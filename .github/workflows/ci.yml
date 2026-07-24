@@ -70,8 +70,12 @@ jobs:
           fetch-depth: 0
       - name: require version increase vs base
         run: |
-          base=$(git show '${{ github.event.pull_request.base.sha }}:package.json' | jq -r .version)
+          base=$( (git show '${{ github.event.pull_request.base.sha }}:package.json' 2>/dev/null || true) | jq -r '.version // empty')
           head=$(jq -r .version package.json)
+          if [ -z "$base" ]; then
+            echo "no package.json on base - first version $head accepted"
+            exit 0
+          fi
           if [ "$base" != "$head" ] && [ "$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -1)" = "$head" ]; then
             echo "version bump ok: $base -> $head"
           else

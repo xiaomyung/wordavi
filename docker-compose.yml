@@ -1,0 +1,49 @@
+name: wordavi
+services:
+  app:
+    image: ghcr.io/xiaomyung/wordavi:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      edge:
+        aliases: [wordavi]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  docs:
+    image: ghcr.io/xiaomyung/wordavi-docs:${DOCS_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.docs
+    restart: unless-stopped
+    networks:
+      edge:
+        aliases: [wordavi-docs]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 256m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  edge:
+    external: true

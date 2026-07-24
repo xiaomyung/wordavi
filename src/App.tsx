@@ -4,7 +4,7 @@ export function App() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-screen text-center">
       <header className="flex flex-col items-center gap-3">
-        <h1 className="font-display text-5xl font-bold tracking-tight">
+        <h1 className="font-display text-5xl font-bold">
           word<span className="text-accent">aví</span>
         </h1>
         <p lang="es" className="numerals text-caption uppercase tracking-widest text-text-muted">

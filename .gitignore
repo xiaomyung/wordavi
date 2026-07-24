@@ -14,3 +14,5 @@ coverage/
 CLAUDE.md
 .obsidian/
 *.tsbuildinfo
+design-handoff/
+*.canvas

@@ -12,7 +12,13 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  expect: {
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
+  },
+  projects: [
+    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+  ],
   webServer: {
     command: `pnpm preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,

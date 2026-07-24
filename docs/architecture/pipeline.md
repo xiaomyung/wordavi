@@ -1,0 +1,116 @@
+---
+title: Pipeline
+---
+
+## From a change to a running container
+
+wordavi is a pure static site, so "deploy" means **build an image, push it to a
+registry, and let the VPS pull it**. There is no runtime server to update and no
+database to migrate. This note traces a change from a pull request all the way
+to a browser. For what actually runs inside the container, see [[overview]].
+
+Unlike the specs in [[layers]] and [[spanish-number-rules]], this pipeline
+**exists today** — v0.1.0 already builds and deploys through it, shipping the
+coming-soon page.
+
+## The flow
+
+```mermaid
+flowchart TD
+    PR[Pull request] --> CI{CI gates}
+    CI -->|"vitest · playwright · biome + typecheck<br/>version-bump · lockfile · docs-guard"| Merge[Merge to master]
+    Merge --> Build[docker workflow builds images]
+    Build -->|"tags: version · sha-&lt;sha&gt; · latest"| GHCR[(GHCR registry)]
+    GHCR -.pull.-> Timer[systemd timer every 5 min → update.sh]
+    Timer --> Compose[docker compose up -d]
+    Compose --> App[wordavi container :8080]
+    Compose --> Docs[wordavi-docs container :8080]
+    App --> Edge[edge proxy on the VPS]
+    Docs --> Edge
+    Edge --> CF[Cloudflare proxied + Full strict]
+    CF --> User((Browser))
+```
+
+## 1. Pull-request gates
+
+Every PR targets `master` (direct pushes are not allowed) and must pass the CI
+workflow before it can merge:
+
+| Gate | What it checks |
+| --- | --- |
+| **test** | `pnpm test` — Vitest unit tests (the engine spec in [[spanish-number-rules]]) |
+| **e2e** | `pnpm build` then Playwright end-to-end (chromium) |
+| **lint** | `biome ci .` plus `tsc` typecheck — includes the layer import bans from [[layers]] |
+| **version-bump** | `package.json` version must **increase** versus the base branch |
+| **lock-check** | `pnpm-lock.yaml` is up to date and frozen |
+| **docs-guard** | *warns* if `src/`, `deploy/`, or `.github/` changed without a `docs/` update |
+
+The **version-bump** gate is what makes rollback possible: the version is
+single-sourced in `package.json` and shown in the app footer, and CI refuses any
+PR that does not bump it. The **docs-guard** is a warning, not a blocker — it
+nudges these notes to stay honest when code or infra moves.
+
+## 2. Merge → image build and tags
+
+A merge to `master` triggers the **docker** workflow. It builds two images with
+the multi-stage `Dockerfile` (node:26-alpine build stage → `pnpm build` →
+nginx-unprivileged serving the static `dist/`):
+
+- `wordavi` — the app.
+- `wordavi-docs` — this documentation site (built with Quartz). The docs image
+  only rebuilds when docs-related paths change, or on a manual / scheduled run.
+
+Each image is pushed to **GHCR** with three tags:
+
+| Tag | Purpose |
+| --- | --- |
+| `<version>` (e.g. `0.1.0`) | immutable, human-readable release marker |
+| `sha-<commit>` | exact provenance for any build |
+| `latest` | moving pointer to the newest default-branch build |
+
+A Trivy scan runs against the built image for HIGH/CRITICAL findings. There are
+**no git tags or GitHub releases** — the image tags are the release ledger, and
+the `<version>` / `sha-` tags are what a rollback pins to.
+
+## 3. VPS timer → pull → containers
+
+The VPS runs the two containers via `docker compose`, attached to an external
+Docker network (`edge`) with **no published host ports**. A **systemd timer
+fires every 5 minutes** and runs the deploy script, which:
+
+1. records the currently running image digests,
+2. runs `docker compose pull` then `docker compose up -d`,
+3. reports only if the images actually changed, and prunes dangling images.
+
+By default it pulls the `latest` tag. **Rollback** is pinning the app image to a
+known-good `<version>` (e.g. `IMAGE_TAG=0.1.0`) and letting the same script
+converge to it — no manual container surgery.
+
+This pull-based model was chosen over an auto-updater daemon watching the socket:
+the timer + script keeps updates ordinary, auditable `compose` runs with no
+extra privileged, socket-mounted container in the mix.
+
+## 4. Edge proxy → Cloudflare → browser
+
+A standalone **edge proxy** on the same `edge` network terminates the public
+side and reverse-proxies by hostname to the containers (`8080` each), including a
+`www` → apex redirect. In front of it:
+
+- **Cloudflare** proxies all traffic (orange-cloud) and terminates public TLS.
+- The origin presents a **Cloudflare Origin Certificate** and the connection is
+  **Full (strict)**.
+- The origin firewall accepts `80`/`443` **only from Cloudflare's address
+  ranges**, so the VPS is not reachable directly.
+
+nginx inside the container serves the SPA with an immutable, fingerprinted
+`/assets/`, a no-cache `index.html` and service worker, a `/healthz` endpoint,
+SPA fallback, and self-only security headers (CSP `default-src 'self'`). From
+there the browser takes over and the PWA runs offline, as described in
+[[overview]].
+
+## Summary
+
+A PR that passes the gates, merges, and bumps the version becomes a tagged GHCR
+image within one workflow; the VPS notices within five minutes and swaps the
+container in place behind Cloudflare — with every prior `<version>` still sitting
+in the registry as a one-line rollback.

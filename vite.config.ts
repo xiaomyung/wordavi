@@ -22,5 +22,8 @@ export default defineConfig({
     environment: 'happy-dom',
     include: ['tests/**/*.test.{ts,tsx}'],
     setupFiles: ['tests/setup.ts'],
+    // Cap worker forks: 57+ happy-dom test files across parallel sessions
+    // otherwise fan out into tens of node processes and exhaust RAM.
+    maxWorkers: 2,
   },
 });

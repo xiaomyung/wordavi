@@ -1,0 +1,41 @@
+/* Shared keyframes for design-system micro-interactions (motion.md).
+   Only the shape of each motion lives here; duration/easing come from the
+   tokens in src/styles/tokens.css and are applied at the call site so a
+   token change never requires touching this file. Both animations are
+   neutralised by the global prefers-reduced-motion rule in global.css
+   (transition/animation durations collapse to ~0). */
+
+@keyframes wa-chip-tick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.wa-chip-tick {
+  display: inline-block;
+  animation: wa-chip-tick var(--duration-tick) ease-out;
+}
+
+/* Rotation is held constant through the pop via --wa-stamp-rotate (set inline
+   per stamp for the deterministic jitter) so scaling never resets it. */
+@keyframes wa-stamp-pop {
+  0% {
+    transform: scale(0.6) rotate(var(--wa-stamp-rotate, 0deg));
+  }
+  60% {
+    transform: scale(1.1) rotate(var(--wa-stamp-rotate, 0deg));
+  }
+  100% {
+    transform: scale(1) rotate(var(--wa-stamp-rotate, 0deg));
+  }
+}
+
+.wa-stamp-pop {
+  animation: wa-stamp-pop var(--duration-stamp) var(--ease-pop);
+}

@@ -1,0 +1,407 @@
+/* Presentational styles + keyframes for the answer-input component family
+   (Stamp, AnswerInput, VerdictBlock, MicButton, Transcript, SpeakerButton,
+   PillButton). Colours/sizes/timings all resolve from tokens in
+   src/styles/tokens.css — this file introduces no palette values of its own.
+
+   Keyframes are namespaced (wa-verdict-*, wa-ring-*, wa-caret-*, wa-char-*) so
+   they never clash with the day-stamp/chip keyframes in animations.css. The
+   global prefers-reduced-motion rule in styles/global.css neutralises every
+   transition/animation here (durations collapse to ~0, opacity-only). */
+
+/* Everything lives in Tailwind's `components` layer so a `className`
+   passed by a caller (a utility, in the later `utilities` layer) still
+   wins — unlayered rules would silently beat every utility. */
+@layer components {
+  /* ------------------------------------------------------------------ Stamp */
+  @keyframes wa-verdict-stamp {
+    0% {
+      transform: scale(0.6) rotate(-16deg);
+    }
+    60% {
+      transform: scale(1.1) rotate(-8deg);
+    }
+    100% {
+      transform: scale(1) rotate(-8deg);
+    }
+  }
+
+  .wa-stamp {
+    display: inline-flex;
+    transform: rotate(-8deg);
+    transform-origin: center;
+  }
+  .wa-stamp--correct {
+    color: var(--color-correct);
+  }
+  .wa-stamp--almost {
+    color: var(--color-almost);
+  }
+  .wa-stamp--wrong {
+    color: var(--color-wrong);
+  }
+  .wa-stamp[data-animate="true"] {
+    animation: wa-verdict-stamp var(--duration-verdict) var(--ease-pop) both;
+  }
+
+  /* ------------------------------------------------------------- AnswerInput */
+  .wa-input-wrap {
+    position: relative;
+    display: block;
+  }
+
+  .wa-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: var(--size-input);
+    padding: 14.5px 16px;
+    background: var(--color-surface-raised);
+    color: var(--color-text);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-input);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.35;
+    text-align: left;
+    resize: none;
+    overflow: hidden;
+    transition-property: border-color, box-shadow, padding;
+    transition-duration: var(--duration-text);
+    transition-timing-function: var(--ease-out-soft);
+  }
+  .wa-input::placeholder {
+    color: var(--color-text-faint);
+    opacity: 1;
+  }
+  .wa-input[data-mode="digits"] {
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  /* Focus: 2px accent border + focus ring (specificity 0,2,0). */
+  .wa-input:focus {
+    outline: none;
+    border-width: 2px;
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-focus);
+    padding: 14px 15.5px;
+  }
+
+  /* Verdict: 2px verdict border, right gutter for the inline stamp. The
+     [data-verdict] rules follow :focus in source order and match its (0,2,0)
+     specificity, so a checked (read-only) field keeps its verdict colour even
+     if focused. Never shakes. */
+  .wa-input[data-verdict] {
+    border-width: 2px;
+    box-shadow: none;
+    padding: 14px 44px 14px 15.5px;
+  }
+  .wa-input[data-verdict="correct"] {
+    border-color: var(--color-correct);
+  }
+  .wa-input[data-verdict="almost"] {
+    border-color: var(--color-almost);
+  }
+  .wa-input[data-verdict="wrong"] {
+    border-color: var(--color-wrong);
+  }
+
+  .wa-input-stamp {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  /* Accent-key insertion flash: a transient span fades from accent to nothing. */
+  @keyframes wa-char-flash {
+    0% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  .wa-input-flash {
+    position: absolute;
+    pointer-events: none;
+    color: var(--color-accent);
+    font-family: var(--font-sans);
+    font-size: var(--text-body-lg);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.35;
+    animation: wa-char-flash var(--duration-flash) var(--ease-out-soft) forwards;
+  }
+
+  /* ------------------------------------------------------------ VerdictBlock */
+  @keyframes wa-verdict-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .wa-verdict {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    text-align: left;
+    /* 80ms delay lands the line just after the stamp pop (motion.md). */
+    animation: wa-verdict-rise var(--duration-text) var(--ease-out-soft) 80ms both;
+  }
+  .wa-verdict-icon {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.125rem;
+    height: 2.125rem;
+    border-radius: 50%;
+  }
+  /* Base title/sub declared before the verdict-qualified overrides so specificity
+     only ever ascends (noDescendingSpecificity). */
+  .wa-verdict-title {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--text-verdict);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.15;
+  }
+  .wa-verdict-sub {
+    margin-top: 2px;
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-muted);
+    line-height: 1.45;
+  }
+  .wa-verdict--correct {
+    color: var(--color-correct);
+  }
+  .wa-verdict--correct .wa-verdict-icon {
+    background: var(--color-correct-tint);
+  }
+  .wa-verdict--correct .wa-verdict-title {
+    color: var(--color-correct-text);
+  }
+  .wa-verdict--almost {
+    color: var(--color-almost);
+  }
+  .wa-verdict--almost .wa-verdict-icon {
+    background: var(--color-almost-tint);
+  }
+  .wa-verdict--almost .wa-verdict-title {
+    color: var(--color-almost-text);
+  }
+  .wa-verdict--wrong {
+    color: var(--color-wrong);
+  }
+  .wa-verdict--wrong .wa-verdict-icon {
+    background: var(--color-wrong-tint);
+  }
+  .wa-verdict--wrong .wa-verdict-title {
+    color: var(--color-wrong-text);
+  }
+  .wa-verdict--muted {
+    color: var(--color-text-muted);
+  }
+  .wa-verdict--muted .wa-verdict-icon {
+    border: 2px solid currentColor;
+  }
+  .wa-verdict--muted .wa-verdict-title {
+    color: var(--color-text);
+  }
+
+  /* --------------------------------------------------------------- MicButton */
+  .wa-mic-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--size-mic) + 3rem);
+    height: calc(var(--size-mic) + 3rem);
+  }
+
+  @keyframes wa-ring-pulse {
+    0% {
+      transform: scale(0.94);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1.12);
+      opacity: 0;
+    }
+  }
+  .wa-mic-ring {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: var(--size-mic);
+    height: var(--size-mic);
+    border: 2px solid var(--color-accent);
+    border-radius: 50%;
+    pointer-events: none;
+    /* 1.6s loop is the only looping animation in the app (motion.md). */
+    animation: wa-ring-pulse 1.6s var(--ease-out-soft) infinite;
+  }
+  .wa-mic-ring--delayed {
+    animation-delay: 0.5s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    /* Rings collapse to a single static outline (a11y.md). */
+    .wa-mic-ring {
+      animation: none;
+      transform: scale(1.05);
+      opacity: 0.35;
+    }
+    .wa-mic-ring--delayed {
+      display: none;
+    }
+  }
+
+  .wa-mic {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-mic);
+    height: var(--size-mic);
+    border: none;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    box-shadow:
+      0 4px 0 var(--color-accent-shelf),
+      inset 0 1.5px 0 var(--color-shelf-glint);
+    cursor: pointer;
+    touch-action: none;
+    transition-property: transform, box-shadow;
+    transition-duration: var(--duration-release);
+    transition-timing-function: var(--ease-out-soft);
+  }
+  .wa-mic[data-state="holding"],
+  .wa-mic:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 1px 0 var(--color-accent-shelf),
+      inset 0 1.5px 0 var(--color-shelf-glint);
+    transition-duration: var(--duration-press);
+  }
+  .wa-mic:focus-visible {
+    outline: none;
+    box-shadow:
+      0 4px 0 var(--color-accent-shelf),
+      var(--shadow-focus);
+  }
+  .wa-mic[data-state="denied"] {
+    background: var(--color-disabled-bg);
+    color: var(--color-text-muted);
+    box-shadow: none;
+    cursor: default;
+    transform: none;
+  }
+
+  /* --------------------------------------------------------------- Transcript */
+  @keyframes wa-caret-blink {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  .wa-trans {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.75rem;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.375rem;
+    line-height: 1.2;
+    color: var(--color-text-muted);
+  }
+  .wa-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.25rem;
+    margin-left: 1px;
+    background: var(--color-accent);
+    animation: wa-caret-blink 1s step-end infinite;
+  }
+
+  /* ------------------------------------------------------------ SpeakerButton */
+  .wa-speaker {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-speaker);
+    height: var(--size-speaker);
+    border: none;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    box-shadow: var(--shadow-shelf);
+    cursor: pointer;
+    transition-property: transform, box-shadow;
+    transition-duration: var(--duration-release);
+    transition-timing-function: var(--ease-out-soft);
+  }
+  .wa-speaker:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 0 var(--color-accent-shelf),
+      inset 0 1.5px 0 var(--color-shelf-glint);
+    transition-duration: var(--duration-press);
+  }
+  .wa-speaker:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-shelf), var(--shadow-focus);
+  }
+  .wa-speaker:disabled {
+    cursor: default;
+  }
+
+  /* ----------------------------------------------------------------- PillButton */
+  .wa-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition-property: transform, background-color, border-color, color;
+    transition-duration: var(--duration-toggle);
+    transition-timing-function: var(--ease-out-soft);
+  }
+  .wa-pill:active {
+    transform: translateY(1px);
+  }
+  .wa-pill:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-focus);
+  }
+  .wa-pill[data-active="true"] {
+    background: var(--color-accent-tint);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .wa-pill:disabled {
+    cursor: default;
+  }
+}

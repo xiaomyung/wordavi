@@ -9,7 +9,7 @@ COPY docs content
 RUN npx quartz build
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
-COPY deploy/security-headers.conf /etc/nginx/snippets/security-headers.conf
+COPY deploy/security-headers-docs.conf /etc/nginx/snippets/security-headers-docs.conf
 COPY deploy/nginx-docs.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /quartz/public /usr/share/nginx/html
 EXPOSE 8080

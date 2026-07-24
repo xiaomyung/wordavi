@@ -1,0 +1,15 @@
+node_modules/
+dist/
+docs-site/public/
+playwright-report/
+test-results/
+coverage/
+*.local
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+.claude/
+CLAUDE.md
+.obsidian/

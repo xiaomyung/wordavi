@@ -7,6 +7,10 @@
     "close": "Закрыть",
     "endless": "∞"
   },
+  "units": {
+    "kg": "кг",
+    "g": "г"
+  },
   "modes": {
     "words": {
       "title": "Число → словами",
@@ -47,7 +51,11 @@
     "cashier_hint": "Как скажет кассир?",
     "mic_denied": "Микрофон недоступен",
     "mic_denied_sub": "Разрешите доступ в настройках браузера — или просто введите ответ текстом.",
-    "mic_help_link": "Как включить микрофон?"
+    "mic_help_link": "Как включить микрофон?",
+    "counter": "{{n}} из {{total}}",
+    "counter_endless": "{{n}} · ∞",
+    "points": "очков",
+    "end_round": "Завершить раунд"
   },
   "verdict": {
     "correct": "¡Muy bien!",
@@ -55,7 +63,14 @@
     "almost": "Почти — {{word}}",
     "almost_sub": "не хватало акцента — засчитано · +8",
     "wrong": "Правильно: {{answer}}",
-    "wrong_sub": "{{hint}} · бывает, ещё встретится"
+    "wrong_sub": "{{hint}} · бывает, ещё встретится",
+    "wrong_sub_plain": "бывает, ещё встретится"
+  },
+  "notes": {
+    "accent": "не хватало акцента",
+    "crossUnit": "то же количество в других единицах — засчитано",
+    "conAccepted": "«con» тоже принимается",
+    "colloquial": "разговорный вариант — засчитано"
   },
   "home": {
     "greeting_morning": "Доброе утро!",
@@ -65,16 +80,25 @@
     "goal_daily": "Дневная цель",
     "goal_sub": "{{done}} из {{total}}",
     "goal_almost": "{{done}} из {{total}} — почти!",
-    "streak_n": "{{n}} дней",
+    "streak_n_one": "{{count}} день",
+    "streak_n_few": "{{count}} дня",
+    "streak_n_many": "{{count}} дней",
     "continue_cta": "Продолжить · {{done}} из {{total}}",
     "start_cta": "Начать первый раунд",
+    "start_round": "Начать раунд",
     "offline_chip": "офлайн",
     "offline_toast": "Нет интернета. Всё письменное работает; голос вернётся с сетью.",
-    "mode_paused_sub": "вернётся с интернетом"
+    "mode_paused_sub": "вернётся с интернетом",
+    "mode_paused_voice": "нужен испанский голос",
+    "mode_paused_mic": "нужен доступ к микрофону",
+    "voice_chip": "голос",
+    "mic_chip": "микрофон"
   },
   "summary": {
     "title": "Раунд завершён",
-    "subtitle": "{{mode}} · {{n}} вопросов",
+    "subtitle_one": "{{mode}} · {{count}} вопрос",
+    "subtitle_few": "{{mode}} · {{count}} вопроса",
+    "subtitle_many": "{{mode}} · {{count}} вопросов",
     "score_line": "+{{points}} очков · лучшая серия ×{{combo}}",
     "congrats": "¡Muy bien!",
     "day_stamped": "День {{day}} отмечен · дневная цель достигнута, {{done}} из {{total}}",
@@ -144,8 +168,12 @@
   "stats": {
     "title": "Статистика",
     "streak_label": "Серия",
-    "streak_record": "рекорд — {{n}} дней",
-    "streak_today_sub": "{{n}} дня подряд — сегодняшний штамп ждёт",
+    "streak_record_one": "рекорд — {{count}} день",
+    "streak_record_few": "рекорд — {{count}} дня",
+    "streak_record_many": "рекорд — {{count}} дней",
+    "streak_today_sub_one": "{{count}} день подряд — сегодняшний штамп ждёт",
+    "streak_today_sub_few": "{{count}} дня подряд — сегодняшний штамп ждёт",
+    "streak_today_sub_many": "{{count}} дней подряд — сегодняшний штамп ждёт",
     "total_answers_label": "ответов всего",
     "accuracy_label": "точность за месяц",
     "skills_title": "Навыки",
@@ -194,6 +222,9 @@
     "update_action": "Перезагрузить",
     "no_speech": "не расслышали — попробуйте ещё раз",
     "import_ok": "Данные восстановлены",
-    "import_bad": "Не получилось прочитать файл"
+    "import_bad": "Не получилось прочитать файл",
+    "export_ok": "Файл сохранён",
+    "copied": "Скопировано",
+    "copy_failed": "Не получилось скопировать"
   }
 }

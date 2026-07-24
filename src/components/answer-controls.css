@@ -10,7 +10,7 @@
 
 /* Cascade-layer order, restated because this file can be the FIRST stylesheet in
    the bundle: it is imported from component modules, and main.tsx evaluates
-   `@/App` (which pulls in these components) before `./styles/index.css` (which
+   `@/app/App` (which pulls in these components) before `./styles/index.css` (which
    pulls in Tailwind). Layer precedence follows first-declaration order, so
    without this statement `components` would register ahead of `theme`/`base`
    and Tailwind's preflight (`button { background-color: transparent;

@@ -7,6 +7,10 @@
     "close": "Close",
     "endless": "∞"
   },
+  "units": {
+    "kg": "kg",
+    "g": "g"
+  },
   "modes": {
     "words": {
       "title": "Number → in words",
@@ -47,7 +51,11 @@
     "cashier_hint": "How would the cashier say it?",
     "mic_denied": "Microphone unavailable",
     "mic_denied_sub": "Allow access in your browser settings — or just type the answer.",
-    "mic_help_link": "How do I enable the microphone?"
+    "mic_help_link": "How do I enable the microphone?",
+    "counter": "{{n}} of {{total}}",
+    "counter_endless": "{{n}} · ∞",
+    "points": "pts",
+    "end_round": "End the round"
   },
   "verdict": {
     "correct": "¡Muy bien!",
@@ -55,7 +63,14 @@
     "almost": "Almost — {{word}}",
     "almost_sub": "just the accent · counted correct · +8",
     "wrong": "Correct: {{answer}}",
-    "wrong_sub": "{{hint}} · it will come back"
+    "wrong_sub": "{{hint}} · it will come back",
+    "wrong_sub_plain": "it will come back"
+  },
+  "notes": {
+    "accent": "just the accent",
+    "crossUnit": "same amount in other units — counted",
+    "conAccepted": "«con» is accepted too",
+    "colloquial": "colloquial form — counted"
   },
   "home": {
     "greeting_morning": "Good morning!",
@@ -65,16 +80,23 @@
     "goal_daily": "Daily goal",
     "goal_sub": "{{done}} of {{total}}",
     "goal_almost": "{{done}} of {{total}} — almost there!",
-    "streak_n": "{{n}} days",
+    "streak_n_one": "{{count}} day",
+    "streak_n_other": "{{count}} days",
     "continue_cta": "Continue · {{done}} of {{total}}",
     "start_cta": "Start the first round",
+    "start_round": "Start a round",
     "offline_chip": "offline",
     "offline_toast": "No internet. Everything written keeps working; audio returns with the network.",
-    "mode_paused_sub": "back with the internet"
+    "mode_paused_sub": "back with the internet",
+    "mode_paused_voice": "needs a Spanish voice",
+    "mode_paused_mic": "needs microphone access",
+    "voice_chip": "voice",
+    "mic_chip": "microphone"
   },
   "summary": {
     "title": "Round complete",
-    "subtitle": "{{mode}} · {{n}} questions",
+    "subtitle_one": "{{mode}} · {{count}} question",
+    "subtitle_other": "{{mode}} · {{count}} questions",
     "score_line": "+{{points}} pts · best combo ×{{combo}}",
     "congrats": "¡Muy bien!",
     "day_stamped": "Day {{day}} stamped · daily goal reached, {{done}} of {{total}}",
@@ -144,8 +166,10 @@
   "stats": {
     "title": "Stats",
     "streak_label": "Streak",
-    "streak_record": "record — {{n}} days",
-    "streak_today_sub": "{{n}} days in a row — today's stamp is waiting",
+    "streak_record_one": "record — {{count}} day",
+    "streak_record_other": "record — {{count}} days",
+    "streak_today_sub_one": "{{count}} day in a row — today's stamp is waiting",
+    "streak_today_sub_other": "{{count}} days in a row — today's stamp is waiting",
     "total_answers_label": "answers total",
     "accuracy_label": "accuracy this month",
     "skills_title": "Skills",
@@ -194,6 +218,9 @@
     "update_action": "Reload",
     "no_speech": "didn't catch that — try again",
     "import_ok": "Data restored",
-    "import_bad": "Couldn't read the file"
+    "import_bad": "Couldn't read the file",
+    "export_ok": "File saved",
+    "copied": "Copied",
+    "copy_failed": "Couldn't copy"
   }
 }

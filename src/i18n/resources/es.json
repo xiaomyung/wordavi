@@ -7,6 +7,10 @@
     "close": "Cerrar",
     "endless": "∞"
   },
+  "units": {
+    "kg": "kg",
+    "g": "g"
+  },
   "modes": {
     "words": {
       "title": "Número → en letras",
@@ -47,7 +51,11 @@
     "cashier_hint": "¿Cómo lo dice el cajero?",
     "mic_denied": "Micrófono no disponible",
     "mic_denied_sub": "Permite el acceso en el navegador — o escribe la respuesta.",
-    "mic_help_link": "¿Cómo activo el micrófono?"
+    "mic_help_link": "¿Cómo activo el micrófono?",
+    "counter": "{{n}} de {{total}}",
+    "counter_endless": "{{n}} · ∞",
+    "points": "puntos",
+    "end_round": "Terminar la ronda"
   },
   "verdict": {
     "correct": "¡Muy bien!",
@@ -55,7 +63,14 @@
     "almost": "Casi — {{word}}",
     "almost_sub": "solo faltó la tilde · cuenta como correcta · +8",
     "wrong": "Correcto: {{answer}}",
-    "wrong_sub": "{{hint}} · volverá a salir"
+    "wrong_sub": "{{hint}} · volverá a salir",
+    "wrong_sub_plain": "volverá a salir"
+  },
+  "notes": {
+    "accent": "solo faltó la tilde",
+    "crossUnit": "la misma cantidad en otra unidad — cuenta",
+    "conAccepted": "«con» también vale",
+    "colloquial": "forma coloquial — cuenta"
   },
   "home": {
     "greeting_morning": "¡Buenos días!",
@@ -65,16 +80,23 @@
     "goal_daily": "Meta diaria",
     "goal_sub": "{{done}} de {{total}}",
     "goal_almost": "{{done}} de {{total}} — ¡casi!",
-    "streak_n": "{{n}} días",
+    "streak_n_one": "{{count}} día",
+    "streak_n_other": "{{count}} días",
     "continue_cta": "Continuar · {{done}} de {{total}}",
     "start_cta": "Empezar la primera ronda",
+    "start_round": "Empezar una ronda",
     "offline_chip": "sin red",
     "offline_toast": "Sin internet. Todo lo escrito funciona; el audio volverá con la red.",
-    "mode_paused_sub": "vuelve con internet"
+    "mode_paused_sub": "vuelve con internet",
+    "mode_paused_voice": "falta una voz en español",
+    "mode_paused_mic": "falta acceso al micrófono",
+    "voice_chip": "voz",
+    "mic_chip": "micrófono"
   },
   "summary": {
     "title": "Ronda completada",
-    "subtitle": "{{mode}} · {{n}} preguntas",
+    "subtitle_one": "{{mode}} · {{count}} pregunta",
+    "subtitle_other": "{{mode}} · {{count}} preguntas",
     "score_line": "+{{points}} puntos · mejor racha ×{{combo}}",
     "congrats": "¡Muy bien!",
     "day_stamped": "Día {{day}} sellado · meta diaria alcanzada, {{done}} de {{total}}",
@@ -144,8 +166,10 @@
   "stats": {
     "title": "Estadísticas",
     "streak_label": "Racha",
-    "streak_record": "récord — {{n}} días",
-    "streak_today_sub": "{{n}} días seguidos — el sello de hoy está esperando",
+    "streak_record_one": "récord — {{count}} día",
+    "streak_record_other": "récord — {{count}} días",
+    "streak_today_sub_one": "{{count}} día seguido — el sello de hoy está esperando",
+    "streak_today_sub_other": "{{count}} días seguidos — el sello de hoy está esperando",
     "total_answers_label": "respuestas en total",
     "accuracy_label": "precisión este mes",
     "skills_title": "Destrezas",
@@ -194,6 +218,9 @@
     "update_action": "Recargar",
     "no_speech": "no te entendimos — inténtalo de nuevo",
     "import_ok": "Datos restaurados",
-    "import_bad": "No se pudo leer el archivo"
+    "import_bad": "No se pudo leer el archivo",
+    "export_ok": "Archivo guardado",
+    "copied": "Copiado",
+    "copy_failed": "No se pudo copiar"
   }
 }

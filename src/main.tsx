@@ -1,11 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from '@/App';
-import { applyTheme } from '@/services/theme';
+import { App } from '@/app/App';
+import { bootstrap } from '@/app/bootstrap';
 import './styles/index.css';
 
-// Default to the system theme until a stored preference is wired in.
-applyTheme('auto');
+bootstrap();
 
 const root = document.getElementById('root');
 if (!root) {

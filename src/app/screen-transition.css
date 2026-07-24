@@ -1,0 +1,41 @@
+/* Screen enter motion (motion.md: nothing moves more than 12px, nothing loops).
+   The wrapper is keyed on the screen kind, so React remounts it on every screen
+   change and the animation replays from the start. Duration reuses the shared
+   --duration-swap token (240ms) that the question swap and progress rule use. */
+
+@keyframes wa-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wa-screen-enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wa-screen {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  animation: wa-screen-enter var(--duration-swap) ease-out both;
+}
+
+/* Reduced motion: opacity only, no travel (a11y.md). The global reset in
+   global.css already collapses the duration; this keeps the shape honest for
+   anyone reading the stylesheet or overriding the reset. */
+@media (prefers-reduced-motion: reduce) {
+  .wa-screen {
+    animation-name: wa-screen-enter-fade;
+  }
+}

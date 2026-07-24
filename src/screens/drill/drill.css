@@ -1,0 +1,40 @@
+/* Question-swap motion (motion.md): the outgoing prompt fades over 120ms, the
+   incoming one rises 12px while fading in over --duration-swap (240ms). The
+   answer field clears instantly because the zone is keyed on the question id
+   and remounts empty. Both are neutralised by the reduced-motion reset in
+   global.css; the explicit fade-only keyframes keep that intent readable. */
+
+@keyframes wa-prompt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wa-prompt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wa-prompt-enter {
+  animation: wa-prompt-enter var(--duration-swap) ease-out both;
+}
+
+.wa-prompt-exit {
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wa-prompt-enter {
+    animation-name: wa-prompt-fade;
+  }
+}

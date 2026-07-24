@@ -1,0 +1,283 @@
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { init, setLanguage } from '@/i18n';
+import { SettingsScreen } from '@/screens/SettingsScreen';
+import { canPromptInstall, isIos, isStandalone, promptInstall } from '@/services/install';
+import { setEnabled } from '@/services/sounds';
+import { applyTheme } from '@/services/theme';
+import { showToast } from '@/services/toast';
+import { exportData, getSettings, updateSettings } from '@/storage';
+
+// Partial mocks: the real modules still initialise i18next / storage, only the
+// live side effects are swapped for spies so a test can assert them without
+// repainting the document or changing the rendered language mid-file.
+vi.mock('@/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/i18n')>();
+  return { ...actual, setLanguage: vi.fn() };
+});
+
+vi.mock('@/services/theme', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/theme')>();
+  return { ...actual, applyTheme: vi.fn() };
+});
+
+vi.mock('@/services/sounds', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/sounds')>();
+  return { ...actual, setEnabled: vi.fn() };
+});
+
+vi.mock('@/services/toast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/toast')>();
+  return { ...actual, showToast: vi.fn() };
+});
+
+vi.mock('@/services/install', () => ({
+  canPromptInstall: vi.fn(() => false),
+  isIos: vi.fn(() => false),
+  isStandalone: vi.fn(() => false),
+  promptInstall: vi.fn(async () => 'accepted'),
+}));
+
+function renderScreen() {
+  const onBack = vi.fn();
+  const onReport = vi.fn();
+  const view = render(<SettingsScreen onBack={onBack} onReport={onReport} />);
+  return { ...view, onBack, onReport };
+}
+
+function stepper(name: string) {
+  return within(screen.getByRole('group', { name }));
+}
+
+describe('SettingsScreen', () => {
+  beforeAll(() => {
+    init({ initialLang: 'ru' });
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+    vi.mocked(isStandalone).mockReturnValue(false);
+    vi.mocked(canPromptInstall).mockReturnValue(false);
+    vi.mocked(isIos).mockReturnValue(false);
+    vi.mocked(promptInstall).mockResolvedValue('accepted');
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => 'blob:wordavi'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
+  });
+
+  it('renders every control with the stored value', () => {
+    updateSettings({
+      rangeMin: 20,
+      rangeMax: 5000,
+      acceptNoAccents: false,
+      roundSize: 30,
+      uiLang: 'ru',
+      theme: 'dark',
+      speechRate: 'fast',
+      dailyGoal: 25,
+      soundsEnabled: true,
+    });
+    renderScreen();
+
+    // The rendered readout groups thousands with a thin space; testing-library
+    // collapses it to a plain space before matching.
+    expect(screen.getByText('20 — 5 000')).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: 'Диапазон чисел — min' })).toHaveAttribute(
+      'aria-valuenow',
+      '20',
+    );
+    expect(screen.getByRole('slider', { name: 'Диапазон чисел — max' })).toHaveAttribute(
+      'aria-valuenow',
+      '5000',
+    );
+    expect(screen.getByRole('switch', { name: 'Принимать ответы без акцентов' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    expect(stepper('Вопросов в раунде').getByText('30')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Русский' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Тёмная' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('slider', { name: 'Скорость речи' })).toHaveAttribute(
+      'aria-valuetext',
+      'быстро',
+    );
+    expect(stepper('Дневная цель').getByText('25')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Звуки ответов' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByText(`wordaví · версия ${__APP_VERSION__}`)).toBeInTheDocument();
+  });
+
+  it('persists the number range as the thumbs move', () => {
+    renderScreen();
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Диапазон чисел — min' }), {
+      key: 'ArrowRight',
+    });
+    expect(getSettings().rangeMin).toBe(1);
+
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Диапазон чисел — max' }), {
+      key: 'PageUp',
+    });
+    expect(getSettings().rangeMax).toBe(1000);
+  });
+
+  it('persists the accept-without-accents toggle', () => {
+    renderScreen();
+    fireEvent.click(screen.getByRole('switch', { name: 'Принимать ответы без акцентов' }));
+    expect(getSettings().acceptNoAccents).toBe(false);
+  });
+
+  it('cycles the round stepper 10 → 20 → 30 → ∞ and back', () => {
+    renderScreen();
+    const group = stepper('Вопросов в раунде');
+    const increase = group.getByRole('button', { name: 'Increase' });
+    const decrease = group.getByRole('button', { name: 'Decrease' });
+
+    expect(group.getByText('20')).toBeInTheDocument();
+    fireEvent.click(increase);
+    expect(getSettings().roundSize).toBe(30);
+    fireEvent.click(increase);
+    expect(getSettings().roundSize).toBe('endless');
+    expect(stepper('Вопросов в раунде').getByText('∞')).toBeInTheDocument();
+    fireEvent.click(increase);
+    expect(getSettings().roundSize).toBe(10);
+    fireEvent.click(decrease);
+    expect(getSettings().roundSize).toBe('endless');
+  });
+
+  it('switches the interface language live and persists it', () => {
+    renderScreen();
+    fireEvent.click(screen.getByRole('radio', { name: 'English' }));
+    expect(setLanguage).toHaveBeenCalledWith('en');
+    expect(getSettings().uiLang).toBe('en');
+  });
+
+  it('applies the theme live and persists it', () => {
+    renderScreen();
+    fireEvent.click(screen.getByRole('radio', { name: 'Тёмная' }));
+    expect(applyTheme).toHaveBeenCalledWith('dark');
+    expect(getSettings().theme).toBe('dark');
+  });
+
+  it('persists the speech rate', () => {
+    renderScreen();
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Скорость речи' }), { key: 'ArrowRight' });
+    expect(getSettings().speechRate).toBe('fast');
+  });
+
+  it('steps the daily goal by five and clamps at both ends', () => {
+    updateSettings({ dailyGoal: 45 });
+    renderScreen();
+    const group = stepper('Дневная цель');
+    fireEvent.click(group.getByRole('button', { name: 'Increase' }));
+    expect(getSettings().dailyGoal).toBe(50);
+    expect(stepper('Дневная цель').getByRole('button', { name: 'Increase' })).toBeDisabled();
+
+    const decrease = stepper('Дневная цель').getByRole('button', { name: 'Decrease' });
+    fireEvent.click(decrease);
+    expect(getSettings().dailyGoal).toBe(45);
+  });
+
+  it('enables answer sounds live and persists them', () => {
+    renderScreen();
+    const toggle = screen.getByRole('switch', { name: 'Звуки ответов' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(toggle);
+    expect(setEnabled).toHaveBeenCalledWith(true);
+    expect(getSettings().soundsEnabled).toBe(true);
+  });
+
+  it('downloads a dated backup file and toasts', () => {
+    const clicks = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /Скачать данные/ }));
+
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    const anchor = clicks.mock.contexts[0] as HTMLAnchorElement | undefined;
+    const today = new Date().toISOString().slice(0, 10);
+    expect(anchor?.download).toBe(`wordavi-backup-${today}.json`);
+    expect(showToast).toHaveBeenCalledWith({ text: 'Файл сохранён' });
+    clicks.mockRestore();
+  });
+
+  it('restores a backup, re-applying the imported language and theme', async () => {
+    const bundle = JSON.parse(exportData()) as { settings: Record<string, unknown> };
+    bundle.settings.uiLang = 'en';
+    bundle.settings.theme = 'dark';
+    bundle.settings.dailyGoal = 35;
+    const file = new File([JSON.stringify(bundle)], 'wordavi-backup.json', {
+      type: 'application/json',
+    });
+
+    const { container } = renderScreen();
+    const input = container.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(showToast).toHaveBeenCalledWith({ text: 'Данные восстановлены' });
+    });
+    expect(getSettings().uiLang).toBe('en');
+    expect(setLanguage).toHaveBeenCalledWith('en');
+    expect(applyTheme).toHaveBeenCalledWith('dark');
+    expect(stepper('Дневная цель').getByText('35')).toBeInTheDocument();
+  });
+
+  it('toasts when the picked file is not a wordavi backup', async () => {
+    const file = new File(['{ not json'], 'notes.json', { type: 'application/json' });
+    const { container } = renderScreen();
+    fireEvent.change(container.querySelector('input[type="file"]') as HTMLInputElement, {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(showToast).toHaveBeenCalledWith({ text: 'Не получилось прочитать файл' });
+    });
+  });
+
+  it('hides the install row when the app already runs standalone', () => {
+    vi.mocked(isStandalone).mockReturnValue(true);
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    renderScreen();
+    expect(screen.queryByRole('button', { name: /Установить приложение/ })).toBeNull();
+  });
+
+  it('hides the install row when no prompt was captured outside iOS', () => {
+    renderScreen();
+    expect(screen.queryByRole('button', { name: /Установить приложение/ })).toBeNull();
+  });
+
+  it('fires the captured install prompt from the install row', () => {
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /Установить приложение/ }));
+    expect(promptInstall).toHaveBeenCalled();
+  });
+
+  it('shows the iOS add-to-home-screen steps instead of a prompt', () => {
+    vi.mocked(isIos).mockReturnValue(true);
+    renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: /Установить приложение/ }));
+    expect(screen.getByText('Установить на iPhone')).toBeInTheDocument();
+    expect(screen.getByText(/Нажмите «Поделиться»/)).toBeInTheDocument();
+    expect(screen.getByText(/На экран Домой/)).toBeInTheDocument();
+    expect(promptInstall).not.toHaveBeenCalled();
+  });
+
+  it('reports navigation through its callbacks', () => {
+    const { onBack, onReport } = renderScreen();
+    fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
+    expect(onBack).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Сообщить о проблеме' }));
+    expect(onReport).toHaveBeenCalled();
+  });
+});

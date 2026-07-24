@@ -112,7 +112,12 @@ describe('answer-controls.css circles', () => {
     expect(ring).toContain('position: absolute');
     expect(ring).toContain('transform-origin: center');
     expect(ring).not.toContain('margin');
-    expect(ring).not.toContain('translate');
+    // Centring must never live inside `transform` where the keyframes' scale()
+    // would overwrite it. The standalone `translate` property is the one
+    // exception: it composes with transform and follows the held button's
+    // 3px sink so rings stay concentric with the sunken circle.
+    expect(ring).not.toContain('transform: translate');
+    expect(ring).toContain('translate: 0 3px');
   });
 
   it('sweeps the rings outward and fades them to nothing', () => {

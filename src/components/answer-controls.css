@@ -267,6 +267,11 @@
        shared centre. */
     inset: 0;
     transform-origin: center;
+    /* Rings render only while holding, and the held button sinks 3px
+       (.wa-mic[data-state='holding'] translateY). Follow it with the separate
+       `translate` property, which composes with the keyframes' transform:scale
+       instead of being overwritten by it. */
+    translate: 0 3px;
     border: 2px solid var(--color-accent);
     border-radius: 50%;
     pointer-events: none;

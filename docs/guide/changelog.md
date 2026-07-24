@@ -2,6 +2,11 @@
 title: Changelog
 ---
 
+## 0.1.2 - 2026-07-24
+
+- Automatic deployment pipeline verified end to end.
+- Language tagging for the Spanish sample line.
+
 ## 0.1.1 - 2026-07-24
 
 - Build fixes for the container image pipeline.

@@ -1,6 +1,15 @@
+import { GalleryScreen } from '@/screens/GalleryScreen';
+
 const NUMBERS_ES = 'uno · dos · tres · cuatro · cinco';
 
+/** Hidden component gallery, for visual smokechecks against the design mockups. */
+function galleryRequested(): boolean {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).has('gallery');
+}
+
 export function App() {
+  if (galleryRequested()) return <GalleryScreen />;
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-screen text-center">
       <header className="flex flex-col items-center gap-3">

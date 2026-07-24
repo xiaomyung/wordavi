@@ -11,14 +11,16 @@ the `docs/` vault (as `content/`) into the clone, and runs `npx quartz build`.
 ## Preview locally
 
 ```bash
-QUARTZ_REF=v4.5.2   # keep in sync with Dockerfile.docs
-git clone --depth 1 --branch "$QUARTZ_REF" https://github.com/jackyzha0/quartz.git /tmp/quartz
-cd /tmp/quartz
-npm ci
-cp /path/to/repo/docs-site/quartz.config.ts /path/to/repo/docs-site/quartz.layout.ts ./
-rm -rf content && cp -r /path/to/repo/docs content
-npx quartz build --serve
+pnpm docs:preview
 ```
 
-Then open the printed local URL. When bumping Quartz, update `QUARTZ_REF` in `Dockerfile.docs` and
-the value above together.
+Then open http://localhost:8080. Ctrl+C stops the server and frees the port.
+
+This runs `docs-site/preview.sh`, which serves a **snapshot** of `docs/` — rerun the command after
+editing docs to see changes. The first run clones Quartz (pinned to `QUARTZ_REF` in the script,
+currently `v4.5.2`) into `~/.cache/wordavi-quartz` and runs `npm ci`, which takes about a minute;
+later runs reuse that cache and start in seconds. Pass a port as the first argument
+(`docs-site/preview.sh 3000`) to override the default `8080`.
+
+When bumping Quartz, update `QUARTZ_REF` in both `Dockerfile.docs` and `docs-site/preview.sh`
+together.

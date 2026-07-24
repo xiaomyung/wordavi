@@ -2,6 +2,13 @@
 title: Changelog
 ---
 
+For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
+
+## 0.1.3 - 2026-07-24
+
+- Internal code cleanup.
+- Docs site: working explorer, graph and search; self-hosted fonts.
+
 ## 0.1.2 - 2026-07-24
 
 - Automatic deployment pipeline verified end to end.

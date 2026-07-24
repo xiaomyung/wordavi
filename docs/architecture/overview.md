@@ -77,3 +77,4 @@ pulled onto the VPS is covered in [[pipeline]].
 - [[spanish-number-rules]] — the Spanish grammar the engine encodes.
 - [[storage-schema]] — how progress and settings persist on the device.
 - [[pipeline]] — how a merge becomes a running container.
+- [[decisions/index|decision records]] — the reasoning behind each of these choices, one ADR at a time.

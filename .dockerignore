@@ -13,4 +13,5 @@
 !deploy/nginx.conf
 !deploy/nginx-docs.conf
 !deploy/security-headers.conf
+!deploy/security-headers-docs.conf
 docs/.obsidian

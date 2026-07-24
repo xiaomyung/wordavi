@@ -8,7 +8,7 @@ describe('App', () => {
   });
 
   it('renders the wordmark and both languages', () => {
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/word\s*avi/i);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/word\s*aví/i);
     expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
     expect(screen.getByText(/скоро/i)).toBeInTheDocument();
   });

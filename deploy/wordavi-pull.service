@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull and restart wordavi containers when new images exist
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=charon
+ExecStart=/srv/wordavi/deploy/update.sh

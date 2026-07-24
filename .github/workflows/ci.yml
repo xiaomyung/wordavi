@@ -1,0 +1,114 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - run: pnpm build
+      - run: pnpm e2e
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec biome ci .
+      - run: pnpm typecheck
+
+  version-bump:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: require version increase vs base
+        run: |
+          base=$( (git show '${{ github.event.pull_request.base.sha }}:package.json' 2>/dev/null || true) | jq -r '.version // empty')
+          head=$(jq -r .version package.json)
+          if [ -z "$base" ]; then
+            echo "no package.json on base - first version $head accepted"
+            exit 0
+          fi
+          if [ "$base" != "$head" ] && [ "$(printf '%s\n%s\n' "$base" "$head" | sort -V | tail -1)" = "$head" ]; then
+            echo "version bump ok: $base -> $head"
+          else
+            echo "::error::package.json version ($head) must increase vs base ($base)"
+            exit 1
+          fi
+
+  lock-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --lockfile-only
+      - run: git diff --exit-code pnpm-lock.yaml
+
+  docs-guard:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: warn when code changed without docs
+        run: |
+          changed=$(git diff --name-only '${{ github.event.pull_request.base.sha }}...HEAD')
+          if echo "$changed" | grep -qE '^(src/|deploy/|\.github/)' && ! echo "$changed" | grep -q '^docs/'; then
+            echo "::warning::code or infra changed without a docs/ update - confirm the docs are still accurate"
+          else
+            echo "docs guard ok"
+          fi

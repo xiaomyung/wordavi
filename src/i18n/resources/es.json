@@ -1,0 +1,199 @@
+{
+  "common": {
+    "check": "Comprobar",
+    "next": "Siguiente",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "close": "Cerrar",
+    "endless": "∞"
+  },
+  "modes": {
+    "words": {
+      "title": "Número → en letras",
+      "example": "475 → cuatrocientos setenta y cinco"
+    },
+    "digits": {
+      "title": "Letras → número",
+      "example": "novecientos catorce → 914"
+    },
+    "listen": {
+      "title": "De oído",
+      "sub": "escúchalo y escribe los dígitos"
+    },
+    "choice": {
+      "title": "Elige una de cuatro",
+      "sub": "un calentamiento rápido"
+    },
+    "speak": {
+      "title": "Dilo en voz alta",
+      "sub": "pronunciación · micrófono"
+    },
+    "grocery": {
+      "title": "Precios y pesos",
+      "example": "2,35 € · 250 g · dos kilos y medio"
+    }
+  },
+  "drill": {
+    "listen": "escuchar",
+    "listen_again": "Toca para escuchar otra vez",
+    "slower": "más lento ×0,75",
+    "hold_to_talk": "Mantén y habla",
+    "release_hint": "suelta para comprobar · no guardamos nada",
+    "type_instead": "Escribir la respuesta",
+    "type_placeholder": "escribe la respuesta con letras",
+    "digits_placeholder": "en cifras, p. ej. 250",
+    "grocery_placeholder": "por ejemplo: dos con veinte",
+    "choice_hint": "Elige el número",
+    "cashier_hint": "¿Cómo lo dice el cajero?",
+    "mic_denied": "Micrófono no disponible",
+    "mic_denied_sub": "Permite el acceso en el navegador — o escribe la respuesta.",
+    "mic_help_link": "¿Cómo activo el micrófono?"
+  },
+  "verdict": {
+    "correct": "¡Muy bien!",
+    "correct_sub": "+10 puntos · {{n}} seguidas",
+    "almost": "Casi — {{word}}",
+    "almost_sub": "solo faltó la tilde · cuenta como correcta · +8",
+    "wrong": "Correcto: {{answer}}",
+    "wrong_sub": "{{hint}} · volverá a salir"
+  },
+  "home": {
+    "greeting_morning": "¡Buenos días!",
+    "greeting_day": "¡Buenas tardes!",
+    "greeting_evening": "¡Buenas noches!",
+    "section_modes": "modos",
+    "goal_daily": "Meta diaria",
+    "goal_sub": "{{done}} de {{total}}",
+    "goal_almost": "{{done}} de {{total}} — ¡casi!",
+    "streak_n": "{{n}} días",
+    "continue_cta": "Continuar · {{done}} de {{total}}",
+    "start_cta": "Empezar la primera ronda",
+    "offline_chip": "sin red",
+    "offline_toast": "Sin internet. Todo lo escrito funciona; el audio volverá con la red.",
+    "mode_paused_sub": "vuelve con internet"
+  },
+  "summary": {
+    "title": "Ronda completada",
+    "subtitle": "{{mode}} · {{n}} preguntas",
+    "score_line": "+{{points}} puntos · mejor racha ×{{combo}}",
+    "congrats": "¡Muy bien!",
+    "day_stamped": "Día {{day}} sellado · meta diaria alcanzada, {{done}} de {{total}}",
+    "retry_missed": "Repetir los {{n}} fallos",
+    "and_more": "...y {{n}} más",
+    "back_home": "Volver al inicio"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "section_practice": "práctica",
+    "section_app": "aplicación",
+    "range_label": "Rango de números",
+    "range_tick_0": "0",
+    "range_tick_10": "10",
+    "range_tick_100": "100",
+    "range_tick_1k": "1 mil",
+    "range_tick_10k": "10 mil",
+    "range_tick_100k": "100 mil",
+    "range_tick_1m": "1 mill",
+    "accents_label": "Aceptar respuestas sin tildes",
+    "accents_sub": "veintiseis = veintiséis · lo marcamos como «casi»",
+    "questions_per_round_label": "Preguntas por ronda",
+    "ui_language_label": "Idioma de la interfaz",
+    "ui_language_sub": "español — inmersión total",
+    "language_ru": "Русский",
+    "language_en": "English",
+    "language_es": "Español",
+    "theme_label": "Tema",
+    "theme_auto": "Auto",
+    "theme_light": "Claro",
+    "theme_dark": "Oscuro",
+    "speech_speed_label": "Velocidad de voz",
+    "speed_slow": "lenta",
+    "speed_normal": "normal",
+    "speed_fast": "rápida",
+    "daily_goal_label": "Meta diaria",
+    "daily_goal_sub": "respuestas al día",
+    "report_problem": "Informar de un problema",
+    "version": "wordaví · versión {{version}}",
+    "sounds_label": "Sonidos de respuesta",
+    "sounds_sub": "Un sonido breve al acertar o fallar",
+    "export_label": "Descargar tus datos",
+    "export_sub": "Copia de seguridad de tu progreso en un archivo",
+    "import_label": "Restaurar desde un archivo",
+    "import_sub": "Cargar el progreso desde un archivo descargado antes",
+    "install_label": "Instalar la aplicación",
+    "install_sub": "Funciona sin conexión, se abre desde la pantalla de inicio"
+  },
+  "onboarding": {
+    "step1_greeting": "¡Hola!",
+    "step1_subtitle": "Números en español — para la tienda, la caja y el día a día.",
+    "step1_section": "язык подсказок · interface language",
+    "step1_spanish_badge": "para los valientes",
+    "step2_title": "¿Por dónde empezamos?",
+    "step2_subtitle": "estos son los ajustes reales — puedes dejarlos así y tocar «Siguiente»",
+    "step2_range_sub": "0–100 es suficiente para la tienda — amplíalo cuando quieras",
+    "step3_title": "¿Cómo te resulta más cómodo?",
+    "step3_subtitle": "el tema, la voz y la meta también están siempre en ajustes",
+    "step3_goal_sub": "respuestas al día · puede ser menos",
+    "step4_title": "Cinco minutos al día y los números se harán tuyos",
+    "step4_subtitle": "Equivocarse es normal: los números difíciles volverán a aparecer hasta que se te queden.",
+    "step4_goal_pill": "Meta — 20 respuestas al día · puede ser menos",
+    "step4_cta": "Empezar la primera ronda",
+    "step4_ghost": "Ver los modos primero",
+    "install_cta": "Instalar la aplicación"
+  },
+  "stats": {
+    "title": "Estadísticas",
+    "streak_label": "Racha",
+    "streak_record": "récord — {{n}} días",
+    "streak_today_sub": "{{n}} días seguidos — el sello de hoy está esperando",
+    "total_answers_label": "respuestas en total",
+    "accuracy_label": "precisión este mes",
+    "skills_title": "Destrezas",
+    "skill_small": "unidades · 1–9",
+    "skill_tens": "decenas · 10–99",
+    "skill_hundreds": "centenas · 100–999",
+    "skill_big": "miles",
+    "skill_prices": "precios · €",
+    "skill_weights": "pesos · kg, g",
+    "needs_practice": "a practicar",
+    "auto_note": "los números difíciles aparecen más a menudo solos — no hay que configurar nada",
+    "empty_title": "Aún no hay nada",
+    "empty_sub": "Una ronda y aquí aparecerán precisión, racha y destrezas.",
+    "empty_streak_sub": "el primer sello — tras la primera ronda de hoy",
+    "empty_cta": "Empezar la primera ronda"
+  },
+  "report": {
+    "title": "Informar de un problema",
+    "describe_placeholder": "Describe qué salió mal…",
+    "attach_image": "Adjuntar una captura",
+    "send": "Enviar",
+    "copy": "Copiar",
+    "sent": "Enviado — ¡gracias!",
+    "sent_hint": "Normalmente respondemos en un par de días.",
+    "mailto_fallback": "Si no se abrió tu correo, adjunta la captura al mensaje manualmente."
+  },
+  "crash": {
+    "title": "Algo salió mal",
+    "sub": "Disculpa las molestias — intenta empezar de nuevo.",
+    "restart": "Reiniciar",
+    "report": "Informar de un problema"
+  },
+  "install_sheet": {
+    "title": "Instalar en iPhone",
+    "step1": "Toca Compartir",
+    "step2": "Elige Añadir a pantalla de inicio"
+  },
+  "voice_sheet": {
+    "title": "Añadir una voz en español",
+    "android": "Ajustes → Accesibilidad → Conversión de texto a voz → descarga una voz en español",
+    "ios": "Ajustes → Accesibilidad → Contenido hablado → Voces → Español"
+  },
+  "toasts": {
+    "offline": "Sin internet. Todo lo escrito funciona; el audio volverá con la red.",
+    "update_ready": "Actualización lista — ¿recargar?",
+    "update_action": "Recargar",
+    "no_speech": "no te entendimos — inténtalo de nuevo",
+    "import_ok": "Datos restaurados",
+    "import_bad": "No se pudo leer el archivo"
+  }
+}

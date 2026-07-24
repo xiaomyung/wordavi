@@ -1,0 +1,199 @@
+{
+  "common": {
+    "check": "Проверить",
+    "next": "Дальше",
+    "continue": "Продолжить",
+    "back": "Назад",
+    "close": "Закрыть",
+    "endless": "∞"
+  },
+  "modes": {
+    "words": {
+      "title": "Число → словами",
+      "example": "475 → cuatrocientos setenta y cinco"
+    },
+    "digits": {
+      "title": "Слова → число",
+      "example": "novecientos catorce → 914"
+    },
+    "listen": {
+      "title": "На слух",
+      "sub": "услышать и ввести цифрами"
+    },
+    "choice": {
+      "title": "Выбор из четырёх",
+      "sub": "быстрая разминка"
+    },
+    "speak": {
+      "title": "Скажите вслух",
+      "sub": "произношение · микрофон"
+    },
+    "grocery": {
+      "title": "Цены и веса",
+      "example": "2,35 € · 250 г · dos kilos y medio"
+    }
+  },
+  "drill": {
+    "listen": "прослушать",
+    "listen_again": "Нажмите, чтобы прослушать ещё раз",
+    "slower": "медленнее ×0,75",
+    "hold_to_talk": "Держите и говорите",
+    "release_hint": "отпустите — проверим · мы ничего не сохраняем",
+    "type_instead": "Ввести текстом",
+    "type_placeholder": "введите ответ словами",
+    "digits_placeholder": "цифрами, напр. 250",
+    "grocery_placeholder": "например: dos con veinte",
+    "choice_hint": "Выберите число",
+    "cashier_hint": "Как скажет кассир?",
+    "mic_denied": "Микрофон недоступен",
+    "mic_denied_sub": "Разрешите доступ в настройках браузера — или просто введите ответ текстом.",
+    "mic_help_link": "Как включить микрофон?"
+  },
+  "verdict": {
+    "correct": "¡Muy bien!",
+    "correct_sub": "+10 очков · {{n}}-е подряд",
+    "almost": "Почти — {{word}}",
+    "almost_sub": "не хватало акцента — засчитано · +8",
+    "wrong": "Правильно: {{answer}}",
+    "wrong_sub": "{{hint}} · бывает, ещё встретится"
+  },
+  "home": {
+    "greeting_morning": "Доброе утро!",
+    "greeting_day": "Добрый день!",
+    "greeting_evening": "Добрый вечер!",
+    "section_modes": "режимы",
+    "goal_daily": "Дневная цель",
+    "goal_sub": "{{done}} из {{total}}",
+    "goal_almost": "{{done}} из {{total}} — почти!",
+    "streak_n": "{{n}} дней",
+    "continue_cta": "Продолжить · {{done}} из {{total}}",
+    "start_cta": "Начать первый раунд",
+    "offline_chip": "офлайн",
+    "offline_toast": "Нет интернета. Всё письменное работает; голос вернётся с сетью.",
+    "mode_paused_sub": "вернётся с интернетом"
+  },
+  "summary": {
+    "title": "Раунд завершён",
+    "subtitle": "{{mode}} · {{n}} вопросов",
+    "score_line": "+{{points}} очков · лучшая серия ×{{combo}}",
+    "congrats": "¡Muy bien!",
+    "day_stamped": "День {{day}} отмечен · дневная цель достигнута, {{done}} из {{total}}",
+    "retry_missed": "Повторить ошибки ({{n}})",
+    "and_more": "…и ещё {{n}}",
+    "back_home": "На главный"
+  },
+  "settings": {
+    "title": "Настройки",
+    "section_practice": "практика",
+    "section_app": "приложение",
+    "range_label": "Диапазон чисел",
+    "range_tick_0": "0",
+    "range_tick_10": "10",
+    "range_tick_100": "100",
+    "range_tick_1k": "1 тыс",
+    "range_tick_10k": "10 тыс",
+    "range_tick_100k": "100 тыс",
+    "range_tick_1m": "1 млн",
+    "accents_label": "Принимать ответы без акцентов",
+    "accents_sub": "veintiseis = veintiséis · помечаем «почти»",
+    "questions_per_round_label": "Вопросов в раунде",
+    "ui_language_label": "Язык интерфейса",
+    "ui_language_sub": "español — полное погружение",
+    "language_ru": "Русский",
+    "language_en": "English",
+    "language_es": "Español",
+    "theme_label": "Тема",
+    "theme_auto": "Авто",
+    "theme_light": "Светлая",
+    "theme_dark": "Тёмная",
+    "speech_speed_label": "Скорость речи",
+    "speed_slow": "медленно",
+    "speed_normal": "обычная",
+    "speed_fast": "быстро",
+    "daily_goal_label": "Дневная цель",
+    "daily_goal_sub": "ответов в день",
+    "report_problem": "Сообщить о проблеме",
+    "version": "wordaví · версия {{version}}",
+    "sounds_label": "Звуки ответов",
+    "sounds_sub": "Короткий сигнал при правильном и неправильном ответе",
+    "export_label": "Скачать данные",
+    "export_sub": "Резервная копия прогресса в файл",
+    "import_label": "Восстановить из файла",
+    "import_sub": "Загрузить прогресс из ранее скачанного файла",
+    "install_label": "Установить приложение",
+    "install_sub": "Работает офлайн, открывается с главного экрана"
+  },
+  "onboarding": {
+    "step1_greeting": "Привет! · ¡Hola!",
+    "step1_subtitle": "Испанские числа — для магазина, кассы и жизни.",
+    "step1_section": "язык подсказок · interface language",
+    "step1_spanish_badge": "для смелых",
+    "step2_title": "С чего начнём?",
+    "step2_subtitle": "это и есть настройки — можно ничего не трогать и просто нажать «Дальше»",
+    "step2_range_sub": "для магазина хватит 0–100 — расширите, когда захочется",
+    "step3_title": "Как удобнее?",
+    "step3_subtitle": "тема, голос и цель — тоже всегда в настройках",
+    "step3_goal_sub": "ответов в день · можно меньше",
+    "step4_title": "Пять минут в день — и числа станут своими",
+    "step4_subtitle": "Ошибки — это нормально: трудные числа будут возвращаться, пока не запомнятся.",
+    "step4_goal_pill": "Цель — 20 ответов в день · можно меньше",
+    "step4_cta": "Начать первый раунд",
+    "step4_ghost": "Сначала посмотреть режимы",
+    "install_cta": "Установить приложение"
+  },
+  "stats": {
+    "title": "Статистика",
+    "streak_label": "Серия",
+    "streak_record": "рекорд — {{n}} дней",
+    "streak_today_sub": "{{n}} дня подряд — сегодняшний штамп ждёт",
+    "total_answers_label": "ответов всего",
+    "accuracy_label": "точность за месяц",
+    "skills_title": "Навыки",
+    "skill_small": "единицы · 1–9",
+    "skill_tens": "десятки · 10–99",
+    "skill_hundreds": "сотни · 100–999",
+    "skill_big": "тысячи",
+    "skill_prices": "цены · €",
+    "skill_weights": "веса · кг, г",
+    "needs_practice": "потренировать",
+    "auto_note": "трудные числа появляются чаще сами — ничего настраивать не нужно",
+    "empty_title": "Пока пусто",
+    "empty_sub": "Один раунд — и здесь появятся точность, серия и навыки.",
+    "empty_streak_sub": "первый штамп — за первый раунд сегодня",
+    "empty_cta": "Начать первый раунд"
+  },
+  "report": {
+    "title": "Сообщить о проблеме",
+    "describe_placeholder": "Опишите, что пошло не так…",
+    "attach_image": "Прикрепить скриншот",
+    "send": "Отправить",
+    "copy": "Скопировать",
+    "sent": "Отправлено — спасибо!",
+    "sent_hint": "Обычно отвечаем в течение пары дней.",
+    "mailto_fallback": "Если почта не открылась, приложите скриншот к письму вручную."
+  },
+  "crash": {
+    "title": "Что-то пошло не так",
+    "sub": "Простите за неудобство — попробуйте начать заново.",
+    "restart": "Перезапустить",
+    "report": "Сообщить о проблеме"
+  },
+  "install_sheet": {
+    "title": "Установить на iPhone",
+    "step1": "Нажмите «Поделиться»",
+    "step2": "Выберите «На экран Домой»"
+  },
+  "voice_sheet": {
+    "title": "Добавить испанский голос",
+    "android": "Настройки → Специальные возможности → Синтез речи → скачайте испанский голос",
+    "ios": "Настройки → Специальные возможности → Читаемый контент → Голоса → Испанский"
+  },
+  "toasts": {
+    "offline": "Нет интернета. Всё письменное работает; голос вернётся с сетью.",
+    "update_ready": "Обновление готово — перезагрузить?",
+    "update_action": "Перезагрузить",
+    "no_speech": "не расслышали — попробуйте ещё раз",
+    "import_ok": "Данные восстановлены",
+    "import_bad": "Не получилось прочитать файл"
+  }
+}

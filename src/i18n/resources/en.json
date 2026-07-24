@@ -1,0 +1,199 @@
+{
+  "common": {
+    "check": "Check",
+    "next": "Next",
+    "continue": "Continue",
+    "back": "Back",
+    "close": "Close",
+    "endless": "∞"
+  },
+  "modes": {
+    "words": {
+      "title": "Number → in words",
+      "example": "475 → cuatrocientos setenta y cinco"
+    },
+    "digits": {
+      "title": "Words → number",
+      "example": "novecientos catorce → 914"
+    },
+    "listen": {
+      "title": "By ear",
+      "sub": "listen and type the digits"
+    },
+    "choice": {
+      "title": "Pick one of four",
+      "sub": "a quick warm-up"
+    },
+    "speak": {
+      "title": "Say it aloud",
+      "sub": "pronunciation · microphone"
+    },
+    "grocery": {
+      "title": "Prices & weights",
+      "example": "2,35 € · 250 g · dos kilos y medio"
+    }
+  },
+  "drill": {
+    "listen": "listen",
+    "listen_again": "Tap to listen again",
+    "slower": "slower ×0.75",
+    "hold_to_talk": "Hold to talk",
+    "release_hint": "release to check · we store nothing",
+    "type_instead": "Type instead",
+    "type_placeholder": "type your answer in words",
+    "digits_placeholder": "digits, e.g. 250",
+    "grocery_placeholder": "for example: dos con veinte",
+    "choice_hint": "Choose the number",
+    "cashier_hint": "How would the cashier say it?",
+    "mic_denied": "Microphone unavailable",
+    "mic_denied_sub": "Allow access in your browser settings — or just type the answer.",
+    "mic_help_link": "How do I enable the microphone?"
+  },
+  "verdict": {
+    "correct": "¡Muy bien!",
+    "correct_sub": "+10 pts · {{n}} in a row",
+    "almost": "Almost — {{word}}",
+    "almost_sub": "just the accent · counted correct · +8",
+    "wrong": "Correct: {{answer}}",
+    "wrong_sub": "{{hint}} · it will come back"
+  },
+  "home": {
+    "greeting_morning": "Good morning!",
+    "greeting_day": "Good afternoon!",
+    "greeting_evening": "Good evening!",
+    "section_modes": "modes",
+    "goal_daily": "Daily goal",
+    "goal_sub": "{{done}} of {{total}}",
+    "goal_almost": "{{done}} of {{total}} — almost there!",
+    "streak_n": "{{n}} days",
+    "continue_cta": "Continue · {{done}} of {{total}}",
+    "start_cta": "Start the first round",
+    "offline_chip": "offline",
+    "offline_toast": "No internet. Everything written keeps working; audio returns with the network.",
+    "mode_paused_sub": "back with the internet"
+  },
+  "summary": {
+    "title": "Round complete",
+    "subtitle": "{{mode}} · {{n}} questions",
+    "score_line": "+{{points}} pts · best combo ×{{combo}}",
+    "congrats": "¡Muy bien!",
+    "day_stamped": "Day {{day}} stamped · daily goal reached, {{done}} of {{total}}",
+    "retry_missed": "Retry the {{n}} missed",
+    "and_more": "…and {{n}} more",
+    "back_home": "Back to home"
+  },
+  "settings": {
+    "title": "Settings",
+    "section_practice": "practice",
+    "section_app": "app",
+    "range_label": "Number range",
+    "range_tick_0": "0",
+    "range_tick_10": "10",
+    "range_tick_100": "100",
+    "range_tick_1k": "1k",
+    "range_tick_10k": "10k",
+    "range_tick_100k": "100k",
+    "range_tick_1m": "1m",
+    "accents_label": "Accept answers without accents",
+    "accents_sub": "veintiseis = veintiséis · marked as almost correct",
+    "questions_per_round_label": "Questions per round",
+    "ui_language_label": "Interface language",
+    "ui_language_sub": "español — full immersion",
+    "language_ru": "Русский",
+    "language_en": "English",
+    "language_es": "Español",
+    "theme_label": "Theme",
+    "theme_auto": "Auto",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "speech_speed_label": "Speech speed",
+    "speed_slow": "slow",
+    "speed_normal": "normal",
+    "speed_fast": "fast",
+    "daily_goal_label": "Daily goal",
+    "daily_goal_sub": "answers per day",
+    "report_problem": "Report a problem",
+    "version": "wordaví · version {{version}}",
+    "sounds_label": "Answer sounds",
+    "sounds_sub": "A short sound for correct and incorrect answers",
+    "export_label": "Download your data",
+    "export_sub": "Back up your progress to a file",
+    "import_label": "Restore from a file",
+    "import_sub": "Load progress from a file you downloaded before",
+    "install_label": "Install the app",
+    "install_sub": "Works offline, opens from your home screen"
+  },
+  "onboarding": {
+    "step1_greeting": "Hello! · ¡Hola!",
+    "step1_subtitle": "Spanish numbers — for the store, the register, and everyday life.",
+    "step1_section": "язык подсказок · interface language",
+    "step1_spanish_badge": "for the brave",
+    "step2_title": "Where should we start?",
+    "step2_subtitle": "these are the real settings — feel free to leave them and just tap Next",
+    "step2_range_sub": "0–100 is plenty for the store — widen it whenever you like",
+    "step3_title": "What's comfortable for you?",
+    "step3_subtitle": "theme, voice, and goal — always in settings too",
+    "step3_goal_sub": "answers per day · less is fine",
+    "step4_title": "Five minutes a day and the numbers become second nature",
+    "step4_subtitle": "Mistakes are normal: the tricky numbers will keep coming back until they stick.",
+    "step4_goal_pill": "Goal — 20 answers a day · less is fine",
+    "step4_cta": "Start the first round",
+    "step4_ghost": "Look at the modes first",
+    "install_cta": "Install the app"
+  },
+  "stats": {
+    "title": "Stats",
+    "streak_label": "Streak",
+    "streak_record": "record — {{n}} days",
+    "streak_today_sub": "{{n}} days in a row — today's stamp is waiting",
+    "total_answers_label": "answers total",
+    "accuracy_label": "accuracy this month",
+    "skills_title": "Skills",
+    "skill_small": "units · 1–9",
+    "skill_tens": "tens · 10–99",
+    "skill_hundreds": "hundreds · 100–999",
+    "skill_big": "thousands",
+    "skill_prices": "prices · €",
+    "skill_weights": "weights · kg, g",
+    "needs_practice": "needs practice",
+    "auto_note": "tricky numbers come up more often on their own — nothing to configure",
+    "empty_title": "Nothing here yet",
+    "empty_sub": "One round and accuracy, streak and skills appear here.",
+    "empty_streak_sub": "first stamp — after today's first round",
+    "empty_cta": "Start the first round"
+  },
+  "report": {
+    "title": "Report a problem",
+    "describe_placeholder": "Describe what went wrong…",
+    "attach_image": "Attach a screenshot",
+    "send": "Send",
+    "copy": "Copy",
+    "sent": "Sent — thank you!",
+    "sent_hint": "We usually reply within a couple of days.",
+    "mailto_fallback": "If your mail app didn't open, attach the screenshot to the email yourself."
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "sub": "Sorry for the trouble — try starting again.",
+    "restart": "Restart",
+    "report": "Report a problem"
+  },
+  "install_sheet": {
+    "title": "Install on iPhone",
+    "step1": "Tap Share",
+    "step2": "Choose Add to Home Screen"
+  },
+  "voice_sheet": {
+    "title": "Add a Spanish voice",
+    "android": "Settings → Accessibility → Text-to-speech → download a Spanish voice",
+    "ios": "Settings → Accessibility → Spoken Content → Voices → Spanish"
+  },
+  "toasts": {
+    "offline": "No internet. Everything written keeps working; audio returns with the network.",
+    "update_ready": "Update ready — reload?",
+    "update_action": "Reload",
+    "no_speech": "didn't catch that — try again",
+    "import_ok": "Data restored",
+    "import_bad": "Couldn't read the file"
+  }
+}

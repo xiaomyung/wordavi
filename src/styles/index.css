@@ -1,1 +1,13 @@
+/* Styles entry - import order matters:
+   1. tailwindcss (declares layers + generates utilities from the theme)
+   2. tokens.css (@theme light values + .dark overrides = the design contract)
+   3. fonts.css (self-hosted @font-face)
+   4. global.css (base element styles + shell primitives) */
 @import "tailwindcss";
+@import "./tokens.css";
+@import "./fonts.css";
+@import "./global.css";
+
+/* class-strategy dark mode: dark: utilities key off <html class="dark">,
+   matching the .dark custom-property overrides in tokens.css. */
+@custom-variant dark (&:where(.dark, .dark *));

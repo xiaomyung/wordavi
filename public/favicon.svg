@@ -1,5 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="wordavi">
   <title>wordavi</title>
-  <rect width="32" height="32" rx="7" fill="#ea580c"/>
-  <text x="16" y="23" font-family="Georgia, serif" font-size="19" font-weight="bold" fill="#fffbeb" text-anchor="middle">w</text>
+  <rect width="64" height="64" rx="16" fill="#AC4A17"></rect>
+  <circle cx="12.5" cy="12.5" r="3.75" fill="#F1E7D2"></circle>
+  <text x="33" y="46" text-anchor="middle" font-family="Alegreya, Georgia, &#39;Times New Roman&#39;, serif" font-size="40" font-weight="700" fill="#FFF8EF">w</text>
 </svg>

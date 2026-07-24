@@ -94,7 +94,9 @@ extra privileged, socket-mounted container in the mix.
 
 A standalone **edge proxy** on the same `edge` network terminates the public
 side and reverse-proxies by hostname to the containers (`8080` each), including a
-`www` → apex redirect. In front of it:
+`www` → apex redirect. The full shape of what is deployed — the two containers,
+their private network, and the proxy — is described in [[deployment]]. In front
+of it:
 
 - **Cloudflare** proxies all traffic (orange-cloud) and terminates public TLS.
 - The origin presents a **Cloudflare Origin Certificate** and the connection is

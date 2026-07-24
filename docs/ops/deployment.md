@@ -4,7 +4,7 @@ title: Deployment architecture
 
 How wordavi is served in production: two small static containers on a private network, a standalone edge proxy terminating TLS, and Cloudflare in front of it all.
 
-For day-to-day operation see [[runbook]]; for the DNS and certificate setup see [[cloudflare]].
+For day-to-day operation see [[runbook]]; for the DNS and certificate setup see [[cloudflare]]; for how images are built and rolled onto the VPS see [[pipeline]].
 
 ## The two containers
 

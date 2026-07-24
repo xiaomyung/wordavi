@@ -270,6 +270,7 @@
     border: 2px solid var(--color-accent);
     border-radius: 50%;
     pointer-events: none;
+    opacity: 0;
     /* 1.6s loop is the only looping animation in the app (motion.md); the
        0.5s stagger keeps a second ring in flight for a continuous sweep. */
     animation: wa-ring-pulse 1.6s var(--ease-out-soft) infinite;

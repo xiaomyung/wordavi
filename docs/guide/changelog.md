@@ -2,6 +2,10 @@
 title: Changelog
 ---
 
+## 0.1.1 - 2026-07-24
+
+- Build fixes for the container image pipeline.
+
 ## 0.1.0 - 2026-07-24
 
 - Project scaffold: React, Vite, TypeScript, and Tailwind set up as the foundation for the app.

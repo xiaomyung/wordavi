@@ -2,6 +2,10 @@
 title: Changelog
 ---
 
+## 0.1.3 - 2026-07-24
+
+- Internal code cleanup.
+
 ## 0.1.2 - 2026-07-24
 
 - Automatic deployment pipeline verified end to end.

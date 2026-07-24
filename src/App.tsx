@@ -7,7 +7,10 @@ export function App() {
         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl">
           word<span className="text-orange-600 dark:text-orange-400">avi</span>
         </h1>
-        <p className="text-sm uppercase tracking-widest text-stone-500 dark:text-stone-400">
+        <p
+          lang="es"
+          className="text-sm uppercase tracking-widest text-stone-500 dark:text-stone-400"
+        >
           {NUMBERS_ES}
         </p>
       </header>

@@ -1,7 +1,7 @@
 FROM node:26-alpine AS build
 ARG QUARTZ_REF=v4.5.2
 WORKDIR /quartz
-RUN apk add --no-cache git \
+RUN apk add --no-cache git coreutils \
   && git clone --depth 1 --branch "$QUARTZ_REF" https://github.com/jackyzha0/quartz.git . \
   && npm ci
 COPY docs-site/quartz.config.ts docs-site/quartz.layout.ts ./

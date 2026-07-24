@@ -85,6 +85,12 @@
 
   /* --- implementation extensions (not from design contract) --- */
 
+  /* price tag: the design's raised-card shelf plus the ambient float drop, so
+     the tag lifts off whatever surface it sits on (price-tag.md). Composed from
+     the two shadow tokens above rather than restated, so both stay single-source
+     and the .dark overrides flow through. */
+  --shadow-tag: var(--shadow-shelf-raised), var(--shadow-float);
+
   /* font weights (Nunito Sans / Alegreya usage weights) */
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -133,6 +139,10 @@
   --size-knob: 1.5rem; /* 24 - toggle knob */
   --size-streak-stamp: 1.75rem; /* 28 - loyalty-card stamp */
   --size-hole: 0.625rem; /* 10 - price-tag punch hole */
+  /* rendered punch hole: the contract's 10px reads as a dot next to a 56px
+     numeral, so the tag punches it 1.2x (12px) — same 1.5px ring, same fill,
+     still clear of the 42px left padding. */
+  --size-hole-tag: calc(var(--size-hole) * 1.2); /* 12 */
   --size-icon-glyph: 1.125rem; /* 18 - icon glyph inside buttons */
 
   /* resolved-range spacing (design gave ranges; these are the picks) */

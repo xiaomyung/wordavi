@@ -9,5 +9,11 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "e2e", "tests/architecture.test.ts"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "e2e",
+    "tests/architecture.test.ts",
+    "tests/components/answer-controls-layers.test.ts"
+  ]
 }

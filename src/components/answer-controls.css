@@ -8,6 +8,17 @@
    global prefers-reduced-motion rule in styles/global.css neutralises every
    transition/animation here (durations collapse to ~0, opacity-only). */
 
+/* Cascade-layer order, restated because this file can be the FIRST stylesheet in
+   the bundle: it is imported from component modules, and main.tsx evaluates
+   `@/App` (which pulls in these components) before `./styles/index.css` (which
+   pulls in Tailwind). Layer precedence follows first-declaration order, so
+   without this statement `components` would register ahead of `theme`/`base`
+   and Tailwind's preflight (`button { background-color: transparent;
+   border-radius: 0 }`) would outrank .wa-mic / .wa-speaker — erasing their
+   accent circles. The order below is exactly what Tailwind emits, so declaring
+   it here is a no-op whenever the Tailwind entry happens to load first. */
+@layer properties, theme, base, components, utilities;
+
 /* Everything lives in Tailwind's `components` layer so a `className`
    passed by a caller (a utility, in the later `utilities` layer) still
    wins — unlayered rules would silently beat every utility. */
@@ -226,40 +237,57 @@
     height: calc(var(--size-mic) + 3rem);
   }
 
+  /* Radar ping: leaves the button edge (0.7 x 148px = 104px, just clear of the
+     100px circle) and travels out to the full 148px frame, fading as it goes.
+     Capped at scale(1) so the ring never paints outside .wa-mic-wrap and cannot
+     be clipped by a scroll container above it. */
   @keyframes wa-ring-pulse {
     0% {
-      transform: scale(0.94);
-      opacity: 0.5;
+      transform: scale(0.7);
+      opacity: 0.6;
     }
     100% {
-      transform: scale(1.12);
+      transform: scale(1);
       opacity: 0;
     }
   }
   .wa-mic-ring {
     position: absolute;
+    /* The ring is the WRAP, not the button: `inset: 0` stretches it across all
+       148px so there is real air between ring and circle (drill-mic.html sizes
+       .micwrap at 148 for exactly this). Sizing it to --size-mic instead makes
+       a hairline that hugs the button and reads as no ring at all.
+
+       Concentricity: stretching to all four edges of the square wrap centres
+       the ring on the same point the wrap's flex centring puts the button, with
+       no width/height/margin and — critically — no translate. A ring centred by
+       translate(-50%, -50%) would be knocked off-centre the moment a keyframe
+       set `transform: scale(...)`, since the later transform replaces the
+       centring one; here scale() is the only transform and it pivots on the
+       shared centre. */
     inset: 0;
-    margin: auto;
-    width: var(--size-mic);
-    height: var(--size-mic);
+    transform-origin: center;
     border: 2px solid var(--color-accent);
     border-radius: 50%;
     pointer-events: none;
-    /* 1.6s loop is the only looping animation in the app (motion.md). */
+    /* 1.6s loop is the only looping animation in the app (motion.md); the
+       0.5s stagger keeps a second ring in flight for a continuous sweep. */
     animation: wa-ring-pulse 1.6s var(--ease-out-soft) infinite;
   }
   .wa-mic-ring--delayed {
     animation-delay: 0.5s;
   }
   @media (prefers-reduced-motion: reduce) {
-    /* Rings collapse to a single static outline (a11y.md). */
+    /* Rings freeze into the mockup's two static outlines — 148px at 0.25 and
+       120px at 0.45 — instead of sweeping (a11y.md). */
     .wa-mic-ring {
       animation: none;
-      transform: scale(1.05);
-      opacity: 0.35;
+      transform: scale(1);
+      opacity: 0.25;
     }
     .wa-mic-ring--delayed {
-      display: none;
+      transform: scale(0.81);
+      opacity: 0.45;
     }
   }
 

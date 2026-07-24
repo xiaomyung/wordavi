@@ -32,7 +32,30 @@ describe('PriceTag', () => {
     const text = screen.getByText('2,35 €');
     expect(text).toBeInTheDocument();
     expect(text.parentElement).toHaveClass('-rotate-1');
-    expect(text.parentElement).toHaveClass('shadow-shelf-raised');
+    // volume: shelf underside + ambient drop (--shadow-tag), not the bare shelf
+    expect(text.parentElement).toHaveClass('shadow-tag');
+    // hugs its value instead of stretching to the container (drill-grocery.html)
+    expect(text.parentElement).toHaveClass('w-fit');
+  });
+
+  it('draws the punch hole as a ringed pseudo-element on the card itself', () => {
+    render(<PriceTag>2,35 €</PriceTag>);
+    const card = screen.getByText('2,35 €').parentElement;
+    // the ::before hole needs the card as its containing block
+    expect(card).toHaveClass('relative');
+    for (const cls of [
+      'before:absolute',
+      // --size-hole-tag, not the raw --size-hole: 10px reads as a dot
+      'before:size-(--size-hole-tag)',
+      'before:top-1/2',
+      'before:-translate-y-1/2',
+      'before:rounded-full',
+      'before:border-[1.5px]',
+      'before:border-hole-ring',
+      'before:bg-hole-bg',
+    ]) {
+      expect(card).toHaveClass(cls);
+    }
   });
 
   it('applies the computed font size inline so any content fits one line', () => {

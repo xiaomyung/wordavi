@@ -98,16 +98,32 @@ describe('MicButton', () => {
     expect(screen.getByRole('button')).not.toHaveClass('my-6');
   });
 
-  it('denied is inert, crossed and disabled', () => {
+  it('denied keeps the circle but is inert, crossed and disabled', () => {
     const onHoldStart = vi.fn();
     const { container } = render(
       <MicButton state="denied" onHoldStart={onHoldStart} aria-label="Микрофон недоступен" />,
     );
     const button = screen.getByRole('button', { name: 'Микрофон недоступен' });
     expect(button).toBeDisabled();
+    // still the circle, only muted: .wa-mic keeps size/radius, [data-state] swaps fill
+    expect(button).toHaveClass('wa-mic');
+    expect(button).toHaveAttribute('data-state', 'denied');
     expect(container.querySelector('path[d="M4 4l16 16"]')).not.toBeNull();
 
     fireEvent.pointerDown(button, { pointerId: 1 });
     expect(onHoldStart).not.toHaveBeenCalled();
+  });
+
+  it('is the .wa-mic circle inside the .wa-mic-wrap ring frame', () => {
+    // The filled accent circle is .wa-mic itself (size, radius, fill and shelf
+    // all hang off that one class) — losing it is the "floating glyph + bar"
+    // regression, so the class and the wrapper it centres in are pinned here.
+    const { container } = render(<MicButton state="idle" aria-label="speak" />);
+    const wrap = container.querySelector('.wa-mic-wrap');
+    const button = screen.getByRole('button');
+    expect(wrap).not.toBeNull();
+    expect(button).toHaveClass('wa-mic');
+    expect(button).toHaveAttribute('data-state', 'idle');
+    expect(wrap?.contains(button)).toBe(true);
   });
 });

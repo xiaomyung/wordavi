@@ -23,7 +23,11 @@ const VARIANT_CLASS: Record<CardVariant, string> = {
   grouped:
     'bg-surface-raised border border-border shadow-shelf-raised divide-y divide-surface-sunken',
   float: 'bg-surface-raised border border-border shadow-float p-4 flex flex-col gap-3',
-  paused: 'bg-surface-paused border-[1.5px] border-dashed border-border-strong p-4 opacity-90',
+  // same internal stack as raised/float — without it the title and subtitle
+  // are inline spans and run together on one line (cards.md keeps the paused
+  // card the same shape, only dimmed).
+  paused:
+    'bg-surface-paused border-[1.5px] border-dashed border-border-strong p-4 flex flex-col gap-3 opacity-90',
 };
 
 export function Card({ variant = 'raised', className, children, ref, ...rest }: CardProps) {

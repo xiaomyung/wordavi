@@ -34,8 +34,11 @@ export function PriceTag({ children, className, ref, ...rest }: PriceTagProps) {
     <div
       ref={ref}
       className={cx(
-        '-rotate-1 relative rounded-input border border-border bg-surface-raised py-4.5 pr-7.5 pl-10.5 shadow-shelf-raised',
-        "before:absolute before:top-1/2 before:left-4 before:size-(--size-hole) before:-translate-y-1/2 before:rounded-full before:border-[1.5px] before:border-hole-ring before:bg-hole-bg before:content-['']",
+        // w-fit: the tag hugs its value like a real shelf label (drill-grocery.html
+        // centres it in a shrink-wrapping column); as a plain block it would
+        // stretch to the container and read as a flat bar.
+        '-rotate-1 relative w-fit rounded-input border border-border bg-surface-raised py-4.5 pr-7.5 pl-10.5 shadow-tag',
+        "before:absolute before:top-1/2 before:left-4 before:size-(--size-hole-tag) before:-translate-y-1/2 before:rounded-full before:border-[1.5px] before:border-hole-ring before:bg-hole-bg before:content-['']",
         className,
       )}
       {...rest}

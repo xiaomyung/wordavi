@@ -25,6 +25,19 @@ describe('ModeRow', () => {
     expect(tile).toContainElement(screen.getByText('42'));
   });
 
+  it.each([false, true])('stacks title above sub as separate lines (paused: %s)', (paused) => {
+    // home.html .mtxt is flex/column/gap-1px; as inline spans the two strings
+    // would concatenate on one line.
+    render(<ModeRow icon="€" title="Say it aloud" sub="back with the internet" paused={paused} />);
+    const text = screen.getByText('Say it aloud').parentElement;
+    expect(text).toHaveClass('flex');
+    expect(text).toHaveClass('flex-col');
+    expect(text).toContainElement(screen.getByText('back with the internet'));
+    expect(screen.getByText('back with the internet').previousElementSibling).toBe(
+      screen.getByText('Say it aloud'),
+    );
+  });
+
   it('dims the icon tile when paused', () => {
     render(<ModeRow icon={<span>42</span>} title="Say it aloud" sub="offline" paused />);
     expect(screen.getByRole('button').firstElementChild).toHaveClass('opacity-65');

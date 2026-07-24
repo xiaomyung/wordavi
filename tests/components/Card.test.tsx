@@ -32,6 +32,20 @@ describe('Card', () => {
     expect(card).toHaveClass('bg-surface-paused');
   });
 
+  it.each(['raised', 'float', 'paused'] as const)(
+    'stacks %s children as separate lines',
+    (variant) => {
+      // Without the column stack the children are inline spans and run
+      // together ("Скажите вслухвернётся с интернетом"); `grouped` is exempt
+      // because CardRow owns its own layout.
+      render(<Card variant={variant} data-testid="card" />);
+      const card = screen.getByTestId('card');
+      expect(card).toHaveClass('flex');
+      expect(card).toHaveClass('flex-col');
+      expect(card).toHaveClass('gap-3');
+    },
+  );
+
   it('passes through className alongside variant classes', () => {
     render(<Card className="custom" data-testid="card" />);
     expect(screen.getByTestId('card')).toHaveClass('custom');

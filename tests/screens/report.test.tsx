@@ -143,6 +143,21 @@ describe('ReportScreen', () => {
     expect(showToast).not.toHaveBeenCalled();
   });
 
+  it('releases the send button even if the send throws', async () => {
+    vi.mocked(sendReport).mockRejectedValue(new Error('URI malformed'));
+    renderScreen();
+    const send = screen.getByRole('button', { name: 'Отправить' });
+    fireEvent.click(send);
+
+    // A stuck spinner would leave no way to send and no way to know why.
+    await waitFor(() => {
+      expect(send).toBeEnabled();
+    });
+    expect(
+      await screen.findByText('Если почта не открылась, приложите скриншот к письму вручную.'),
+    ).toBeInTheDocument();
+  });
+
   it('copies the diagnostics to the clipboard', async () => {
     renderScreen();
     fireEvent.change(screen.getByPlaceholderText('Опишите, что пошло не так…'), {

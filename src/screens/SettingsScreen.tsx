@@ -35,20 +35,35 @@ export interface SettingsScreenProps {
   onReport: () => void;
 }
 
+/** Long enough for any browser to have started reading the blob it was handed. */
+const REVOKE_DELAY_MS = 60_000;
+
 function backupFilename(): string {
   const date = new Date().toISOString().slice(0, 10);
   return `wordavi-backup-${date}.json`;
 }
 
-/** Saves a JSON string as a download. Returns false when the browser has no blob URLs. */
+/**
+ * Saves a JSON string as a download. Returns false when the browser has no blob URLs.
+ *
+ * The anchor has to be in the document for Firefox and WebKit to honour a
+ * scripted click at all, and both fetch the blob asynchronously — revoking on
+ * the next line would hand the learner an empty file while this still reported
+ * success, which for a backup is worse than failing loudly.
+ */
 function downloadJson(json: string, filename: string): boolean {
   try {
     const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
     const anchor = document.createElement('a');
     anchor.href = url;
     anchor.download = filename;
+    anchor.style.display = 'none';
+    document.body.append(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => {
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }, REVOKE_DELAY_MS);
     return true;
   } catch (err) {
     log.error(UI_NS, 'data export failed', { error: String(err) });

@@ -307,6 +307,35 @@ describe('SettingsScreen', () => {
     clicks.mockRestore();
   });
 
+  it('keeps the backup blob alive past the click, with the anchor in the document', () => {
+    let attachedAtClick = false;
+    const clicks = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function click(
+      this: HTMLAnchorElement,
+    ) {
+      // Firefox and WebKit ignore a scripted click on a detached anchor, and
+      // both read the blob after this returns.
+      attachedAtClick = this.isConnected;
+    });
+    let revokedBeforeTimers = false;
+    let anchor: HTMLAnchorElement | undefined;
+    vi.useFakeTimers();
+    try {
+      renderScreen();
+      fireEvent.click(screen.getByRole('button', { name: /Скачать данные/ }));
+      anchor = clicks.mock.contexts.at(-1) as HTMLAnchorElement | undefined;
+      revokedBeforeTimers = vi.mocked(URL.revokeObjectURL).mock.calls.length > 0;
+      vi.runAllTimers();
+    } finally {
+      vi.useRealTimers();
+      clicks.mockRestore();
+    }
+
+    expect(attachedAtClick).toBe(true);
+    expect(revokedBeforeTimers).toBe(false);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:wordavi');
+    expect(anchor?.isConnected).toBe(false);
+  });
+
   it('restores a backup, re-applying the imported language and theme', async () => {
     const bundle = JSON.parse(exportData()) as { settings: Record<string, unknown> };
     bundle.settings.uiLang = 'en';

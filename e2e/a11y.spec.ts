@@ -140,6 +140,18 @@ for (const theme of THEMES) {
     test('onboarding step one has no serious accessibility violations', async ({ page }) => {
       await seedApp(page, { onboarded: false, settings: { theme } });
       await gotoApp(page);
+      // Chromium fires no `beforeinstallprompt` and reports no installed app, so
+      // step one is the install invitation in its manual state.
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('Установите на телефон');
+      await scan(page);
+    });
+
+    test('the onboarding language step has no serious accessibility violations', async ({
+      page,
+    }) => {
+      await seedApp(page, { onboarded: false, settings: { theme } });
+      await gotoApp(page);
+      await page.getByRole('button', { name: 'Продолжить в браузере' }).click();
       await expect(page.getByRole('heading', { level: 1 })).toContainText('Привет!');
       await scan(page);
     });

@@ -6,9 +6,15 @@ const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url),
   version: string;
 };
 
-/** Language → practice → app → ready, ending on "look at the modes first". */
+/**
+ * Install → language → practice → app → ready, ending on "look at the modes
+ * first". The install step opens in its manual state (Chromium fires no
+ * `beforeinstallprompt`) and, like everything before the language choice, speaks
+ * the detected language rather than the chosen one.
+ */
 async function completeOnboarding(page: Page): Promise<void> {
   await page.goto('/');
+  await page.getByRole('button', { name: 'Продолжить в браузере' }).click();
   await page.getByRole('button', { name: 'English' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Next' }).click();
@@ -19,9 +25,7 @@ test('a first visit walks onboarding through to home', async ({ page }) => {
   await page.goto('/');
 
   // A learner who has never opened the app lands in onboarding, not on home.
-  // The app opens in RU (the default), so the greeting is asserted through the
-  // Spanish half it always carries — the English copy arrives one click later.
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('¡Hola!');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Установите на телефон');
 
   await completeOnboarding(page);
 

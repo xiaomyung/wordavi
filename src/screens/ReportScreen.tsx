@@ -93,7 +93,13 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
   async function handleSend(): Promise<void> {
     setBusy(true);
     const payload = composeReport({ userText: text, screenshots: shots.map((shot) => shot.file) });
-    const result = await sendReport(payload);
+    // sendReport is total by contract, but a stuck spinner would leave the
+    // learner with no way to send and no way to know why, so the release of the
+    // busy flag does not depend on that contract holding.
+    const result = await sendReport(payload).catch((err: unknown) => {
+      log.error(UI_NS, 'report send threw', { error: String(err) });
+      return { ok: false } as Awaited<ReturnType<typeof sendReport>>;
+    });
     setBusy(false);
     if (result.ok) showToast({ text: t('report.sent') });
     // A mailto hand-off can't carry files, and a failed send is worth the same

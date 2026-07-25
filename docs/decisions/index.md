@@ -16,6 +16,11 @@ Learner-facing behaviour and the Spanish-number domain the app teaches.
 - [[adr-009-light-srs-buckets|Light SRS via skill buckets]]
 - [[adr-010-mode-registry|Mode registry plugin interface]]
 - [[adr-013-forgiving-matching|Forgiving answer matching]]
+- [[adr-019-es-ui-language|Spanish interface, chosen by the device]]
+- [[adr-020-feedback-sounds|Synthesised feedback sounds, on by default]]
+- [[adr-021-endless-rounds|An endless round alongside fixed ones]]
+- [[adr-023-honest-microphone-copy|Honest copy about where speech happens]]
+- [[adr-025-mixed-round|The start button always mixes]]
 
 ## Stack
 
@@ -26,7 +31,10 @@ The application's runtime technology and how state lives on the device.
 - [[adr-004-static-no-backend|Pure static app, no backend]]
 - [[adr-005-localstorage-versioned-schema|Versioned localStorage schema]]
 - [[adr-011-pwa-full-offline|Full offline precache PWA]]
-- [[adr-012-react-i18next|react-i18next for RU/EN]]
+- [[adr-012-react-i18next|react-i18next for the interface]]
+- [[adr-022-install-affordances|Four install affordances]]
+- [[adr-024-token-extension-policy|Design tokens land verbatim]]
+- [[adr-026-overlay-scrollbar|A custom overlay scrollbar]]
 
 ## Infrastructure
 

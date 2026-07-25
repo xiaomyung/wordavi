@@ -9,8 +9,9 @@ grammar that the pure `engine` layer must encode for formatting numbers and for
 matching a learner's answer. It doubles as the reference the unit tests are
 written against.
 
-The engine is planned for v1 (v0.1.0 ships only the coming-soon page — see
-[[overview]]). The rules below are locked. The learner-facing range is
+Everything below is implemented and pinned by tests: a hand-verified fixture for
+0–1000, boundary tables around every irregular form, and property tests. The
+learner-facing range is
 **0 to 1,000,000** plus decimals, so everything up to `un millón` must be
 exact; larger magnitudes are specified for completeness and to define correct
 rejections.
@@ -243,14 +244,14 @@ consume them):
 
 | Verdict | When |
 | --- | --- |
-| `correct` | canonical match after normalisation |
-| `correctWithNote` | accepted but imperfect — e.g. a missing accent, or an accepted-variant phrasing when a cleaner one exists |
+| `correct` | canonical match after normalisation, or an accepted variant — which may carry a note explaining the equivalence, at no cost to the score |
+| `almost` | right word, missing accent — scores 8 of 10 and keeps the combo |
 | `wrong` | a real grammatical error, including hard-rejected archaisms |
 
 Normalisation before comparison:
 
 1. **NFD diacritic folding** — decompose and strip combining marks, so
-   `dieciseis` matches `dieciséis`. A stripped accent yields `correctWithNote`,
+   `dieciseis` matches `dieciséis`. A stripped accent yields `almost`,
    never `wrong`.
 2. **Whitespace / case** — collapse runs of spaces, lowercase, trim.
 3. **Accepted-variant sets** — each target carries the price/quantity/decimal

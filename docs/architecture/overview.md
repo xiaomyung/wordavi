@@ -29,26 +29,27 @@ described in [[layers]] and [[mode-registry]].
 
 ## Current status vs the committed plan
 
-**v0.1.0 ships only an "in progress" page** — a bilingual (EN/RU) coming-soon
-screen with the version in the footer. The layered architecture across these
-notes is the **committed plan for v1**, being built behind that page. A full
-build follows a dedicated design phase.
-
-Each note marks what exists today versus what is planned. At a glance:
+**v0.2.0 ships the learning app**: six practice modes plus a mixed round, the
+number-grammar engine, light spaced repetition, a daily goal with streaks,
+onboarding, statistics, settings, backup and restore, and a problem report — all
+of it offline-capable and installable. What each note describes is what the code
+does; where a note still says "planned", the plan is genuinely unbuilt.
 
 | Area | Status |
 | --- | --- |
-| Static build, coming-soon page, version in footer | **Exists** |
+| Static build, version in footer | **Exists** |
 | CI gates, image build, deploy pipeline, edge proxy | **Exists** — see [[pipeline]] |
-| Number-grammar engine and matcher | **Planned** — spec'd in [[spanish-number-rules]] |
-| Session / light SRS / scoring | **Planned** |
-| Learning modes and the mode registry | **Planned** — see [[mode-registry]] |
-| Storage schema, migrations, error buffer | **Planned** — spec'd in [[storage-schema]] |
-| Offline precache, i18n (RU/EN) | **Exists** — full precache, prompt-to-reload updates |
+| Number-grammar engine and matcher | **Exists** — see [[spanish-number-rules]] |
+| Session / light SRS / scoring | **Exists** |
+| Learning modes and the mode registry | **Exists** — see [[mode-registry]] |
+| Storage schema, migrations, error buffer | **Exists** — see [[storage-schema]] |
+| Offline precache, i18n (RU/EN/ES) | **Exists** — full precache, prompt-to-reload updates |
+| Account sync across devices | **Not planned** — see [[adr-004-static-no-backend]] |
 
-Writing these specs before the code is deliberate: the engine and storage
-shapes are the load-bearing decisions, and they are locked here so the later
-UI work is free to move fast without re-litigating them.
+The engine and storage shapes were specified before they were written, because
+they are the load-bearing decisions: everything above them assumes an answer can
+be judged and progress can be trusted. That order paid off — the UI was built
+against a settled engine rather than negotiating with it.
 
 ## How a request flows
 

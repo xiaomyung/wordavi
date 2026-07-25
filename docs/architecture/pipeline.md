@@ -9,9 +9,7 @@ registry, and let the VPS pull it**. There is no runtime server to update and no
 database to migrate. This note traces a change from a pull request all the way
 to a browser. For what actually runs inside the container, see [[overview]].
 
-Unlike the specs in [[layers]] and [[spanish-number-rules]], this pipeline
-**exists today** — v0.1.0 already builds and deploys through it, shipping the
-coming-soon page.
+Every release since the first has gone out this way, including the app itself.
 
 ## The flow
 
@@ -38,9 +36,9 @@ workflow before it can merge:
 
 | Gate | What it checks |
 | --- | --- |
-| **test** | `pnpm test` — Vitest unit tests (the engine spec in [[spanish-number-rules]]) |
-| **e2e** | `pnpm build` then Playwright end-to-end (chromium) |
-| **lint** | `biome ci .` plus `tsc` typecheck — includes the layer import bans from [[layers]] |
+| **test** | `pnpm test` — Vitest unit tests, including the engine tables in [[spanish-number-rules]] and the layer import bans from [[layers]] |
+| **e2e** | `pnpm build` then Playwright, on an emulated phone and on desktop Chrome, with an accessibility scan of every screen in both themes |
+| **lint** | `biome ci .` plus the `tsc` typecheck |
 | **version-bump** | `package.json` version must **increase** versus the base branch |
 | **lock-check** | `pnpm-lock.yaml` is up to date and frozen |
 | **docs-guard** | *warns* if `src/`, `deploy/`, or `.github/` changed without a `docs/` update |

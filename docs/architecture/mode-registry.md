@@ -15,94 +15,88 @@ Modes sit in the `modes` layer described in [[layers]]. They lean on the pure
 `engine` for grammar (see [[spanish-number-rules]]) and on `session` for
 scheduling.
 
-> **Status.** v0.1.0 ships only the coming-soon page. The `LearningMode`
-> interface and the six modes below are the **committed plan for v1**. This note
-> is the spec they are built against, not a description of shipped code.
 
 ## The interface
 
 ```ts
-/** A verdict from checking a learner's answer. */
-export type Verdict =
-  | { kind: 'correct' }
-  | { kind: 'correctWithNote'; note: string } // accepted, but nudge the learner
-  | { kind: 'wrong'; expected: string };
+/** A browser capability a mode cannot work without. */
+export type Capability = 'tts' | 'speech';
 
-/** Capabilities a mode may require from the environment. */
-export type Capability =
-  | 'speechSynthesis' // hear the number spoken (es-ES)
-  | 'speechRecognition'; // say the answer out loud
-
-/** A single generated question, produced by a mode. */
-export interface Question {
-  /** The skill bucket this question exercises, for the SRS. */
-  skill: SkillId;
-  /** The canonical value under test, e.g. 475 or 4.75. */
-  value: number;
-  /** Everything the mode's Prompt/AnswerInput need to render, mode-specific. */
-  payload: unknown;
+export interface LearningMode {
+  id: ModeId;
+  /** i18n keys under `modes.*` — a mode never calls the translator itself. */
+  titleKey: string;
+  exampleKey: string;
+  requires: readonly Capability[];
+  /** Every key this mode's Prompt and AnswerZone need, resolved for them. */
+  labelKeys: readonly string[];
+  /** Where questions come from, and which ones this mode can grade. */
+  source: QuestionSource;
+  /** Speak mode only: choose which recognition alternative to submit. */
+  pickGiven?: (alternatives: string[], question: Question) => string;
+  /** Composite modes only: per-question title, since questions come from elsewhere. */
+  titleKeyFor?: (question: Question) => string;
+  Prompt: ComponentType<PromptProps>;
+  AnswerZone: ComponentType<AnswerZoneProps>;
 }
 
-/** The contract every practice style implements. */
-export interface LearningMode {
-  /** Stable id, used in the registry and in storage. */
-  id: string;
-  /** i18n key for the mode's display name (RU/EN). */
-  titleKey: string;
-  /** Capabilities that must be present, or the mode is hidden. */
-  requires: readonly Capability[];
-  /** Build a question for the given skill and difficulty. */
-  generate(ctx: GenerateContext): Question;
-  /** Judge a raw learner answer against the question. */
-  check(question: Question, answer: string): Verdict;
-  /** Renders the question (framework component). */
-  Prompt: React.ComponentType<{ question: Question }>;
-  /** Renders the answer control and reports the raw answer up. */
-  AnswerInput: React.ComponentType<{
-    question: Question;
-    onAnswer: (raw: string) => void;
-  }>;
+/** Generation and grading, in the session layer so a round never imports a mode. */
+export interface QuestionSource {
+  eligibleBuckets(config: RoundConfig): readonly SkillBucket[];
+  generate(rng: Rng, ctx: QuestionContext): Question;
+  /** Whether this source can present and grade a question it did not just generate. */
+  canReplay?(question: Question): boolean;
+  check(question: Question, given: string): AnswerVerdict;
 }
 ```
 
-`generate` and `check` are thin: they defer to the `engine` for all grammar and
-matching, so two modes that both accept typed Spanish share the exact same
-matcher and the same accepted-variant logic. `Prompt` and `AnswerInput` are the
-only React the mode owns.
+Three things about this shape are worth explaining, because none of them is
+obvious from the types.
 
-## The six v1 modes
+**A mode emits i18n keys, never translated text.** `titleKey`, `exampleKey` and
+`labelKeys` are keys; the drill resolves them and hands the strings down as
+`labels`. That is what lets the interface language change under a running app,
+and it is why a mode cannot accidentally hard-code Russian.
 
-| id | Title | Prompt shows | Answer input | `requires` |
-| --- | --- | --- | --- | --- |
-| `number-to-text` | Number → Spanish | a numeral, e.g. `475` | text field (Spanish words) | — |
-| `text-to-number` | Spanish → number | Spanish words | numeric field | — |
-| `listen-to-number` | Listening | speaker button (es-ES TTS) | numeric field | `speechSynthesis` |
-| `multiple-choice` | Multiple choice | a numeral or phrase | four tappable options | — |
-| `speak-it` | Say it | a numeral to pronounce | mic button (es-ES ASR) | `speechRecognition` |
-| `prices-quantities` | Prices & quantities | a price or grocery quantity | text field | — |
+**Grading lives in a `QuestionSource`, not in the mode.** The source belongs to
+the `session` layer's vocabulary, so a round can generate and judge without ever
+importing a mode — which is what the layer bans in [[layers]] require.
 
-How each implements the contract:
+**`canReplay` is what keeps the wrongQueue honest.** The queue of recent misses
+is global, but a question's accepted answers belong to whichever mode minted it:
+a missed numeral is graded against Spanish spellings, the same numeral in the
+digits mode against an integer. Replaying one into the other would mark a correct
+answer wrong — and since an item only leaves the queue after two non-wrong
+answers, it would be stuck punishing the learner indefinitely. So each source
+claims only what it can actually serve, and the mixed round claims everything it
+can resolve back to an available mode.
 
-- **`number-to-text`** — `generate` picks a value in the configured range and
-  formats the expected Spanish via the engine; `check` runs the engine matcher
-  (NFD diacritic folding, accepted-variant sets) and returns the verdict,
-  including `correctWithNote` for near-misses and hard `wrong` for rejected
-  archaisms like `veinte y uno`. See [[spanish-number-rules]].
-- **`text-to-number`** — the mirror: prompt is the engine-formatted words,
-  `check` parses the typed digits and compares numerically (so `1000` and
-  `1 000` both pass).
-- **`listen-to-number`** — same `check` as `text-to-number`; the difference is
-  `Prompt`, which speaks the value through the `speechSynthesis` service instead
-  of printing it.
-- **`multiple-choice`** — `generate` also builds plausible distractors (off-by-a-
-  bucket errors: wrong tens-`y`, `cien`/`ciento` confusion); `check` is a simple
-  option-equality test.
-- **`speak-it`** — `Prompt` shows the numeral, `AnswerInput` streams from
-  `SpeechRecognition`; `check` folds the transcript through the same engine
-  matcher as `number-to-text`.
-- **`prices-quantities`** — draws from the price and quantity skill buckets
-  (`cuatro con setenta y cinco`, `dos kilos y medio`, `250 gramos`) and checks
-  against the engine's accepted-set for money and grocery phrasings.
+## The six modes, plus the mixed round
+
+| id | Prompt shows | Answer | `requires` |
+| --- | --- | --- | --- |
+| `words` | a numeral, e.g. `475` | text field, Spanish words | — |
+| `digits` | Spanish words | numeric keypad | — |
+| `listen` | a speaker button (es-ES) | numeric keypad | `tts` |
+| `choice` | a numeral | four tappable options | — |
+| `speak` | a numeral to pronounce | microphone | `speech` |
+| `grocery` | a price tag or a weight | text field | — |
+| `mixed` | whatever the drawn mode shows | that mode's own | — |
+
+- **`words`** grades through the engine matcher: diacritic folding, accepted
+  variants, hard rejection of archaisms like `veinte y uno`. See
+  [[spanish-number-rules]].
+- **`digits`** is the mirror, comparing numerically, so `1000` and `1 000` both
+  pass.
+- **`listen`** shares `digits`' grading; only the prompt differs — it speaks the
+  value instead of printing it.
+- **`choice`** builds confusable distractors rather than random ones: a wrong
+  tens-`y`, `cien` against `ciento`, `quinientos` against `setecientos`.
+- **`speak`** folds the recognition transcript through the same matcher as
+  `words`, choosing from the n-best list the alternative that grades best.
+- **`grocery`** draws prices and weights (`cuatro con setenta y cinco`,
+  `dos kilos y medio`, `250 gramos`) and accepts every phrasing a cashier might
+  use, including cross-unit equivalents like `medio kilo` for `500 gramos`.
 
 ## Capability filtering
 
@@ -110,12 +104,15 @@ Each mode declares `requires`. At startup the `services` layer probes the
 browser and produces a capability set; the registry is filtered to modes whose
 requirements are all met.
 
-- `speak-it` needs `speechRecognition` — **auto-hidden** where the browser lacks
-  it (most desktop Firefox, many in-app browsers). It is never shown broken.
-- `listen-to-number` needs `speechSynthesis` with an es-ES voice; without one it
-  is hidden and the learner is nudged toward the reading modes.
-- The four remaining modes have no requirements and are always available,
-  including fully offline.
+- `speak` needs `speech` (recognition) — **paused with an explanation** where the
+  browser lacks it, or where the browser has the API but no working recogniser
+  behind it. It is never shown as if it worked.
+- `listen` needs `tts` with an es-ES voice; without one the row is paused and
+  offers instructions for adding a Spanish voice.
+- The other five — `words`, `digits`, `choice`, `grocery` and `mixed` — require
+  nothing and stay available fully offline. `grocery` speaks the price when it
+  can, but that is an optional replay, not a requirement: at a till the answer is
+  typed.
 
 Filtering happens once, in one place, so no screen has to special-case a missing
 API. This mirrors the PWA rule from [[overview]]: online-or-unsupported features
@@ -158,7 +155,7 @@ and practising.
 Because the registry is flat and typed, extension is additive:
 
 - **A new practice style** (e.g. ordinal numbers, or a fill-the-blank drill):
-  implement `LearningMode`, register it, add its `titleKey` to the RU/EN
+  implement `LearningMode`, register it, add its `titleKey` to the three
   locale files, and — if it needs one — a new engine matcher. No change to
   `session` or the screens.
 - **A whole new subject beyond numbers** (the long-term direction): the same

@@ -9,11 +9,6 @@ state is in `localStorage`** on the device. The `storage` layer
 ([[layers]]) is the only code that touches it; everything else goes through
 typed helpers.
 
-> **Status.** v0.1.0 persists nothing beyond what the browser caches for the
-> PWA. The schema below is the **committed plan for v1** and is being built as
-> the engine and session land. The shapes are locked now so later migrations
-> have a clean starting point.
-
 ## Keys
 
 All keys are namespaced under `wordavi:`.
@@ -21,10 +16,13 @@ All keys are namespaced under `wordavi:`.
 | Key | Holds |
 | --- | --- |
 | `wordavi:v` | schema version number (integer) |
-| `wordavi:settings` | UI language, range slider, decimals toggle, daily goal, theme override |
-| `wordavi:srs` | the ~15 skill buckets and the `wrongQueue` |
-| `wordavi:progress` | streaks, score, combo, daily-goal progress, session history counters |
+| `wordavi:settings` | interface language, number range, round size, speech rate, daily goal, theme, sounds, accent tolerance, last mode played, whether onboarding is done |
+| `wordavi:srs` | the thirteen skill buckets and the `wrongQueue` |
+| `wordavi:progress` | streak (current and best) and lifetime answer counts |
+| `wordavi:days` | one aggregate row per practised day, kept indefinitely |
+| `wordavi:round` | the round in progress, so leaving mid-way resumes exactly where it stood |
 | `wordavi:errors` | the error ring buffer (see below) |
+| `wordavi:log` | the recent-actions ring buffer that a problem report carries |
 
 Splitting into several keys (rather than one blob) keeps a corrupt or
 oversized value — most likely `errors` — from taking the whole app down with it.
@@ -93,9 +91,13 @@ problem" feature described in [[overview]].
 
 ## Relationship to the SRS
 
-`wordavi:srs` stores the ~15 **skill buckets** (units, teens-fused,
-twenties-fused, tens-`y`, hundreds regular/irregular, thousands, millions,
-decimals, price-cents, quantities, …) plus the **`wrongQueue`** (capped at 50,
-items resurfacing after 3 / 8 / 20 questions). Those bucket ids are the same
+`wordavi:srs` stores the thirteen **skill buckets** — 0–15, fused teens, fused
+twenties, tens with `y`, round tens, regular hundreds, irregular hundreds
+(quinientos / setecientos / novecientos), thousands, millions, decimals,
+price cents, fractional quantities and grams — plus the **`wrongQueue`** (capped
+at 50, items resurfacing after 3 / 8 / 20 questions and leaving after two
+consecutive non-wrong answers). A queued miss is only ever replayed into a mode
+that can present and grade it, so a Spanish-words miss never reappears on a
+numeric keypad. Those bucket ids are the same
 `Question.skill` values the modes emit — see [[mode-registry]] — which is what
 lets a future subject reuse this storage shape unchanged.

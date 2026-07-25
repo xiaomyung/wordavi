@@ -32,9 +32,12 @@ const VARIANT: Record<ButtonVariant, string> = {
     '[&>svg]:size-(--size-icon-glyph)',
 };
 
+/* min-h + shrink-0, never a fixed h: CTAs live in flex columns clamped to the
+   viewport, where a fixed height + default flex-shrink lets the column squash
+   the button flat before the scroll region takes over. */
 const SIZE: Record<ButtonSize, string> = {
-  default: 'h-(--size-cta) text-[1.0625rem]',
-  tall: 'h-(--size-cta-tall) text-body-lg',
+  default: 'min-h-(--size-cta) shrink-0 text-[1.0625rem]',
+  tall: 'min-h-(--size-cta-tall) shrink-0 text-body-lg',
 };
 
 /**

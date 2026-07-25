@@ -56,12 +56,12 @@ describe('Button', () => {
         Start
       </Button>,
     );
-    expect(screen.getByRole('button')).toHaveClass('h-(--size-cta-tall)');
+    expect(screen.getByRole('button')).toHaveClass('min-h-(--size-cta-tall)');
     rerender(
       <Button variant="icon" size="tall" aria-label="X">
         x
       </Button>,
     );
-    expect(screen.getByRole('button')).not.toHaveClass('h-(--size-cta-tall)');
+    expect(screen.getByRole('button')).not.toHaveClass('min-h-(--size-cta-tall)');
   });
 });

@@ -3,7 +3,7 @@ import { type ReactElement, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RangeSlider, type RangeSliderProps } from '@/components/RangeSlider';
 
-const TICKS = ['0', '10', '100', '1 тыс', '10 тыс', '100 тыс', '1 млн'] as const;
+const TICKS = ['0', '10', '100', '1т', '10т', '100т', '1м'] as const;
 
 type Extra = Omit<RangeSliderProps, 'value' | 'onChange' | 'tickLabels'>;
 

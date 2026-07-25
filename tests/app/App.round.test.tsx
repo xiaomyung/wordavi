@@ -5,7 +5,8 @@ import { init as initI18n } from '@/i18n';
 import type { AnswerZoneProps, PromptProps } from '@/modes';
 import { SWAP_OUT_MS } from '@/screens/drill/useDrillRound';
 import type { PromptPayload, QuestionSource } from '@/session';
-import { getProgress, getRound, updateSettings } from '@/storage';
+import { localDayKey } from '@/session';
+import { getDay, getProgress, getRound, updateSettings } from '@/storage';
 
 /**
  * The round lifecycle (start → summary → retry → home) is wired against a stub
@@ -97,6 +98,20 @@ function startRound(): void {
   press(/Start/);
 }
 
+/** Start the single mode from its own row, the way a learner dips into one. */
+function startWordsRow(): void {
+  const row = screen
+    .getAllByRole('button')
+    .find((el) => (el.textContent ?? '').includes('in words'));
+  if (row === undefined) throw new Error('no words row on home');
+  fireEvent.click(row);
+}
+
+function todayRow(): { answered: number; correct: number } {
+  const day = getDay(localDayKey(new Date()));
+  return { answered: day?.answered ?? 0, correct: day?.correct ?? 0 };
+}
+
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, '', '/');
@@ -159,6 +174,33 @@ describe('App round lifecycle', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/good/i);
     // Home is the root again: nothing is parked and nothing is stacked behind it.
     expect(getRound()).toBeNull();
+  });
+
+  it('counts every answer as it is given, not only when the round ends', () => {
+    render(<App />);
+    startRound();
+
+    answer(true);
+    expect(todayRow()).toEqual({ answered: 1, correct: 1 });
+
+    answer(false);
+    expect(todayRow()).toEqual({ answered: 2, correct: 1 });
+    expect(getProgress()).toMatchObject({ totalAnswered: 2, totalCorrect: 1 });
+  });
+
+  it('counts a single-mode round the learner leaves part-played', () => {
+    render(<App />);
+    startWordsRow();
+    for (let index = 0; index < 6; index += 1) answer(true);
+
+    press('Close');
+
+    // The round is parked, and every answer in it already counted: a mode row is
+    // made to be dipped into, and the goal has to move for that.
+    expect(getRound()?.modeId).toBe('words');
+    expect(todayRow()).toEqual({ answered: 6, correct: 6 });
+    // Goal is 5, so this afternoon earned its stamp without finishing a round.
+    expect(getProgress().streakCurrent).toBe(1);
   });
 
   it('leaves the round resumable when the learner backs out mid-drill', () => {

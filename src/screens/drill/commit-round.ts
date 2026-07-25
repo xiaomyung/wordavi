@@ -1,18 +1,13 @@
 /**
- * The one write transaction a finished round performs.
+ * The two write transactions a drill performs: one per answer, one at the end.
  *
- * Everything a round leaves behind lands here, in this order: the SRS state it
- * updated, the parked-round slot it no longer needs, today's day row, and the
- * streak/progress record that day may have stamped. It is kept out of the round
- * hook because it is a transaction rather than lifecycle — sequential storage
- * writes with one derived value feeding the next — and because a wrong order
- * here (folding the day in before reading it back, say) is exactly the kind of
- * bug that only shows up as a streak that grew twice.
- *
- * Called once per finished round; the hook guards against a second call.
+ * They are kept out of the round hook because they are transactions rather than
+ * lifecycle — sequential storage writes with one derived value feeding the next —
+ * and because a wrong order here (folding the day in before reading it back, say)
+ * is exactly the kind of bug that only shows up as a streak that grew twice.
  */
 import { log } from '@/services/log';
-import type { DayRowLike, RoundSummary, SrsState } from '@/session';
+import type { AnswerRecord, DayRowLike, RoundSummary, Score, SrsState } from '@/session';
 import {
   applyAnswersToDay,
   effectiveDailyGoal,
@@ -35,20 +30,22 @@ import {
 const NS = 'drill';
 
 /**
- * Persist a finished round and roll it into the day and the streak.
+ * Fold one graded answer into today's row, the running totals and the streak.
  *
- * @param summary the round as `finishRound` reported it
- * @param srs the round's final SRS state (serialized here, not by the caller)
- * @param now the clock reading that decides which local day this round counts for
+ * Per answer rather than per finished round: leaving a round part-played is the
+ * ordinary way to use a mode row — the home screen offers "continue · 6 of 20"
+ * for exactly that — and a daily goal that only moved when a round reached its
+ * last question showed nothing at all for an afternoon of practice.
+ *
+ * @param record the answer as `answerQuestion` graded it
+ * @param score the round's score *after* that answer (its best combo is a total)
+ * @param now the clock reading that decides which local day the answer counts for
  */
-export function commitRound(summary: RoundSummary, srs: SrsState, now: Date = new Date()): void {
-  setSrs(serializeSrs(srs));
-  clearRound();
-
+export function commitAnswer(record: AnswerRecord, score: Score, now: Date = new Date()): void {
   const date = localDayKey(now);
   const existing = getDay(date);
   const base: DayRowLike = existing ?? { date, answered: 0, correct: 0, byGroup: {} };
-  const day = applyAnswersToDay(base, toGoalVerdicts(summary.verdicts));
+  const day = applyAnswersToDay(base, toGoalVerdicts([record]));
   setDay(day);
 
   const progress = getProgress();
@@ -61,15 +58,29 @@ export function commitRound(summary: RoundSummary, srs: SrsState, now: Date = ne
     date,
     isGoalMet(day, effectiveDailyGoal(getSettings().dailyGoal)),
   );
+  // `counted` is what the day row counts as correct: an 'almost' is a hit.
+  const counted = record.verdict !== 'wrong';
   setProgress({
     ...progress,
     streakCurrent: streak.current,
     streakBest: streak.best,
     lastGoalDate: streak.lastGoalDate,
-    bestCombo: Math.max(progress.bestCombo, summary.bestCombo),
-    totalAnswered: progress.totalAnswered + summary.total,
-    totalCorrect: progress.totalCorrect + summary.correctCount,
+    bestCombo: Math.max(progress.bestCombo, score.bestCombo),
+    totalAnswered: progress.totalAnswered + 1,
+    totalCorrect: progress.totalCorrect + (counted ? 1 : 0),
   });
+}
+
+/**
+ * Close the books on a finished round: its final SRS state, and the parked slot
+ * it no longer needs. The day, the totals and the streak are already up to date —
+ * {@link commitAnswer} wrote each of them as the answer was given.
+ *
+ * Called once per finished round; the hook guards against a second call.
+ */
+export function commitRound(summary: RoundSummary, srs: SrsState): void {
+  setSrs(serializeSrs(srs));
+  clearRound();
 
   log.info(NS, 'round summary', {
     modeId: summary.modeId,
@@ -79,6 +90,6 @@ export function commitRound(summary: RoundSummary, srs: SrsState, now: Date = ne
     wrong: summary.wrongCount,
     points: summary.points,
     bestCombo: summary.bestCombo,
-    streak: streak.current,
+    streak: getProgress().streakCurrent,
   });
 }

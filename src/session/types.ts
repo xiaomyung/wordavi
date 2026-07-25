@@ -321,6 +321,14 @@ export interface RoundConfig {
   acceptNoAccents?: boolean;
 }
 
+/**
+ * The part of a {@link RoundConfig} a learner may change while a round is
+ * parked, and which a resume therefore re-reads from settings rather than from
+ * the round. Everything else — the length, the seed, the mode — is what
+ * "question 7 of 20" already means, and is left as the round was started.
+ */
+export type LiveRoundConfig = Pick<RoundConfig, 'rangeMin' | 'rangeMax' | 'acceptNoAccents'>;
+
 export interface RoundState {
   config: RoundConfig;
   /** Number of rng draws consumed (for deterministic resume). */

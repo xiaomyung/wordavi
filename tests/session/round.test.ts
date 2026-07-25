@@ -372,21 +372,22 @@ describe('round — resuming a question the mode cannot serve', () => {
     };
   }
 
-  it('drops it rather than resuming into a question with no way out', () => {
+  it('replaces it rather than resuming into a question with no way out', () => {
     const resumed = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
-    expect(resumed.current).toBeNull();
     expect(resumed.served.map((q) => q.id)).not.toContain(foreign.id);
+    // The learner lands on the step they left, holding a question this mode owns —
+    // not back on the verdict of the one before it.
+    expect(current(resumed).id.startsWith('choice:')).toBe(true);
+    expect(resumed.step).toBe(3);
     // served and records stay aligned — finishRound pairs them by index.
-    expect(resumed.served).toHaveLength(resumed.records.length);
-    expect(resumed.step).toBe(2);
+    expect(resumed.served).toHaveLength(resumed.records.length + 1);
   });
 
   it('serves the next question straight away, and the summary stays honest', () => {
-    let state = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
-    state = nextQuestion(state);
-    const served = current(state);
+    const state0 = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
+    const served = current(state0);
     expect(served.id.startsWith('choice:')).toBe(true);
-    state = answerQuestion(state, 'zzz').state;
+    const state = answerQuestion(state0, 'zzz').state;
 
     const summary = finishRound(state);
     expect(summary.total).toBe(3);
@@ -400,6 +401,109 @@ describe('round — resuming a question the mode cannot serve', () => {
     const resumed = deserializeRound(serializeRound(state), initSrs(), ownedSource('choice'));
     expect(resumed.current).toEqual(pending);
     expect(resumed.step).toBe(1);
+  });
+});
+
+/**
+ * The number range is a setting, not a property of the round: a learner who
+ * narrows it while a round is parked expects the round they come back to to obey
+ * it — the question already on stage included.
+ */
+describe('round — a range changed while the round was parked', () => {
+  const WIDE = { rangeMin: 0, rangeMax: 999_999 };
+  const NARROW = { rangeMin: 0, rangeMax: 100 };
+
+  /** A source that draws strictly inside whatever range the round carries. */
+  const rangedSource: QuestionSource = {
+    eligibleBuckets: () => ['d0_15', 'teens_fused', 'twenties_fused', 'tens_y'],
+    generate: (rng, ctx) => {
+      const value = rng.int(ctx.config.rangeMin, ctx.config.rangeMax);
+      return numberQuestion(`m:n${value}`, value);
+    },
+  };
+
+  /** A round parked on `pending`, one answer in, started under the wide range. */
+  function parkedOn(pending: Question): ReturnType<typeof serializeRound> {
+    let state = createRound(cfg({ ...WIDE, size: 10, seed: 3 }), initSrs(), rangedSource);
+    state = nextQuestion(state);
+    state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    const serialized = serializeRound(state);
+    return { ...serialized, step: serialized.step + 1, served: [...serialized.served, pending] };
+  }
+
+  it('replaces a pending question the new range no longer covers', () => {
+    const tooBig = numberQuestion('m:n777777', 777_777);
+    const resumed = deserializeRound(parkedOn(tooBig), initSrs(), rangedSource, NARROW);
+
+    expect(resumed.served.map((q) => q.id)).not.toContain(tooBig.id);
+    expect(numberValue(current(resumed))).toBeLessThanOrEqual(100);
+    // The learner is still on the question they left, not one step back.
+    expect(resumed.step).toBe(2);
+  });
+
+  it('keeps a pending question the new range still covers', () => {
+    const small = numberQuestion('m:n42', 42);
+    const resumed = deserializeRound(parkedOn(small), initSrs(), rangedSource, NARROW);
+    expect(resumed.current).toEqual(small);
+  });
+
+  it('draws the rest of the round from the new range', () => {
+    let state = deserializeRound(parkedOn(numberQuestion('m:n42', 42)), initSrs(), rangedSource, {
+      ...NARROW,
+      acceptNoAccents: true,
+    });
+    expect(state.config.rangeMax).toBe(100);
+
+    for (let i = 0; i < 5; i += 1) {
+      state = answerQuestion(state, correctAnswerFor(current(state))).state;
+      state = nextQuestion(state);
+      expect(numberValue(current(state))).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it('leaves the shape of the round alone — length, seed and mode are its own', () => {
+    const parked = parkedOn(numberQuestion('m:n42', 42));
+    const resumed = deserializeRound(parked, initSrs(), rangedSource, NARROW);
+    expect(resumed.config.size).toBe(parked.config.size);
+    expect(resumed.config.seed).toBe(parked.config.seed);
+    expect(resumed.config.modeId).toBe(parked.config.modeId);
+  });
+
+  it('resumes unchanged when no live settings are handed in', () => {
+    const tooBig = numberQuestion('m:n777777', 777_777);
+    const resumed = deserializeRound(parkedOn(tooBig), initSrs(), rangedSource);
+    expect(resumed.current).toEqual(tooBig);
+    expect(resumed.config.rangeMax).toBe(WIDE.rangeMax);
+  });
+
+  it('stops re-serving a wrongQueue miss the range no longer covers', () => {
+    const missed = numberQuestion('m:n777777', 777_777);
+    const srs: SrsState = initSrs();
+    srs.answeredCount = 100;
+    srs.wrongQueue.push({ question: missed, reappearances: 0, consecutiveCorrect: 0, dueAt: 0 });
+
+    // Due, and the only thing in the queue — a round under the wide range serves it…
+    const wide = nextQuestion(createRound(cfg({ ...WIDE, seed: 7 }), srs, rangedSource));
+    expect(current(wide).id).toBe(missed.id);
+
+    // …but the same queue against a narrowed range is skipped, not clamped.
+    const narrow = nextQuestion(createRound(cfg({ ...NARROW, seed: 7 }), srs, rangedSource));
+    expect(current(narrow).id).not.toBe(missed.id);
+    expect(numberValue(current(narrow))).toBeLessThanOrEqual(100);
+  });
+
+  it('leaves a price or a weight alone — the slider does not govern those', () => {
+    const priced: Question = {
+      id: 'grocery:p4.75',
+      bucket: 'price_cents',
+      prompt: { kind: 'price', euros: 4, cents: 75 },
+      accepted: {
+        canonical: 'cuatro con setenta y cinco',
+        variants: [{ text: 'cuatro setenta y cinco' }],
+      },
+    };
+    const resumed = deserializeRound(parkedOn(priced), initSrs(), rangedSource, NARROW);
+    expect(resumed.current).toEqual(priced);
   });
 });
 
@@ -454,14 +558,13 @@ describe('round — resuming a retry round whose items the mode cannot serve', (
     expect(parked.served.at(-1)?.id).toBe(foreign.id);
 
     const resumed = deserializeRound(parked, initSrs(), ownedSource('choice'));
-    expect(resumed.current).toBeNull();
     expect(resumed.retryItems.map((q) => q.id)).toEqual([first.id, last.id]);
     // A retry round is sized by its list, so the progress the drill shows follows it.
     expect(resumed.config.size).toBe(2);
+    // The refused item is replaced in place by the next one still on the list.
+    expect(current(resumed).id).toBe(last.id);
 
-    let state = nextQuestion(resumed);
-    expect(current(state).id).toBe(last.id);
-    state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    const state = answerQuestion(resumed, correctAnswerFor(current(resumed))).state;
     expect(isRoundComplete(state)).toBe(true);
     expect(finishRound(state).total).toBe(2);
   });

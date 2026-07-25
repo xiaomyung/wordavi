@@ -65,6 +65,7 @@ export type {
   DayRowLike,
   DisplayGroup,
   GoalVerdict,
+  LiveRoundConfig,
   PromptPayload,
   Question,
   QuestionContext,

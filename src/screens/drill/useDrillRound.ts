@@ -27,7 +27,7 @@ import {
 } from '@/session';
 import type { SavedRound, Settings } from '@/storage';
 import { getSettings, getSrs, setRound as saveRound, setSrs } from '@/storage';
-import { commitRound } from './commit-round';
+import { commitAnswer, commitRound } from './commit-round';
 
 /** Old prompt fade-out before the next question mounts (motion.md). */
 export const SWAP_OUT_MS = 120;
@@ -96,7 +96,14 @@ function buildRound(options: UseDrillRoundOptions, settings: Settings): RoundSta
     // A round that was already closed must not resume into a drill the learner
     // has ended; fall through to a fresh one.
     if (!resume.state.finished) {
-      return deserializeRound(resume.state, srs, source);
+      // Settings the learner may have changed while the round was parked are
+      // handed back in: a narrowed number range has to govern the rest of the
+      // round, not only the next one they start.
+      return deserializeRound(resume.state, srs, source, {
+        rangeMin: settings.rangeMin,
+        rangeMax: settings.rangeMax,
+        acceptNoAccents: settings.acceptNoAccents,
+      });
     }
   }
 
@@ -105,8 +112,8 @@ function buildRound(options: UseDrillRoundOptions, settings: Settings): RoundSta
 
 /**
  * Round lifecycle for the drill screen: setup/resume, grading, persistence after
- * every answer, and — through {@link commitRound} — the day/streak roll-up the
- * finished round leaves behind.
+ * every answer — including, through {@link commitAnswer}, the day/streak roll-up
+ * each answer earns — and the closing {@link commitRound} at the end.
  *
  * The authoritative round lives in a ref rather than state — timers, the
  * visibilitychange listener and the unmount flush all need the freshest value,
@@ -197,6 +204,9 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
 
       setSrs(serializeSrs(outcome.state.srs));
       saveRound(modeId, serializeRound(outcome.state));
+      // The day, the totals and the streak move with this answer, not with the
+      // round it belongs to: a round left part-played still counted.
+      commitAnswer(outcome.record, outcome.state.score);
 
       playVerdict(outcome.record.verdict);
       if (outcome.record.verdict === 'wrong') {

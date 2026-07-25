@@ -240,11 +240,10 @@ describe('App home', () => {
 
     fireEvent.click(rowNamed('Number → in words'));
 
-    // Back on the last question this mode did serve, with the way onward that a
-    // question it cannot render would never have offered.
-    expect(screen.getByText('2 of 10')).toBeInTheDocument();
+    // On the step the round was left at, holding a question this mode can draw
+    // instead of the one it cannot — the progress never rewinds.
+    expect(screen.getByText('3 of 10')).toBeInTheDocument();
     expect(screen.queryByText('1500')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
   it('starts a fresh mixed round from the big button while a single-mode round is parked', () => {

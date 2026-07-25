@@ -27,6 +27,19 @@ All keys are namespaced under `wordavi:`.
 Splitting into several keys (rather than one blob) keeps a corrupt or
 oversized value — most likely `errors` — from taking the whole app down with it.
 
+## When each of them is written
+
+One answer writes four of these keys, in this order: `srs` (the bucket stats and
+the wrongQueue), `round` (so the tab can close mid-question), `days` (today's
+row), and `progress` (the lifetime totals and the streak the day may just have
+stamped). Finishing a round adds nothing to the tally — it writes the final `srs`
+and clears `round`. That the goal follows the answer rather than the round is
+[[adr-027-answers-count-as-given|a decision of its own]].
+
+`settings` is written by the settings screen, and read back by everything that
+starts or resumes a round: a parked round re-reads the parts of it a learner may
+have changed while it sat there ([[adr-028-live-round-settings]]).
+
 ## Versioning and migrations
 
 `wordavi:v` records the schema version the stored data was last written under.

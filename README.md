@@ -12,19 +12,24 @@ Requires Node 22+ and [pnpm](https://pnpm.io). If pnpm lives outside your `PATH`
 
 ```bash
 pnpm install
-pnpm dev            # dev server on :5173 — add --host to reach it from a phone on the same network
+pnpm dev                     # http://localhost:5173
+pnpm dev --host              # also on the LAN, e.g. http://192.168.1.20:5173 — open that on a phone
+pnpm dev --port 3000         # if 5173 is taken
 ```
+
+`--host` prints every address it is listening on; the one that is not `localhost` is what a phone on the same wifi can reach. Note that a LAN address over plain `http://` is not a secure origin, so installing the app, the clipboard and Web Share stay unavailable there — use `localhost` or the live site for those.
 
 | Command | What it does |
 | --- | --- |
+| `pnpm dev` | dev server with hot reload on :5173 (`--host` to expose it on the LAN) |
 | `pnpm verify` | lint, typecheck, unit tests and build — **run this before pushing** |
 | `pnpm test` | Vitest once; `pnpm test:watch` to keep it running |
 | `pnpm e2e` | Playwright, on an emulated phone and desktop Chrome |
 | `pnpm lint` | Biome check; `pnpm lint:fix` to apply what it can |
 | `pnpm typecheck` | `tsc` with no emit |
 | `pnpm build` | production build into `dist/` |
-| `pnpm preview` | serve the built `dist/` |
-| `pnpm docs:preview` | build and serve the docs site locally |
+| `pnpm preview` | serve the built `dist/` on :4173 (`--host` works here too) |
+| `pnpm docs:preview` | build and serve the docs site locally on :8080 |
 
 One-time, before the first `pnpm e2e`:
 

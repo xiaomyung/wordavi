@@ -108,6 +108,13 @@ SPA fallback, and self-only security headers (CSP `default-src 'self'`). From
 there the browser takes over and the PWA runs offline, as described in
 [[overview]].
 
+Caching differs too, and for the same reason the app fingerprints its assets:
+Quartz emits none. Every documentation build overwrites the same `/postscript.js`
+and `/static/contentIndex.json`, so those are served `no-cache` — anything cached
+by URL would outlive the deploy that replaced it, and a browser running one
+build's scripts against another build's pages fails silently rather than loudly.
+Only the fonts are cached for a day.
+
 The two sites carry **different policies**, in `deploy/security-headers.conf` and
 `deploy/security-headers-docs.conf`. The app's forbids `eval`. This
 documentation site has to allow it: Quartz draws the graph with PixiJS, which

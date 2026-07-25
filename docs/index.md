@@ -11,6 +11,8 @@ wordavi is a mobile-first PWA for learning how numbers work in Spanish — count
   phone.
 - **Understanding the code** → [[overview]] for the shape of the system, then
   [[layers]] for the dependency rules it is built on.
+- **Working on the code** → [[development]]: the commands, and the things about
+  the test suites that would otherwise cost you an afternoon.
 - **Running it in production** → [[runbook]] for day-to-day operations, or
   [[pipeline]] for how a merge becomes a running container.
 - **Why something is the way it is** → [[decisions/index|the decision records]].

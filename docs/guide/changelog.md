@@ -4,6 +4,21 @@ title: Changelog
 
 For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
 
+## 0.2.1 - 2026-07-25
+
+- The documentation now has a development note: the commands, the repo layout, and
+  the test-suite behaviour that is easy to get wrong. The readme is for learners
+  again, screenshots and all.
+- The app mark is now drawn at one scale everywhere — the favicon, the installed
+  icons and the tile in onboarding all match the maskable icon's framing.
+- A report with a screenshot now says up front when the screenshot cannot travel
+  with the message, instead of dropping it silently on the way to the mail app.
+- The component gallery is a development surface again: it is no longer part of
+  the published build.
+- The documentation's graph view is legible: the notes are spread out instead of
+  piled in the middle, and hovering one dims the rest.
+- The score chip in a drill no longer runs its number into the word after it.
+
 ## 0.2.0 - 2026-07-25
 
 The learning app itself, replacing the in-progress page.

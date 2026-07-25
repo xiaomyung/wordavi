@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearLog, log } from '@/services/log';
 import type { ReportPayload } from '@/services/report';
-import { composeReport, copyReport, sendReport } from '@/services/report';
+import { composeReport, copyReport, planReport, sendReport } from '@/services/report';
 import { clearErrors, pushError } from '@/storage';
 import { setNavProp } from '../helpers/nav';
 
@@ -103,6 +103,66 @@ describe('report', () => {
     });
   });
 
+  describe('planReport', () => {
+    it('plans a file share when the browser can carry the screenshots', () => {
+      setNavProp('share', vi.fn());
+      setNavProp(
+        'canShare',
+        vi.fn(() => true),
+      );
+
+      expect(planReport([makeFile()])).toEqual({ channel: 'share', droppedScreenshots: 0 });
+    });
+
+    it('does not take navigator.share as proof that files can travel', () => {
+      // Desktop Chrome and several mobile browsers share text and refuse files.
+      setNavProp('share', vi.fn());
+      setNavProp('canShare', undefined);
+
+      expect(planReport([makeFile()])).toEqual({ channel: 'mailto', droppedScreenshots: 1 });
+    });
+
+    it('counts every screenshot mailto will drop', () => {
+      expect(planReport([makeFile('a.png'), makeFile('b.png')])).toEqual({
+        channel: 'mailto',
+        droppedScreenshots: 2,
+      });
+    });
+
+    it('asks canShare about the files it is actually about to send', () => {
+      const canShare = vi.fn(() => true);
+      setNavProp('share', vi.fn());
+      setNavProp('canShare', canShare);
+      const files = [makeFile()];
+
+      planReport(files);
+
+      expect(canShare).toHaveBeenCalledWith({ files });
+    });
+
+    it('treats a canShare that throws as no file support', () => {
+      setNavProp('share', vi.fn());
+      setNavProp(
+        'canShare',
+        vi.fn(() => {
+          throw new Error('cannot describe files');
+        }),
+      );
+
+      expect(planReport([makeFile()])).toEqual({ channel: 'mailto', droppedScreenshots: 1 });
+    });
+
+    it('plans mailto with nothing to lose for a text-only report', () => {
+      setNavProp('share', vi.fn());
+      setNavProp(
+        'canShare',
+        vi.fn(() => true),
+      );
+
+      expect(planReport([])).toEqual({ channel: 'mailto', droppedScreenshots: 0 });
+    });
+  });
+
   describe('sendReport', () => {
     it('uses Web Share when screenshots exist and canShare approves', async () => {
       const share = vi.fn().mockResolvedValue(undefined);
@@ -115,12 +175,7 @@ describe('report', () => {
       const payload = composeReport({ userText: 'bug', screenshots: [makeFile()] });
       const result = await sendReport(payload);
 
-      expect(result).toEqual({
-        ok: true,
-        channel: 'share',
-        manualAttachHint: false,
-        droppedScreenshots: 0,
-      });
+      expect(result).toEqual({ ok: true, channel: 'share', droppedScreenshots: 0 });
       expect(share).toHaveBeenCalledTimes(1);
       const arg = share.mock.calls[0]?.[0] as { files: File[] };
       expect(arg.files).toHaveLength(1);
@@ -139,7 +194,7 @@ describe('report', () => {
 
       expect(share).not.toHaveBeenCalled();
       expect(result.channel).toBe('mailto');
-      expect(result.manualAttachHint).toBe(false);
+      expect(result.droppedScreenshots).toBe(0);
     });
 
     it('falls back to mailto when canShare rejects the file set', async () => {
@@ -155,7 +210,7 @@ describe('report', () => {
 
       expect(share).not.toHaveBeenCalled();
       expect(result.channel).toBe('mailto');
-      expect(result.manualAttachHint).toBe(true);
+      expect(result.droppedScreenshots).toBe(1);
     });
 
     it('falls back to mailto when navigator.share throws', async () => {
@@ -176,19 +231,18 @@ describe('report', () => {
     it('falls back to mailto when share is entirely unsupported', async () => {
       const payload = composeReport({ userText: 'bug', screenshots: [] });
       const result = await sendReport(payload);
-      expect(result).toEqual({
-        ok: true,
-        channel: 'mailto',
-        manualAttachHint: false,
-        droppedScreenshots: 0,
-      });
+      expect(result).toEqual({ ok: true, channel: 'mailto', droppedScreenshots: 0 });
     });
 
-    it('flags manualAttachHint when mailto is used with screenshots pending', async () => {
-      const payload = composeReport({ userText: 'bug', screenshots: [makeFile()] });
-      const result = await sendReport(payload);
-      expect(result.channel).toBe('mailto');
-      expect(result.manualAttachHint).toBe(true);
+    it('leaves through the channel planReport promised the sheet', async () => {
+      // The sheet warns about a dropped screenshot from the plan alone, so a
+      // plan that disagreed with the send would make that warning a lie.
+      const screenshots = [makeFile('a.png'), makeFile('b.png')];
+      const plan = planReport(screenshots);
+      const result = await sendReport(composeReport({ userText: 'bug', screenshots }));
+
+      expect(result.channel).toBe(plan.channel);
+      expect(result.droppedScreenshots).toBe(plan.droppedScreenshots);
     });
 
     it('reports how many screenshots the mailto fallback dropped', async () => {
@@ -201,7 +255,6 @@ describe('report', () => {
 
       expect(result.channel).toBe('mailto');
       expect(result.droppedScreenshots).toBe(2);
-      expect(result.manualAttachHint).toBe(true);
       expect(warnSpy).toHaveBeenCalledWith('report', 'screenshots dropped', { count: 2 });
     });
 
@@ -240,6 +293,22 @@ describe('report', () => {
 
       expect(result.channel).toBe('mailto');
       expect(result.droppedScreenshots).toBe(1);
+    });
+
+    it('keeps the note and the diagnostics when a file share fails', async () => {
+      setNavProp('share', vi.fn().mockRejectedValue(new Error('permission denied')));
+      setNavProp(
+        'canShare',
+        vi.fn(() => true),
+      );
+      pushError({ t: 1, message: 'boom' });
+
+      const payload = composeReport({ userText: 'звук пропал', screenshots: [makeFile()] });
+      const result = await sendReport(payload);
+
+      expect(result.ok).toBe(true);
+      expect(mailtoBody()).toContain('звук пропал');
+      expect(mailtoBody()).toContain('boom');
     });
 
     it('addresses the mailto fallback to the project inbox with a versioned subject', async () => {

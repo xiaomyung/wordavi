@@ -1,5 +1,7 @@
 /**
- * Hidden component gallery — reachable only via `?gallery=1`.
+ * Hidden component gallery — reachable via `?gallery=1` in the builds that carry
+ * it: `pnpm dev`, the unit runs, and `pnpm build:e2e`. A shipped build compiles
+ * it out entirely (see vite.config.ts).
  *
  * Purpose: a visual smokecheck of every exported component against
  * `design-handoff/wordavi-design-v1/screens/*.html`, and a stable target for

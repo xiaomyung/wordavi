@@ -44,7 +44,35 @@ jobs:
       - if: steps.pw-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
       - run: pnpm build
+      - name: shipped build carries no component gallery
+        # The gallery is a design surface, opt-in at build time. What a plain
+        # build must never emit: its lazy chunk, or the nav label only it has.
+        run: |
+          if ls dist/assets/GalleryScreen-*.js >/dev/null 2>&1; then
+            echo "::error::the build ships the gallery chunk"
+            exit 1
+          fi
+          if grep -rqF 'price · dots' dist; then
+            echo "::error::the build ships gallery markup"
+            exit 1
+          fi
+          echo "gallery is out of the shipped build"
+      # Rebuilds dist with the gallery in it: the visual and a11y specs open it.
       - run: pnpm e2e
+      - name: the gallery check above can still fail
+        # Both markers are searched for, not merely absent, in a build that is
+        # meant to carry them. Renaming either one would otherwise leave the
+        # check above passing over a build it can no longer recognise.
+        run: |
+          if ! ls dist/assets/GalleryScreen-*.js >/dev/null 2>&1; then
+            echo "::error::a gallery build emits no GalleryScreen chunk — the check above proves nothing"
+            exit 1
+          fi
+          if ! grep -rqF 'price · dots' dist; then
+            echo "::error::the gallery marker changed — update the check above to match"
+            exit 1
+          fi
+          echo "both markers present in a gallery build, so their absence means something"
 
   lint:
     runs-on: ubuntu-latest

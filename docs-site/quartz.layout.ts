@@ -41,7 +41,30 @@ export const defaultContentPageLayout: PageLayout = {
     Component.Explorer(),
   ],
   right: [
-    Component.Graph(),
+    // The defaults pack every note into the middle, where forty titles overlap
+    // into an unreadable smear. Spreading the nodes and shrinking the labels is
+    // what makes a dot legibly one article; hovering one dims the rest, which is
+    // the only thing that fully separates the decision records, since they all
+    // orbit the same hub at the same radius.
+    Component.Graph({
+      localGraph: {
+        repelForce: 0.9,
+        centerForce: 0.28,
+        linkDistance: 45,
+        fontSize: 0.55,
+        // Label alpha is (zoom * opacityScale - 1) / 3.75, so at this zoom the
+        // default of 1 renders every title invisible until the reader zooms in.
+        opacityScale: 3.4,
+      },
+      globalGraph: {
+        scale: 0.85,
+        repelForce: 3.4,
+        centerForce: 0.05,
+        linkDistance: 130,
+        fontSize: 0.5,
+        opacityScale: 4.6,
+      },
+    }),
     Component.DesktopOnly(Component.TableOfContents()),
     Component.Backlinks(),
   ],

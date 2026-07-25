@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { init } from '@/i18n';
 import { ReportScreen } from '@/screens/ReportScreen';
-import { composeReport, copyReport, sendReport } from '@/services/report';
+import { composeReport, copyReport, planReport, sendReport } from '@/services/report';
 import { showToast } from '@/services/toast';
 
 vi.mock('@/services/report', () => ({
@@ -11,10 +11,15 @@ vi.mock('@/services/report', () => ({
     userText: input.userText,
     screenshots: input.screenshots,
   })),
+  // A browser that cannot share files at all — the desktop default, and what
+  // happy-dom is. Specs about the share path override it.
+  planReport: vi.fn((screenshots: File[]) => ({
+    channel: 'mailto',
+    droppedScreenshots: screenshots.length,
+  })),
   sendReport: vi.fn(async () => ({
     ok: true,
     channel: 'mailto',
-    manualAttachHint: false,
     droppedScreenshots: 0,
   })),
   copyReport: vi.fn(async () => ({ ok: true })),
@@ -41,6 +46,12 @@ function screenshot(name = 'shot.png'): File {
   return new File(['pixels'], name, { type: 'image/png' });
 }
 
+const ATTACH_ONE =
+  'Скриншот нельзя отправить вместе с письмом — прикрепите его в почте сами. Файл: ekran.png';
+/** Matches the warning whatever the count and file names are. */
+const ATTACH_ANY = /нельзя отправить вместе с письмом/;
+const SEND_FAILED = 'Почта не открылась. Нажмите «Скопировать» и вставьте текст в письмо.';
+
 describe('ReportScreen', () => {
   beforeAll(() => {
     init({ initialLang: 'ru' });
@@ -49,10 +60,13 @@ describe('ReportScreen', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
+    vi.mocked(planReport).mockImplementation((screenshots) => ({
+      channel: 'mailto',
+      droppedScreenshots: screenshots.length,
+    }));
     vi.mocked(sendReport).mockResolvedValue({
       ok: true,
       channel: 'mailto',
-      manualAttachHint: false,
       droppedScreenshots: 0,
     });
     vi.mocked(copyReport).mockResolvedValue({ ok: true });
@@ -110,37 +124,121 @@ describe('ReportScreen', () => {
     expect(await screen.findByText('Обычно отвечаем в течение пары дней.')).toBeInTheDocument();
   });
 
-  it('asks for a manual attachment when the report left through mailto', async () => {
-    vi.mocked(sendReport).mockResolvedValue({
-      ok: true,
-      channel: 'mailto',
-      manualAttachHint: true,
-      droppedScreenshots: 1,
-    });
+  it('warns that the screenshot cannot travel before handing over to the mail app', () => {
     const { container } = renderScreen();
-    attach(container, screenshot());
-    fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+    attach(container, screenshot('ekran.png'));
+
+    // Still on the sheet: nothing has been handed off yet.
+    expect(sendReport).not.toHaveBeenCalled();
+    expect(screen.getByText(ATTACH_ONE)).toBeInTheDocument();
+  });
+
+  it('names every file that has to be attached by hand', () => {
+    const { container } = renderScreen();
+    attach(container, screenshot('one.png'), screenshot('two.png'));
 
     expect(
-      await screen.findByText('Если почта не открылась, приложите скриншот к письму вручную.'),
+      screen.getByText(
+        'Скриншоты нельзя отправить вместе с письмом — прикрепите их в почте сами. Файлы: one.png, two.png',
+      ),
     ).toBeInTheDocument();
   });
 
-  it('shows the same hint when sending failed outright', async () => {
+  it('stays quiet when the browser can share the screenshot itself', () => {
+    vi.mocked(planReport).mockReturnValue({ channel: 'share', droppedScreenshots: 0 });
+    const { container } = renderScreen();
+    attach(container, screenshot('ekran.png'));
+
+    expect(screen.queryByText(ATTACH_ANY)).toBeNull();
+  });
+
+  it('keeps the warning up after the mail draft opened without the screenshot', async () => {
+    vi.mocked(sendReport).mockResolvedValue({
+      ok: true,
+      channel: 'mailto',
+      droppedScreenshots: 1,
+    });
+    const { container } = renderScreen();
+    attach(container, screenshot('ekran.png'));
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    expect(await screen.findByText('Обычно отвечаем в течение пары дней.')).toBeInTheDocument();
+    expect(screen.getByText(ATTACH_ONE)).toBeInTheDocument();
+  });
+
+  it('takes the warning back when the screenshot is removed', () => {
+    const { container } = renderScreen();
+    attach(container, screenshot('ekran.png'));
+    expect(screen.getByText(ATTACH_ONE)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть · ekran.png' }));
+    expect(screen.queryByText(ATTACH_ANY)).toBeNull();
+  });
+
+  it('forgets the last hand-off once the attachments change', async () => {
+    vi.mocked(sendReport).mockResolvedValue({
+      ok: true,
+      channel: 'mailto',
+      droppedScreenshots: 1,
+    });
+    const { container } = renderScreen();
+    attach(container, screenshot('ekran.png'));
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+    expect(await screen.findByText(ATTACH_ONE)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть · ekran.png' }));
+
+    expect(screen.queryByText(ATTACH_ANY)).toBeNull();
+    expect(screen.queryByText('Обычно отвечаем в течение пары дней.')).toBeNull();
+  });
+
+  it('recounts the files when another screenshot joins after a send', async () => {
+    vi.mocked(sendReport).mockResolvedValue({
+      ok: true,
+      channel: 'mailto',
+      droppedScreenshots: 1,
+    });
+    const { container } = renderScreen();
+    attach(container, screenshot('one.png'));
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+    expect(await screen.findByText(/Файл: one\.png$/)).toBeInTheDocument();
+
+    attach(container, screenshot('two.png'));
+
+    expect(
+      screen.getByText(
+        'Скриншоты нельзя отправить вместе с письмом — прикрепите их в почте сами. Файлы: one.png, two.png',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('points at the copy button when nothing could be sent', async () => {
     vi.mocked(sendReport).mockResolvedValue({
       ok: false,
       channel: 'mailto',
-      manualAttachHint: false,
       droppedScreenshots: 0,
       error: 'boom',
     });
     renderScreen();
     fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
 
-    expect(
-      await screen.findByText('Если почта не открылась, приложите скриншот к письму вручную.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(SEND_FAILED)).toBeInTheDocument();
     expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('does not send them to their mail app when no draft ever opened', async () => {
+    vi.mocked(sendReport).mockResolvedValue({
+      ok: false,
+      channel: 'mailto',
+      droppedScreenshots: 1,
+      error: 'boom',
+    });
+    const { container } = renderScreen();
+    attach(container, screenshot('ekran.png'));
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить' }));
+
+    expect(await screen.findByText(SEND_FAILED)).toBeInTheDocument();
+    expect(screen.queryByText(ATTACH_ANY)).toBeNull();
   });
 
   it('releases the send button even if the send throws', async () => {
@@ -153,9 +251,7 @@ describe('ReportScreen', () => {
     await waitFor(() => {
       expect(send).toBeEnabled();
     });
-    expect(
-      await screen.findByText('Если почта не открылась, приложите скриншот к письму вручную.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(SEND_FAILED)).toBeInTheDocument();
   });
 
   it('copies the diagnostics to the clipboard', async () => {

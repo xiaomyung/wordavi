@@ -215,7 +215,9 @@
     "copy": "Copy",
     "sent": "Sent — thank you!",
     "sent_hint": "We usually reply within a couple of days.",
-    "mailto_fallback": "If your mail app didn't open, attach the screenshot to the email yourself."
+    "attach_by_hand_one": "The screenshot can't be sent with the email — attach it in your mail app. File: {{files}}",
+    "attach_by_hand_other": "The screenshots can't be sent with the email — attach them in your mail app. Files: {{files}}",
+    "send_failed": "Your mail app didn't open. Tap “Copy” and paste the text into an email."
   },
   "crash": {
     "title": "Something went wrong",

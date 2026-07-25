@@ -37,7 +37,7 @@ workflow before it can merge:
 | Gate | What it checks |
 | --- | --- |
 | **test** | `pnpm test` — Vitest unit tests, including the engine tables in [[spanish-number-rules]] and the layer import bans from [[layers]] |
-| **e2e** | `pnpm build` then Playwright, on an emulated phone and on desktop Chrome, with an accessibility scan of every screen in both themes |
+| **e2e** | a production build, checked to prove it does not ship the component gallery, then Playwright on an emulated phone and on desktop Chrome, with an accessibility scan of every screen in both themes |
 | **lint** | `biome ci .` plus the `tsc` typecheck |
 | **version-bump** | `package.json` version must **increase** versus the base branch |
 | **lock-check** | `pnpm-lock.yaml` is up to date and frozen |

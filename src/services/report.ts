@@ -45,16 +45,18 @@ export interface ReportPayload {
 
 export type ReportChannel = 'share' | 'mailto';
 
-export interface SendReportResult {
-  ok: boolean;
+export interface ReportPlan {
   channel: ReportChannel;
-  manualAttachHint: boolean;
   /**
-   * Screenshots the chosen channel could not carry. `mailto:` can't attach
-   * files at all, so a degraded send drops every one of them — the caller has
+   * Screenshots the channel cannot carry. A `mailto:` URL has nowhere to put a
+   * file, so a report leaving that way drops every one of them — the caller has
    * to say so instead of letting them vanish silently.
    */
   droppedScreenshots: number;
+}
+
+export interface SendReportResult extends ReportPlan {
+  ok: boolean;
   error?: string;
 }
 
@@ -253,31 +255,42 @@ function formatReportBody(payload: ReportPayload): string {
   return `${fitEncoded(text, room)}${TRUNCATION_MARKER}`;
 }
 
-function canShareFiles(nav: Navigator, files: File[]): boolean {
-  if (typeof nav.canShare !== 'function') return false;
+/**
+ * Whether this browser can hand `files` to a share target. A `navigator.share`
+ * that exists proves nothing about attachments: desktop browsers and several
+ * mobile ones take text and refuse file payloads, and `canShare` is the only
+ * way to ask before the sheet is already open.
+ */
+function canShareFiles(files: File[]): boolean {
+  if (typeof navigator === 'undefined') return false;
+  if (typeof navigator.share !== 'function') return false;
+  if (typeof navigator.canShare !== 'function') return false;
   try {
-    return nav.canShare({ files });
+    return navigator.canShare({ files });
   } catch {
+    // A file list it cannot describe makes Chromium throw rather than say no.
     return false;
   }
 }
 
 /**
- * The navigator that can share this payload, or null. Web Share is only worth
- * using when there are screenshots to attach — a text-only report reads better
- * in a mail draft the learner can edit.
+ * The channel a report carrying these screenshots would leave through, and what
+ * it would cost. Decided without sending anything, so the report sheet can warn
+ * that a screenshot has to be attached by hand BEFORE the hand-off — afterwards
+ * the mail draft is already open and the missing image reads as a bug.
+ * Never throws: this runs while the sheet renders.
  */
-function shareableWith(payload: ReportPayload): Navigator | null {
-  if (typeof navigator === 'undefined') return null;
-  if (typeof navigator.share !== 'function') return null;
-  if (payload.screenshots.length === 0) return null;
-  return canShareFiles(navigator, payload.screenshots) ? navigator : null;
+export function planReport(screenshots: File[]): ReportPlan {
+  // Web Share is only worth using when there are screenshots to attach — a
+  // text-only report reads better in a mail draft the learner can still edit.
+  if (screenshots.length === 0) return { channel: 'mailto', droppedScreenshots: 0 };
+  if (canShareFiles(screenshots)) return { channel: 'share', droppedScreenshots: 0 };
+  return { channel: 'mailto', droppedScreenshots: screenshots.length };
 }
 
 function sendMailto(payload: ReportPayload): SendReportResult {
   // mailto can't carry attachments, so every pending screenshot is lost here.
   const droppedScreenshots = payload.screenshots.length;
-  const manualAttachHint = droppedScreenshots > 0;
 
   if (droppedScreenshots > 0) {
     log.warn(NS, 'screenshots dropped', { count: droppedScreenshots });
@@ -291,43 +304,45 @@ function sendMailto(payload: ReportPayload): SendReportResult {
     }
   } catch (err) {
     log.error(NS, 'mailto navigation failed', { error: String(err) });
-    return {
-      ok: false,
-      channel: 'mailto',
-      manualAttachHint,
-      droppedScreenshots,
-      error: String(err),
-    };
+    return { ok: false, channel: 'mailto', droppedScreenshots, error: String(err) };
   }
 
-  log.info(NS, 'report sent', { channel: 'mailto', manualAttachHint, droppedScreenshots });
-  return { ok: true, channel: 'mailto', manualAttachHint, droppedScreenshots };
+  log.info(NS, 'report sent', { channel: 'mailto', droppedScreenshots });
+  return { ok: true, channel: 'mailto', droppedScreenshots };
 }
 
 async function shareOrMailto(payload: ReportPayload): Promise<SendReportResult> {
-  const nav = shareableWith(payload);
+  const plan = planReport(payload.screenshots);
 
-  if (nav !== null) {
+  if (plan.channel === 'share') {
     try {
-      await nav.share({
+      await navigator.share({
         title: `Wordavi report v${payload.version}`,
         text: formatReportBody(payload),
         files: payload.screenshots,
       });
       log.info(NS, 'report sent', { channel: 'share', fileCount: payload.screenshots.length });
-      return { ok: true, channel: 'share', manualAttachHint: false, droppedScreenshots: 0 };
+      return { ok: true, channel: 'share', droppedScreenshots: 0 };
     } catch (err) {
+      // A share sheet the learner dismissed, or a target that refused the files,
+      // must not take the note down with it: the mail draft still carries the
+      // whole body, and the screenshots are then reported as dropped.
       log.warn(NS, 'share failed, falling back to mailto', { error: String(err) });
       return sendMailto(payload);
     }
   }
 
-  const globalNav = typeof navigator === 'undefined' ? undefined : navigator;
-  log.warn(NS, 'share unsupported, falling back to mailto', {
-    shareAvailable: typeof globalNav?.share === 'function',
-    canShareAvailable: typeof globalNav?.canShare === 'function',
-    screenshotCount: payload.screenshots.length,
-  });
+  if (payload.screenshots.length > 0) {
+    // Which half of the capability is missing decides whether the screenshot
+    // could ever have travelled — worth knowing from a report that arrived
+    // without one.
+    const nav = typeof navigator === 'undefined' ? undefined : navigator;
+    log.warn(NS, 'share cannot carry files, falling back to mailto', {
+      shareAvailable: typeof nav?.share === 'function',
+      canShareAvailable: typeof nav?.canShare === 'function',
+      screenshotCount: payload.screenshots.length,
+    });
+  }
   return sendMailto(payload);
 }
 
@@ -339,13 +354,7 @@ export async function sendReport(payload: ReportPayload): Promise<SendReportResu
     // The report sheet's only way out of its sending state is this result, so
     // even a payload the composer would never build has to come back as one.
     log.error(NS, 'report send failed', { error: String(err) });
-    return {
-      ok: false,
-      channel: 'mailto',
-      manualAttachHint: false,
-      droppedScreenshots: 0,
-      error: String(err),
-    };
+    return { ok: false, channel: 'mailto', droppedScreenshots: 0, error: String(err) };
   }
 }
 

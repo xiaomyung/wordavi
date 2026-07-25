@@ -4,6 +4,15 @@ title: Changelog
 
 For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
 
+## 0.2.2 - 2026-07-25
+
+- The documentation's graph view no longer prints one note's title over another:
+  the captions settle into place around their dots, and a caption that cannot
+  fit waits for you to hover its dot rather than colliding.
+- The published documentation site gets its graph, explorer and search back. They
+  had never worked there: the browser refused the whole script bundle, so every
+  page rendered with dead navigation while a local preview looked fine.
+
 ## 0.2.1 - 2026-07-25
 
 - The documentation now has a development note: the commands, the repo layout, and
@@ -16,7 +25,8 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
 - The component gallery is a development surface again: it is no longer part of
   the published build.
 - The documentation's graph view is legible: the notes are spread out instead of
-  piled in the middle, and hovering one dims the rest.
+  piled in the middle, hovering one dims the rest, and the titles now move out of
+  each other's way instead of printing on top of one another.
 - The score chip in a drill no longer runs its number into the word after it.
 
 ## 0.2.0 - 2026-07-25

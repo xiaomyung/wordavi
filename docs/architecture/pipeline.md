@@ -110,10 +110,18 @@ there the browser takes over and the PWA runs offline, as described in
 
 Caching differs too, and for the same reason the app fingerprints its assets:
 Quartz emits none. Every documentation build overwrites the same `/postscript.js`
-and `/static/contentIndex.json`, so those are served `no-cache` — anything cached
-by URL would outlive the deploy that replaced it, and a browser running one
+and `/static/contentIndex.json`, so those are served **`no-store`** — anything
+cached by URL would outlive the deploy that replaced it, and a browser running one
 build's scripts against another build's pages fails silently rather than loudly.
 Only the fonts are cached for a day.
+
+`no-store` rather than `no-cache`, and the difference is not pedantry: `no-cache`
+lets a cache keep a copy provided it revalidates, which the CDN did — it ended up
+holding two builds of `/postscript.js` at once and serving whichever one a given
+request keyed to, so `curl` saw the current bundle while a browser ran the
+previous one from the same URL. `no-store` is the directive that forbids keeping
+a copy, and `CDN-Cache-Control` says it to the edge in the header it reads first.
+See [[cloudflare]] for the one part of this that origin headers cannot settle.
 
 The two sites carry **different policies**, in `deploy/security-headers.conf` and
 `deploy/security-headers-docs.conf`. The app's forbids `eval`. This

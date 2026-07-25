@@ -16,6 +16,10 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
 - The installed icon reads at the same size as the mark inside the app. It was
   framed against the whole image rather than the part a phone actually shows, so
   it came out about a quarter too large on the home screen.
+- The documentation site stops handing different builds to different visitors.
+  Its scripts asked not to be cached with a directive that still allows a copy to
+  be kept, so the edge held two builds of the same file at once and answered from
+  whichever one a request happened to match.
 
 ## 0.2.3 - 2026-07-25
 

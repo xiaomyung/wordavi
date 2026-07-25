@@ -43,6 +43,28 @@ Conceptually, the certificate and key are installed as **secrets on the edge pro
 
 The origin certificate protects the *content* of the connection, but the origin IP can still be probed directly. Close that path at the VPS firewall: allow inbound `80`/`443` only from **Cloudflare's published IP ranges**, and drop everything else. Combined with Full (strict), this means the only way to reach the origin is a genuine, Cloudflare-proxied request.
 
+## 6. Caching, and the one setting the origin cannot decide
+
+The documentation site is the awkward one: Quartz emits no fingerprinted
+filenames, so every build overwrites the same `/postscript.js` and
+`/static/contentIndex.json` (see [[pipeline]]). Those are served `no-store`, with
+`CDN-Cache-Control: no-store` alongside it, which is what keeps the edge from
+holding a copy of a build that has been replaced.
+
+Origin headers settle the edge, but **not the browser**. The zone's
+**Caching &rarr; Browser Cache TTL** rewrites the `Cache-Control` a browser
+receives, whatever the origin said — with a fixed value set, a visitor pins the
+documentation's scripts for that long and keeps running the previous build after
+a deploy. Set it to **Respect Existing Headers**, or add a Cache Rule for
+`docs.wordavi.com` that does the same for that hostname alone.
+
+After a deploy that changes the documentation's scripts, **Caching &rarr;
+Configuration &rarr; Purge Everything** (or a purge by URL) clears anything the
+edge is still holding from before this was in place.
+
+The app is unaffected: it fingerprints its assets, so a stale copy of one is
+simply never asked for.
+
 ## Result
 
 - Browsers connect to Cloudflare over HTTPS; Cloudflare connects to `<VPS_IP>` over HTTPS validated against the origin certificate.

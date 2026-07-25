@@ -8,6 +8,8 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
 
 - Documented the development commands in the readme, which had none, and dropped
   its stale "work in progress" status.
+- The app mark is now drawn at one scale everywhere — the favicon, the installed
+  icons and the tile in onboarding all match the maskable icon's framing.
 
 ## 0.2.0 - 2026-07-25
 

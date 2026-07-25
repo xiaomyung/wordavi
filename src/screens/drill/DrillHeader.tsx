@@ -56,7 +56,9 @@ export function DrillHeader({ step, size, score, onLeave }: DrillHeaderProps) {
             string, and a text query cannot tell them apart. */}
         <Chip variant="score" tick={score.points} data-testid="score-chip">
           {score.points}
-          <small className="font-semibold text-text-muted">{t('drill.points')}</small>
+          {/* Chip's own gap sits between the icon and this whole label, so the
+              breathing room between the count and its unit has to live here. */}
+          <small className="ml-1 font-semibold text-text-muted">{t('drill.points')}</small>
         </Chip>
         {score.combo > 1 && (
           <Chip variant="combo" tick={score.combo} data-testid="combo-chip">

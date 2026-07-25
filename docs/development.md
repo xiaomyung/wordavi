@@ -103,6 +103,19 @@ to that machine.
 deliberate: the suite is large and an unbounded fork pool will exhaust memory on
 a normal laptop.
 
+## The readme's screenshots
+
+They live in `docs/assets/screenshots/` and are generated, not taken by hand:
+
+```bash
+SHOTS=1 pnpm exec playwright test e2e/screenshots.spec.ts --project=mobile
+```
+
+That spec skips itself without `SHOTS=1`, because it writes into the working
+tree. It seeds the state rather than playing it — a frozen clock, fixed seeds,
+reduced motion, and an English interface — so rerunning it reproduces the same
+four images instead of whatever today's random numerals happen to be.
+
 ## The component gallery
 
 `/?gallery=1` opens a page holding every component in every state — the surface a

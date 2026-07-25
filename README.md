@@ -10,7 +10,7 @@ No account, no sign-up, nothing to pay. Install it and it works with no internet
 
 <p align="center">
   <a href="docs/assets/screenshots/home-dashboard.png"><img src="docs/assets/screenshots/home-dashboard.png" width="23%" alt="Home screen with the daily goal, the streak stamps and the mode list"></a>
-  <a href="docs/assets/screenshots/drill-number-to-words.png"><img src="docs/assets/screenshots/drill-number-to-words.png" width="23%" alt="A drill question showing the numeral 714 with the Spanish typed underneath"></a>
+  <a href="docs/assets/screenshots/drill-number-to-words.png"><img src="docs/assets/screenshots/drill-number-to-words.png" width="23%" alt="A drill question showing the numeral 777 with the Spanish typed underneath"></a>
   <a href="docs/assets/screenshots/round-summary.png"><img src="docs/assets/screenshots/round-summary.png" width="23%" alt="Round summary listing the missed answers with their corrections"></a>
   <a href="docs/assets/screenshots/grocery-price-tag.png"><img src="docs/assets/screenshots/grocery-price-tag.png" width="23%" alt="The grocery mode showing a shelf price tag reading 4,70 euros"></a>
 </p>
@@ -19,9 +19,9 @@ No account, no sign-up, nothing to pay. Install it and it works with no internet
 
 **Home** — the daily goal fills as you answer, the row of stamps is your streak, and the big button plays a mixed round drawn from every mode your device can run.
 
-**A question** — read `714`, write it in Spanish. The accent row is right under the field, and the score and combo tick along at the top.
+**A question** — read `777`, write it in Spanish. The accent row sits right under the field, and the score and combo tick along at the top.
 
-**The summary** — misses come first, each with the correction underneath: `quinientos uno` was really `seiscientos uno`. One button replays just those, and chains until they are clean.
+**The summary** — misses come first, each with the correction underneath, and one button replays just those, chaining until they are clean.
 
 **Prices and weights** — a shelf tag asks what the cashier would say. Every phrasing a real person uses is accepted, including `medio kilo` for 500 grams.
 

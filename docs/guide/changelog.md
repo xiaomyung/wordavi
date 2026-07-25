@@ -17,6 +17,7 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
   the published build.
 - The documentation's graph view is legible: the notes are spread out instead of
   piled in the middle, and hovering one dims the rest.
+- The score chip in a drill no longer runs its number into the word after it.
 
 ## 0.2.0 - 2026-07-25
 

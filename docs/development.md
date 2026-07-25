@@ -129,6 +129,29 @@ tree. It seeds the state rather than playing it — a frozen clock, fixed seeds,
 reduced motion, and an English interface — so rerunning it reproduces the same
 four images instead of whatever today's random numerals happen to be.
 
+## The app icons
+
+The PNGs in `public/icons/` are generated from the SVG sources in
+`design/icons/`, and both are committed:
+
+```bash
+scripts/build-icons.sh          # needs rsvg-convert (librsvg)
+```
+
+Nothing in CI or in the Docker image runs it — the image build never sees
+`design/` or `scripts/` at all, since `.dockerignore` allows only what the app
+needs. Run it after editing anything in `design/icons/` (or `public/favicon.svg`,
+which the two tab favicons come from) and commit what changes.
+
+There are two variants and they are deliberately framed differently. The `any`
+icon is shown as drawn, so it carries its own rounded corners and the mark sits at
+0.625 of the canvas. The maskable one is cropped by the launcher to a shape of its
+choosing, of which only the central 80% is guaranteed, so it bleeds to every edge
+and the mark sits at 0.5 — which is that same 0.625, measured against what is
+actually shown. `tests/icons.test.ts` holds the rule, because the crop happens on
+the phone and the file looks fine either way. See
+[[adr-029-maskable-icon-safe-zone]].
+
 ## The component gallery
 
 `/?gallery=1` opens a page holding every component in every state — the surface a

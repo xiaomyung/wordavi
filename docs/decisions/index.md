@@ -21,6 +21,8 @@ Learner-facing behaviour and the Spanish-number domain the app teaches.
 - [[adr-021-endless-rounds|An endless round alongside fixed ones]]
 - [[adr-023-honest-microphone-copy|Honest copy about where speech happens]]
 - [[adr-025-mixed-round|The start button always mixes]]
+- [[adr-027-answers-count-as-given|Answers count as they are given]]
+- [[adr-028-live-round-settings|What a parked round re-reads from settings]]
 
 ## Stack
 
@@ -35,6 +37,7 @@ The application's runtime technology and how state lives on the device.
 - [[adr-022-install-affordances|Four install affordances]]
 - [[adr-024-token-extension-policy|Design tokens land verbatim]]
 - [[adr-026-overlay-scrollbar|A custom overlay scrollbar]]
+- [[adr-029-maskable-icon-safe-zone|The maskable icon is framed against the safe zone]]
 
 ## Infrastructure
 

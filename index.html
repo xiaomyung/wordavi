@@ -5,7 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <!-- The maskable icon, not the "any" one: iOS draws its own rounded corners and
+         does not honour transparency, so the rounded tile's transparent corners
+         would come out black. This one bleeds to every edge. -->
+    <link rel="apple-touch-icon" href="/icons/icon-maskable-192.png" />
     <!-- iOS ignores manifest short_name; this sets the home-screen label -->
     <meta name="apple-mobile-web-app-title" content="WordAvi" />
     <!-- viewport-fit=cover: without it iOS reports every env(safe-area-inset-*) as

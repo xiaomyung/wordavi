@@ -23,6 +23,7 @@ import {
   MicGlyph,
   ModeRow,
   OfflineGlyph,
+  ScrollArea,
   SpeakerGlyph,
   StreakStamps,
 } from '@/components';
@@ -303,7 +304,7 @@ export function HomeScreen({
         </Button>
       </header>
 
-      <div className="screen-content safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
+      <ScrollArea className="safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
         <div className="flex flex-col gap-0.5">
           <h1 className="font-bold font-display text-title-lg">
             {t(greetingKeyFor(now.getHours()))}
@@ -373,7 +374,7 @@ export function HomeScreen({
             );
           })}
         </ul>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

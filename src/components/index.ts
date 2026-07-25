@@ -39,6 +39,8 @@ export type { ProgressRuleProps } from './ProgressRule';
 export { ProgressRule } from './ProgressRule';
 export type { RangeSliderProps } from './RangeSlider';
 export { RangeSlider } from './RangeSlider';
+export type { ScrollAreaProps, ScrollAreaTag, ScrollThumbGeometry } from './ScrollArea';
+export { ScrollArea, scrollThumbGeometry, scrollTopFromDrag } from './ScrollArea';
 export type { SegmentedOption, SegmentedProps } from './Segmented';
 export { Segmented } from './Segmented';
 export type { SkillBarProps } from './SkillBar';

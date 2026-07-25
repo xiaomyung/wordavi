@@ -17,7 +17,16 @@
  */
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BackGlyph, Button, Card, Chip, Dots, goalRingArc, PriceTag } from '@/components';
+import {
+  BackGlyph,
+  Button,
+  Card,
+  Chip,
+  Dots,
+  goalRingArc,
+  PriceTag,
+  ScrollArea,
+} from '@/components';
 import { formatPrice } from '@/engine';
 import { log } from '@/services/log';
 import type { Settings, UiLang } from '@/storage';
@@ -576,7 +585,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         <span aria-hidden="true" className="size-(--size-icon-button) shrink-0" />
       </header>
 
-      <div className="screen-content safe-bottom relative flex flex-col px-screen pt-1 pb-6">
+      <ScrollArea className="safe-bottom relative flex flex-col px-screen pt-1 pb-6">
         {leaving === null ? null : (
           // Detached copy of the step we just left: out of the accessibility
           // tree and untouchable, so it can only ever be seen, never used.
@@ -593,7 +602,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
         <div key={step} data-step={step} className="wa-step-enter flex flex-1 flex-col gap-3">
           {renderStep(step)}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

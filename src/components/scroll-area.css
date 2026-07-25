@@ -1,0 +1,103 @@
+/* Overlay scrollbar for the app's scroll regions (ScrollArea). Colours, sizes
+   and timings all resolve from tokens in src/styles/tokens.css — this file
+   introduces no palette values of its own.
+
+   The rail is absolutely positioned inside a `position: relative` wrapper, so
+   showing or hiding it costs zero layout: the scroller keeps exactly the width
+   it had before, and no content shifts by a pixel. That is the whole point —
+   the platform bar it replaces is a space-consuming control on Linux/Windows
+   Chrome (arrow buttons and all) that reflows the column the moment it appears.
+
+   The reveal is a transition on `opacity` only, never a keyframe animation: the
+   global prefers-reduced-motion rule in styles/global.css replaces
+   `transition-property` with `opacity` wholesale and collapses every keyframe
+   animation to ~0ms, so an opacity transition is the one fade that survives
+   intact for reduced-motion users while a keyframed one would hard-snap. */
+
+/* Cascade-layer order, restated because this file can be the FIRST stylesheet
+   in the bundle: it is imported from a component module, and main.tsx evaluates
+   `@/app/App` (which pulls in these components) before `./styles/index.css`
+   (which pulls in Tailwind). Layer precedence follows first-declaration order,
+   so without this statement `components` registers before `theme`/`base` and
+   therefore ranks below them, and Tailwind's preflight reset would outrank
+   every rule here. The order below is exactly what Tailwind emits, so declaring
+   it is a no-op whenever the Tailwind entry happens to load first. */
+@layer properties, theme, base, components, utilities;
+
+/* The `components` layer (not unlayered) because .wa-scroll-view shares its
+   element with whatever utilities the caller passes as `className` — those live
+   in the later `utilities` layer and must keep winning. */
+@layer components {
+  .wa-scroll {
+    /* the rail's containing block */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    /* takes over the sizing .screen-content used to do in .screen's column;
+       min-height:0 lets the scroller collapse below its content height */
+    flex: 1 1 auto;
+    min-height: 0;
+    /* breathing room from the screen edge, so the bar reads as part of the
+       design rather than as an OS control bolted to the frame */
+    --wa-scroll-inset: calc(var(--spacing) * 1.5);
+  }
+
+  /* The native bar is removed rather than restyled: ::-webkit-scrollbar cannot
+     be made an overlay, so a styled one would still take its 15px column. */
+  .wa-scroll-view {
+    scrollbar-width: none;
+  }
+
+  .wa-scroll-view::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wa-scroll-rail {
+    position: absolute;
+    top: var(--wa-scroll-inset);
+    right: var(--wa-scroll-inset);
+    bottom: var(--wa-scroll-inset);
+    width: var(--size-scrollbar);
+    border-radius: var(--radius-pill);
+    background: var(--color-scrollbar-track);
+    opacity: 0;
+    /* Clicks on the empty rail belong to the content underneath; only the thumb
+       opts back in, and only while it is actually visible. Also the reason the
+       rail is never `display: none` — the thumb geometry is measured from its
+       clientHeight, and a display:none rail measures 0 and could never come
+       back. */
+    pointer-events: none;
+    transition: opacity var(--duration-text) var(--ease-out-soft);
+  }
+
+  /* Height and translateY are written straight to this element's style by the
+     component on every scroll — deliberately not declared here, so nothing in
+     the cascade can fight the measured geometry. */
+  .wa-scroll-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--color-scrollbar-thumb);
+    cursor: grab;
+    /* the grip owns its gesture: without this a drag on a touch screen would
+       also scroll the content it is dragging */
+    touch-action: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wa-scroll-rail[data-visible="true"] {
+    opacity: 1;
+  }
+
+  .wa-scroll-rail[data-visible="true"] .wa-scroll-thumb {
+    pointer-events: auto;
+  }
+
+  .wa-scroll-thumb[data-dragging="true"] {
+    background: var(--color-scrollbar-thumb-active);
+    cursor: grabbing;
+  }
+}

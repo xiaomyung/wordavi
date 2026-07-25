@@ -15,6 +15,7 @@
     "playwright.config.ts",
     "e2e",
     "tests/architecture.test.ts",
-    "tests/components/answer-controls-layers.test.ts"
+    "tests/components/answer-controls-layers.test.ts",
+    "tests/components/scroll-area-layers.test.ts"
   ]
 }

@@ -96,6 +96,19 @@
     flex: 0 0 auto;
   }
 
+  /* Every screen renders this element through <ScrollArea>, so it is no longer
+     a direct child of .screen: the ScrollArea wrapper (.wa-scroll, which owns
+     the overlay rail) sits between them and takes over the `flex: 1 1 auto`
+     +`min-height: 0` role in .screen's column, i.e. exactly the box this
+     element used to occupy — see components/scroll-area.css.
+
+     `flex: 1 1 auto` stays here for the inner box: it makes the scroller fill
+     the wrapper even when the content is shorter than the screen, which is
+     what keeps a short screen's `flex-1` children (the onboarding step) and
+     `justify-center` (the drill prompt) measuring against the full frame
+     rather than against their own height. Growing costs nothing when the
+     content overflows, because `overflow-y: auto` also zeroes this element's
+     automatic minimum size, which is what lets it shrink and scroll at all. */
   .screen-content {
     flex: 1 1 auto;
     overflow-y: auto;

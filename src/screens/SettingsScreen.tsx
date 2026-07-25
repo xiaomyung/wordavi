@@ -12,7 +12,7 @@
  */
 import { type ChangeEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BackGlyph, Button, Card, CardRow, Pressable } from '@/components';
+import { BackGlyph, Button, Card, CardRow, Pressable, ScrollArea } from '@/components';
 import { log } from '@/services/log';
 import { showToast } from '@/services/toast';
 import { clearAllData, exportData, importData } from '@/storage';
@@ -142,7 +142,7 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
         <h1 className="font-bold font-display text-title">{t('settings.title')}</h1>
       </header>
 
-      <div className="screen-content safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
+      <ScrollArea className="safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
         <h2 className="font-extrabold text-overline text-text-muted tracking-wide">
           {t('settings.section_practice')}
         </h2>
@@ -232,7 +232,7 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
             void handleImportFile(event);
           }}
         />
-      </div>
+      </ScrollArea>
     </div>
   );
 }

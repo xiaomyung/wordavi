@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, VerdictBlock } from '@/components';
+import { Button, ScrollArea, VerdictBlock } from '@/components';
 import type {
   DrillServices,
   LearningMode,
@@ -186,7 +186,7 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
         onLeave={endless ? finish : onExit}
       />
 
-      <main className="screen-content flex flex-col items-center justify-center px-screen">
+      <ScrollArea as="main" className="flex flex-col items-center justify-center px-screen">
         {question !== null && (
           <div
             key={swapKey}
@@ -207,7 +207,7 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
             />
           </div>
         )}
-      </main>
+      </ScrollArea>
 
       <section
         className="safe-bottom flex flex-col gap-3 px-screen pb-5"

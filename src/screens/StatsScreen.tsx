@@ -9,7 +9,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StreakStampDay } from '@/components';
-import { BackGlyph, Button, Card, Chip, SkillBar, StreakStamps } from '@/components';
+import { BackGlyph, Button, Card, Chip, ScrollArea, SkillBar, StreakStamps } from '@/components';
 import { formatNumber } from '@/engine';
 import type { DisplayGroup, SessionStats } from '@/session';
 import {
@@ -140,7 +140,7 @@ export function StatsScreen({ onBack, onStartFirstRound }: StatsScreenProps) {
         <h1 className="font-bold font-display text-[26px]">{t('stats.title')}</h1>
       </header>
 
-      <div className="screen-content safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
+      <ScrollArea className="safe-bottom flex flex-col gap-3 px-screen pt-2 pb-6">
         <Card>
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-extrabold text-sub-strong">{t('stats.streak_label')}</span>
@@ -222,7 +222,7 @@ export function StatsScreen({ onBack, onStartFirstRound }: StatsScreenProps) {
             <Button onClick={onStartFirstRound}>{t('stats.empty_cta')}</Button>
           </div>
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 }

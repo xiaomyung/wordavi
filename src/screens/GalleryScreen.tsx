@@ -13,7 +13,7 @@
  */
 import { useState } from 'react';
 import type { SegmentedOption } from '@/components';
-import { Segmented } from '@/components';
+import { ScrollArea, Segmented } from '@/components';
 import { applyTheme, type ThemePref } from '@/services/theme';
 import {
   AccentKeysSection,
@@ -78,7 +78,7 @@ export function GalleryScreen() {
         </nav>
       </header>
 
-      <div className="screen-content safe-bottom flex flex-col gap-10 px-screen py-6">
+      <ScrollArea className="safe-bottom flex flex-col gap-10 px-screen py-6">
         <ButtonsSection />
         <ChoiceSection />
         <AccentKeysSection />
@@ -95,7 +95,7 @@ export function GalleryScreen() {
         <ProgressSection />
         <StreakSection />
         <PriceSection />
-      </div>
+      </ScrollArea>
 
       <GalleryToaster />
     </div>

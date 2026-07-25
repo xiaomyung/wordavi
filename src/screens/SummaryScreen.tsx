@@ -9,7 +9,7 @@
 import type { TFunction } from 'i18next';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, GoalRing, Stamp, StreakStamps } from '@/components';
+import { Button, Card, GoalRing, ScrollArea, Stamp, StreakStamps } from '@/components';
 import { formatWeight } from '@/engine';
 import { findMode, promptDisplay } from '@/modes';
 import { dayStamp as hapticDayStamp } from '@/services/haptics';
@@ -213,7 +213,7 @@ export function SummaryScreen({
 
   return (
     <div className="screen">
-      <div className="screen-content safe-top safe-bottom flex flex-col gap-3 px-screen pt-4 pb-6">
+      <ScrollArea className="safe-top safe-bottom flex flex-col gap-3 px-screen pt-4 pb-6">
         <div className="flex flex-col gap-1 text-center">
           <h1 className="font-bold font-display text-title-lg">{t('summary.title')}</h1>
           <p className="font-semibold text-sub text-text-muted">
@@ -293,7 +293,7 @@ export function SummaryScreen({
         <Button variant="ghost" onClick={onBackHome}>
           {t('summary.back_home')}
         </Button>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

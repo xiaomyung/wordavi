@@ -157,6 +157,7 @@
      still clear of the 42px left padding. */
   --size-hole-tag: calc(var(--size-hole) * 1.2); /* 12 */
   --size-icon-glyph: 1.125rem; /* 18 - icon glyph inside buttons */
+  --size-scrollbar: 0.375rem; /* 6 - overlay scrollbar rail width */
 
   /* resolved-range spacing (design gave ranges; these are the picks) */
   --spacing-stack: 0.75rem; /* 12 - stacked-element gap */
@@ -182,6 +183,16 @@
 
   /* paused surface (design left this un-tokenized; warm cream) */
   --color-surface-paused: #fbf5e7;
+
+  /* overlay scrollbar: the app draws its own so the platform bar (a classic
+     space-consuming control with arrow buttons on desktop Chrome) never reflows
+     the content when it appears. The rail borrows the slider's recessed track
+     and the thumb a warm tan a step stronger than --color-border-strong, which
+     is tuned for hairlines and reads as nothing at 6px wide; dragging paints
+     the thumb accent so the grip confirms the grab. */
+  --color-scrollbar-track: #efe3c6;
+  --color-scrollbar-thumb: #c9b285;
+  --color-scrollbar-thumb-active: #ac4a17;
 }
 
 /* dark theme - same design language, warm umber (never gray-black) */
@@ -223,4 +234,7 @@
 
   /* --- implementation extensions (not from design contract) --- */
   --color-surface-paused: #2e2110;
+  --color-scrollbar-track: #3f2f19;
+  --color-scrollbar-thumb: #6f5a3b;
+  --color-scrollbar-thumb-active: #e08344;
 }

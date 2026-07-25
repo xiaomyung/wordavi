@@ -9,7 +9,7 @@
  */
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, CloseGlyph } from '@/components';
+import { Button, Card, CloseGlyph, ScrollArea } from '@/components';
 import { getRecentLog, log } from '@/services/log';
 import { composeReport, copyReport, sendReport } from '@/services/report';
 import { showToast } from '@/services/toast';
@@ -116,7 +116,7 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
         <h1 className="font-bold font-display text-title">{t('report.title')}</h1>
       </header>
 
-      <div className="screen-content safe-bottom flex flex-col gap-4 px-screen pt-2 pb-6">
+      <ScrollArea className="safe-bottom flex flex-col gap-4 px-screen pt-2 pb-6">
         <textarea
           value={text}
           onChange={(event) => setText(event.target.value)}
@@ -191,7 +191,7 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
             </p>
           )}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

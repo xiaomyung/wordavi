@@ -15,6 +15,7 @@ import { getRound, getSettings, updateSettings } from '@/storage';
 import { currentAvailableModeIds } from './availability';
 import { summaryDayState } from './day-state';
 import { ErrorBoundary } from './ErrorBoundary';
+import { galleryRequested } from './gallery';
 import { ScreenTransition } from './ScreenTransition';
 import type { Screen } from './state';
 import { AppStateProvider, useAppState } from './state';
@@ -25,28 +26,28 @@ import { useHomeModes } from './useHomeModes';
 import { usePwaUpdate } from './usePwaUpdate';
 
 /**
- * The gallery is a design-review surface, not part of the app: split out so the
- * bundle the learner downloads carries every specimen of every component only
- * when `?gallery` actually asks for it.
+ * The gallery is a design-review surface, not part of the app. `__GALLERY__` is
+ * a compile-time constant (vite.config.ts): the builds that leave the gallery
+ * out lose this import with the branch, chunk and all, and the ones that keep it
+ * still fetch every specimen of every component only when `?gallery` asks.
  */
-const GalleryScreen = lazy(async () => ({
-  default: (await import('@/screens/GalleryScreen')).GalleryScreen,
-}));
+const GalleryScreen = __GALLERY__
+  ? lazy(async () => ({
+      default: (await import('@/screens/GalleryScreen')).GalleryScreen,
+    }))
+  : null;
 
 /** What "start a round" means before anything has ever been played. */
 const DEFAULT_MODE_ID = 'words';
 
-/** Hidden component gallery, for visual smokechecks against the design mockups. */
-function galleryRequested(): boolean {
-  return typeof location !== 'undefined' && new URLSearchParams(location.search).has('gallery');
-}
-
 /**
  * Where the app opens. Onboarding gates everything until it has been completed
- * once; `?gallery` bypasses both for design review.
+ * once; `?gallery` bypasses both for design review, where there is a gallery.
  */
 function initialScreen(): Screen {
-  if (galleryRequested()) return { kind: 'gallery' };
+  if (typeof location !== 'undefined' && galleryRequested(location.search, __GALLERY__)) {
+    return { kind: 'gallery' };
+  }
   return getSettings().onboarded ? { kind: 'home' } : { kind: 'onboarding' };
 }
 
@@ -111,7 +112,10 @@ function ScreenRouter() {
   }, [navigate]);
 
   switch (screen.kind) {
+    // Unreachable without a gallery to reach: nothing navigates here, and
+    // `?gallery` is inert in a build that carries none.
     case 'gallery':
+      if (GalleryScreen === null) return null;
       // No fallback: the chunk is local and the gallery is never on the
       // learner's path, so a flash of nothing beats a flash of skeleton.
       return (

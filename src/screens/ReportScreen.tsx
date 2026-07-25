@@ -6,12 +6,18 @@
  * services/report at send time. The diagnostics line is informational only:
  * it tells the user what travels with the report, and nothing there is
  * editable.
+ *
+ * A screenshot only travels when the browser can share files. Where it cannot,
+ * the note under the actions says so while the sheet is still open and names
+ * the file to attach, so the image is attached in the mail app instead of
+ * quietly never arriving.
  */
-import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, CloseGlyph, ScrollArea } from '@/components';
 import { getRecentLog, log } from '@/services/log';
-import { composeReport, copyReport, sendReport } from '@/services/report';
+import type { SendReportResult } from '@/services/report';
+import { composeReport, copyReport, planReport, sendReport } from '@/services/report';
 import { showToast } from '@/services/toast';
 import { getErrors } from '@/storage';
 import { UI_NS } from './log-ns';
@@ -27,8 +33,18 @@ interface Shot {
   url: string;
 }
 
-/** Follow-up line under the actions; the send channel decides which one shows. */
-type SendNote = 'none' | 'sent' | 'attach';
+const NOTE_CLASS = 'text-center font-semibold text-caption text-text-muted leading-normal';
+
+/**
+ * Screenshots the learner still has to attach in their mail app: what the
+ * planned channel would drop while the sheet is open, and what the hand-off
+ * actually dropped once it happened. A send that got nowhere reports none —
+ * nothing reached a mail draft, so there is nothing to attach to yet.
+ */
+function droppedScreenshots(sent: SendReportResult | null, planned: number): number {
+  if (sent === null) return planned;
+  return sent.ok ? sent.droppedScreenshots : 0;
+}
 
 function previewUrl(file: File): string {
   try {
@@ -51,13 +67,17 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
   const { t } = useTranslation();
   const [text, setText] = useState('');
   const [shots, setShots] = useState<Shot[]>([]);
-  const [note, setNote] = useState<SendNote>('none');
+  const [sent, setSent] = useState<SendReportResult | null>(null);
   const [busy, setBusy] = useState(false);
   const nextId = useRef(1);
   const fileInput = useRef<HTMLInputElement>(null);
   const [diagnostics] = useState(
     () => `v${__APP_VERSION__} · errors ${getErrors().length} · log ${getRecentLog().length}`,
   );
+
+  const files = useMemo(() => shots.map((shot) => shot.file), [shots]);
+  const plan = useMemo(() => planReport(files), [files]);
+  const dropped = droppedScreenshots(sent, plan.droppedScreenshots);
 
   const shotsRef = useRef(shots);
   shotsRef.current = shots;
@@ -71,6 +91,8 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
     const picked = Array.from(event.target.files ?? []);
     event.target.value = '';
     if (picked.length === 0) return;
+    // The last hand-off's advice was about a different set of screenshots.
+    setSent(null);
     setShots((current) => [
       ...current,
       ...picked.map((file) => {
@@ -83,6 +105,7 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
   }
 
   function removeShot(id: number): void {
+    setSent(null);
     setShots((current) => {
       const gone = current.find((shot) => shot.id === id);
       if (gone) releasePreview(gone.url);
@@ -92,23 +115,21 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
 
   async function handleSend(): Promise<void> {
     setBusy(true);
-    const payload = composeReport({ userText: text, screenshots: shots.map((shot) => shot.file) });
+    const payload = composeReport({ userText: text, screenshots: files });
     // sendReport is total by contract, but a stuck spinner would leave the
     // learner with no way to send and no way to know why, so the release of the
     // busy flag does not depend on that contract holding.
     const result = await sendReport(payload).catch((err: unknown) => {
       log.error(UI_NS, 'report send threw', { error: String(err) });
-      return { ok: false } as Awaited<ReturnType<typeof sendReport>>;
+      return { ok: false, channel: 'mailto', droppedScreenshots: 0 } satisfies SendReportResult;
     });
     setBusy(false);
     if (result.ok) showToast({ text: t('report.sent') });
-    // A mailto hand-off can't carry files, and a failed send is worth the same
-    // nudge: the user still has the option of attaching them by hand.
-    setNote(result.ok && !result.manualAttachHint ? 'sent' : 'attach');
+    setSent(result);
   }
 
   async function handleCopy(): Promise<void> {
-    const payload = composeReport({ userText: text, screenshots: shots.map((shot) => shot.file) });
+    const payload = composeReport({ userText: text, screenshots: files });
     const result = await copyReport(payload);
     showToast({ text: result.ok ? t('toasts.copied') : t('toasts.copy_failed') });
   }
@@ -191,9 +212,17 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
           >
             {t('report.copy')}
           </Button>
-          {note === 'none' ? null : (
-            <p className="text-center font-semibold text-caption text-text-muted leading-normal">
-              {note === 'sent' ? t('report.sent_hint') : t('report.mailto_fallback')}
+          {dropped > 0 ? (
+            <p className={NOTE_CLASS}>
+              {t('report.attach_by_hand', {
+                count: dropped,
+                files: files.map((file) => file.name).join(', '),
+              })}
+            </p>
+          ) : null}
+          {sent === null ? null : (
+            <p className={NOTE_CLASS}>
+              {sent.ok ? t('report.sent_hint') : t('report.send_failed')}
             </p>
           )}
         </div>

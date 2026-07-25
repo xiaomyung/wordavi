@@ -215,7 +215,9 @@
     "copy": "Copiar",
     "sent": "Enviado — ¡gracias!",
     "sent_hint": "Normalmente respondemos en un par de días.",
-    "mailto_fallback": "Si no se abrió tu correo, adjunta la captura al mensaje manualmente."
+    "attach_by_hand_one": "La captura no puede enviarse con el correo — adjúntala en tu correo. Archivo: {{files}}",
+    "attach_by_hand_other": "Las capturas no pueden enviarse con el correo — adjúntalas en tu correo. Archivos: {{files}}",
+    "send_failed": "No se abrió tu correo. Pulsa «Copiar» y pega el texto en un mensaje."
   },
   "crash": {
     "title": "Algo salió mal",

@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { type ConfigEnv, defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
@@ -21,7 +21,26 @@ const UNUSED_FONT_SUBSETS = ['**/*-greek-*.woff*', '**/*-vietnamese-*.woff*'];
 // nobody ever fetches. They stay in dist for the CSS src list, unprecached.
 const LEGACY_WOFF = ['**/*.woff'];
 
-export default defineConfig({
+/** Opt-in for the gallery in a real build; `pnpm build:e2e` is what sets it. */
+const GALLERY_ENV = 'WORDAVI_GALLERY';
+
+/**
+ * Whether this build carries the component gallery (`/?gallery=1`) — a
+ * design-review surface holding every component in every state.
+ *
+ * It is toolchain, not app: `pnpm dev` and the unit runs get it for free, a real
+ * build only when `WORDAVI_GALLERY` asks (the Playwright suite serves such a
+ * build; the image the site runs does not). The decision lands in the bundle as
+ * the constant `__GALLERY__`, so nothing a browser can send — a query
+ * parameter, a stored value, a hostname — can reach a build that said no, and
+ * with the constant folded to `false` the gallery's dynamic import in
+ * src/app/App.tsx is unreachable and its chunk never gets emitted.
+ */
+function galleryIncluded({ command }: ConfigEnv): boolean {
+  return command === 'serve' || process.env[GALLERY_ENV] === '1';
+}
+
+export default defineConfig((env) => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -87,6 +106,7 @@ export default defineConfig({
   ],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __GALLERY__: JSON.stringify(galleryIncluded(env)),
   },
   resolve: {
     alias: {
@@ -101,4 +121,4 @@ export default defineConfig({
     // otherwise fan out into tens of node processes and exhaust RAM.
     maxWorkers: 2,
   },
-});
+}));

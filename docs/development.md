@@ -54,11 +54,12 @@ start in seconds.
 | `pnpm verify` | lint, typecheck, unit tests and build — **run this before pushing** |
 | `pnpm test` | Vitest once |
 | `pnpm test:watch` | Vitest in watch mode |
-| `pnpm e2e` | Playwright, on an emulated phone and desktop Chrome |
+| `pnpm e2e` | Playwright, on an emulated phone and desktop Chrome — builds first |
 | `pnpm lint` | Biome check |
 | `pnpm lint:fix` | Biome check, applying what it can fix |
 | `pnpm typecheck` | `tsc` with no emit |
 | `pnpm build` | production build into `dist/` |
+| `pnpm build:e2e` | the same build plus the component gallery, which three specs need |
 | `pnpm preview` | serve the built `dist/` on :4173 |
 | `pnpm docs:preview` | build and serve this documentation site on :8080 |
 
@@ -74,9 +75,12 @@ pnpm exec playwright install chromium
 
 ## Things the test suites will not tell you
 
-**`pnpm e2e` serves `dist/` as it is on disk.** Playwright starts `pnpm preview`
-over whatever was built last, so build first — `pnpm verify` does — or you are
-testing the previous build and wondering why your change had no effect.
+**`pnpm e2e` builds first; driving Playwright yourself does not.** The script
+runs `pnpm build:e2e` and then the suite, so `pnpm e2e` always tests your current
+code. But calling `pnpm exec playwright test …` directly — which is what you do to
+regenerate a baseline or run one spec — serves `dist/` exactly as it is on disk.
+Run `pnpm build:e2e` first, or you are testing the previous build and wondering
+why your change had no effect.
 
 **Visual baselines need `--update-snapshots=all`.** The committed baselines live
 in `e2e/visual.spec.ts-snapshots/` and are compared with a one-percent pixel
@@ -86,6 +90,7 @@ image in place. The result is a committed screenshot that no longer matches the
 app while every test is green. After an intentional design change:
 
 ```bash
+pnpm build:e2e
 pnpm exec playwright test e2e/visual.spec.ts --project=mobile --update-snapshots=all
 ```
 
@@ -97,6 +102,19 @@ to that machine.
 **Unit tests run with a worker cap.** `vitest.config`'s `maxWorkers: 2` is
 deliberate: the suite is large and an unbounded fork pool will exhaust memory on
 a normal laptop.
+
+## The component gallery
+
+`/?gallery=1` opens a page holding every component in every state — the surface a
+design review reads next to the mockups. It is not a feature, and it is not in
+the live site: a build carries it only when `WORDAVI_GALLERY=1` asks for it, which
+`pnpm build:e2e` sets and `pnpm build` does not. `pnpm dev` and the unit runs
+always have it.
+
+The switch is thrown when the bundle is built, so nothing in a browser can flip
+it — the shipped bundle contains neither the gallery's code nor the branch that
+would load it, and CI fails the pull request if a production build ever emits the
+gallery chunk.
 
 ## Layout
 

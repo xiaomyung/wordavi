@@ -6,10 +6,15 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
 
 ## 0.2.1 - 2026-07-25
 
-- Documented the development commands in the readme, which had none, and dropped
-  its stale "work in progress" status.
+- The documentation now has a development note: the commands, the repo layout, and
+  the test-suite behaviour that is easy to get wrong. The readme is for learners
+  again, screenshots and all.
 - The app mark is now drawn at one scale everywhere — the favicon, the installed
   icons and the tile in onboarding all match the maskable icon's framing.
+- A report with a screenshot now says up front when the screenshot cannot travel
+  with the message, instead of dropping it silently on the way to the mail app.
+- The component gallery is a development surface again: it is no longer part of
+  the published build.
 
 ## 0.2.0 - 2026-07-25
 

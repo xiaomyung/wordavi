@@ -44,6 +44,20 @@ jobs:
       - if: steps.pw-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
       - run: pnpm build
+      - name: shipped build carries no component gallery
+        # The gallery is a design surface, opt-in at build time. What a plain
+        # build must never emit: its lazy chunk, or the nav label only it has.
+        run: |
+          if ls dist/assets/GalleryScreen-*.js >/dev/null 2>&1; then
+            echo "::error::the build ships the gallery chunk"
+            exit 1
+          fi
+          if grep -rqF 'price · dots' dist; then
+            echo "::error::the build ships gallery markup"
+            exit 1
+          fi
+          echo "gallery is out of the shipped build"
+      # Rebuilds dist with the gallery in it: the visual and a11y specs open it.
       - run: pnpm e2e
 
   lint:

@@ -28,8 +28,10 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
-    // Serves dist as-is: run `pnpm build` first (CI does, and so does `pnpm
-    // verify`) or the suite tests the previous build.
+    // Serves dist as-is. `pnpm e2e` builds it first with `pnpm build:e2e` — the
+    // production build plus the component gallery, which three specs here open;
+    // a plain `pnpm build` compiles that gallery out. Driving Playwright
+    // directly tests whatever dist happens to hold.
     command: `pnpm preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,

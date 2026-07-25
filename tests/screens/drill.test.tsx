@@ -232,14 +232,16 @@ describe('DrillScreen', () => {
     renderDrill();
 
     answerRight();
-    expect(screen.getByText('10')).toBeInTheDocument();
+    // Scoped to the chip: the numeral on stage can be the same number as the
+    // score, so a text query would match either one depending on the draw.
+    expect(screen.getByTestId('score-chip')).toHaveTextContent('10');
     // A combo only becomes worth showing at two in a row.
-    expect(screen.queryByText('×2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('combo-chip')).not.toBeInTheDocument();
 
     goNext();
     answerRight();
-    expect(screen.getByText('20')).toBeInTheDocument();
-    expect(screen.getByText('×2')).toBeInTheDocument();
+    expect(screen.getByTestId('score-chip')).toHaveTextContent('20');
+    expect(screen.getByTestId('combo-chip')).toHaveTextContent('×2');
   });
 
   it('runs a fixed round to the end and reports the summary', () => {

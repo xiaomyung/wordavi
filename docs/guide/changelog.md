@@ -4,6 +4,11 @@ title: Changelog
 
 For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
 
+## 0.2.1 - 2026-07-25
+
+- Documented the development commands in the readme, which had none, and dropped
+  its stale "work in progress" status.
+
 ## 0.2.0 - 2026-07-25
 
 The learning app itself, replacing the in-progress page.

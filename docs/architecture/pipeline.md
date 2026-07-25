@@ -108,6 +108,15 @@ SPA fallback, and self-only security headers (CSP `default-src 'self'`). From
 there the browser takes over and the PWA runs offline, as described in
 [[overview]].
 
+The two sites carry **different policies**, in `deploy/security-headers.conf` and
+`deploy/security-headers-docs.conf`. The app's forbids `eval`. This
+documentation site has to allow it: Quartz draws the graph with PixiJS, which
+compiles its shaders through `new Function`, and refusing that does not merely
+lose the graph — the whole script bundle throws on load, taking the explorer and
+the search with it. The trade is bounded by what this site is: static pages
+built from markdown in the repository, with no user input, no accounts and no
+data. The app, on its own origin, is unaffected.
+
 ## Summary
 
 A PR that passes the gates, merges, and bumps the version becomes a tagged GHCR

@@ -9,6 +9,9 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
 - The documentation's graph view no longer prints one note's title over another:
   the captions settle into place around their dots, and a caption that cannot
   fit waits for you to hover its dot rather than colliding.
+- The published documentation site gets its graph, explorer and search back. They
+  had never worked there: the browser refused the whole script bundle, so every
+  page rendered with dead navigation while a local preview looked fine.
 
 ## 0.2.1 - 2026-07-25
 

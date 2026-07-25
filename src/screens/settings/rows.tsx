@@ -6,7 +6,9 @@
  * persistence path and the live side effects live here once and both screens
  * compose them. Every writer goes through `useSettingsState().update`, which
  * persists immediately, logs, and applies the effect the setting owns
- * (language, theme, sounds) without waiting for a reload.
+ * (language, theme, sounds) without waiting for a reload. Speech rate adds a
+ * per-interaction confirmation rather than a persistent effect: it speaks a
+ * sample at the rate just picked (see {@link playSpeechRateSample}).
  *
  * Control geometry mirrors design-handoff/wordavi-design-v1/screens/settings.html:
  * `.srow` = CardRow (label/sub + trailing control), `.scol` = StackedRow
@@ -22,6 +24,7 @@ import { setLanguage } from '@/i18n';
 import { log } from '@/services/log';
 import { setEnabled as setSoundsEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
+import { getVoiceStatus, speak } from '@/services/tts';
 import type { RoundSizeSetting, Settings, SpeechRate, Theme, UiLang } from '@/storage';
 import { getSettings, updateSettings } from '@/storage';
 import { UI_NS } from '../log-ns';
@@ -32,6 +35,14 @@ const DEFAULT_ROUND_INDEX = 1;
 
 const SPEECH_RATES: readonly SpeechRate[] = ['slow', 'normal', 'fast'];
 const DEFAULT_SPEECH_INDEX = 1;
+
+/**
+ * Spoken back at the rate just chosen, so "slow / normal / fast" is something
+ * the learner hears instead of a word they have to imagine. 475 is the app's
+ * signature number (the one the home screen advertises), long enough that a
+ * rate difference is audible in it.
+ */
+const SPEECH_RATE_SAMPLE = 'cuatrocientos setenta y cinco';
 
 const GOAL_MIN = 5;
 const GOAL_MAX = 50;
@@ -248,6 +259,21 @@ export function ThemeSetting({ settings, update }: SettingRowProps) {
   );
 }
 
+/**
+ * Plays the sample at `rate`. Fired once per interaction (the slider's commit,
+ * not every stop the thumb snaps through), and `speak` cancels whatever is
+ * in flight first — so a learner sliding back and forth hears the newest
+ * sample cut the previous one instead of a chorus. Silent on devices with no
+ * Spanish voice, and a sample that fails anyway is cosmetic: it goes to the
+ * log, never to a toast.
+ */
+function playSpeechRateSample(rate: SpeechRate): void {
+  if (getVoiceStatus() === 'none') return;
+  void speak(SPEECH_RATE_SAMPLE, { rate }).catch((error: unknown) => {
+    log.debug(UI_NS, 'speech rate sample failed', { rate, error });
+  });
+}
+
 export function SpeechRateSetting({ settings, update }: SettingRowProps) {
   const { t } = useTranslation();
   const label = t('settings.speech_speed_label');
@@ -269,7 +295,9 @@ export function SpeechRateSetting({ settings, update }: SettingRowProps) {
         onChangeCommitted={(next) => {
           setDraft(null);
           const rate = SPEECH_RATES[next];
-          if (rate) update({ speechRate: rate }, 'speechRate');
+          if (!rate) return;
+          update({ speechRate: rate }, 'speechRate');
+          playSpeechRateSample(rate);
         }}
         ariaLabel={label}
       />

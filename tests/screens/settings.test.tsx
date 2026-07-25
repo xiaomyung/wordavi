@@ -12,6 +12,7 @@ import {
 import { setEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
 import { showToast } from '@/services/toast';
+import { getVoiceStatus, speak } from '@/services/tts';
 import { clearAllData, exportData, getSettings, updateSettings } from '@/storage';
 
 // Partial mocks: the real modules still initialise i18next / storage, only the
@@ -43,6 +44,18 @@ vi.mock('@/services/toast', async (importOriginal) => {
 vi.mock('@/services/install', async () => {
   const { installMock } = await import('../helpers/mocks');
   return installMock(installBus);
+});
+
+// jsdom has no speechSynthesis, so the sample the speech-rate row plays is
+// asserted through spies: a voice is present by default (the interesting case),
+// and `speak` resolves without making a sound.
+vi.mock('@/services/tts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/tts')>();
+  return {
+    ...actual,
+    getVoiceStatus: vi.fn(() => 'es-ES' as const),
+    speak: vi.fn(() => Promise.resolve()),
+  };
 });
 
 // Storage stays real (the screen's whole job is writing to it); clearAllData and
@@ -84,6 +97,8 @@ describe('SettingsScreen', () => {
     vi.mocked(isIos).mockReturnValue(false);
     vi.mocked(promptInstall).mockResolvedValue('accepted');
     vi.mocked(isInstalled).mockResolvedValue(false);
+    vi.mocked(getVoiceStatus).mockReturnValue('es-ES');
+    vi.mocked(speak).mockResolvedValue(undefined);
     installBus.listeners.clear();
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
@@ -209,7 +224,7 @@ describe('SettingsScreen', () => {
     expect(getSettings().theme).toBe('dark');
   });
 
-  it('persists the speech rate once the thumb settles', () => {
+  it('persists the speech rate once the thumb settles, then plays a sample at it', () => {
     renderScreen();
     const slider = screen.getByRole('slider', { name: 'Скорость речи' });
     vi.mocked(updateSettings).mockClear();
@@ -217,10 +232,43 @@ describe('SettingsScreen', () => {
     fireEvent.keyDown(slider, { key: 'ArrowRight' });
     expect(slider).toHaveAttribute('aria-valuetext', 'быстро');
     expect(updateSettings).not.toHaveBeenCalled();
+    // A stop the thumb only passed through is not worth speaking.
+    expect(speak).not.toHaveBeenCalled();
 
     fireEvent.keyUp(slider, { key: 'ArrowRight' });
     expect(updateSettings).toHaveBeenCalledTimes(1);
     expect(getSettings().speechRate).toBe('fast');
+    expect(speak).toHaveBeenCalledTimes(1);
+    expect(speak).toHaveBeenCalledWith('cuatrocientos setenta y cinco', { rate: 'fast' });
+  });
+
+  it('samples every interaction, letting tts cut the one still playing', () => {
+    renderScreen();
+    const slider = screen.getByRole('slider', { name: 'Скорость речи' });
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    fireEvent.keyDown(slider, { key: 'Home' });
+    fireEvent.keyUp(slider, { key: 'Home' });
+
+    expect(speak).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(speak).mock.calls.map(([, options]) => options?.rate)).toEqual([
+      'fast',
+      'slow',
+    ]);
+    expect(getSettings().speechRate).toBe('slow');
+  });
+
+  it('still persists the rate but says nothing when the device has no Spanish voice', () => {
+    vi.mocked(getVoiceStatus).mockReturnValue('none');
+    renderScreen();
+    const slider = screen.getByRole('slider', { name: 'Скорость речи' });
+
+    fireEvent.keyDown(slider, { key: 'ArrowLeft' });
+    fireEvent.keyUp(slider, { key: 'ArrowLeft' });
+
+    expect(getSettings().speechRate).toBe('slow');
+    expect(speak).not.toHaveBeenCalled();
   });
 
   it('steps the daily goal by five and clamps at both ends', () => {

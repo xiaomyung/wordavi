@@ -27,7 +27,7 @@ export {
 } from './generators';
 export { matchText } from './match';
 export { hasAccentDifference, normalizeAnswer, stripAccents } from './normalize';
-export { numberToWords, wordsWithApocope } from './numbers';
+export { NUMBER_MAX, numberToWords, wordsWithApocope } from './numbers';
 export { priceToWords } from './prices';
 export { type Quantity, quantityToWords } from './quantities';
 export { createRng, type Rng } from './rng';

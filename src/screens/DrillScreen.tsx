@@ -38,7 +38,8 @@ export interface DrillScreenProps {
   resume?: SavedRound;
   /** "Retry the missed": replay this summary's misses instead of a fresh round. */
   retryOf?: RoundSummary;
-  onFinish: (summary: RoundSummary) => void;
+  /** `stampEarned` is true when one of this round's answers met today's goal. */
+  onFinish: (summary: RoundSummary, stampEarned: boolean) => void;
   /** Leave without ending the round — the saved round stays resumable. */
   onExit: () => void;
 }

@@ -5,6 +5,7 @@ import {
   type DayRowLike,
   type GoalVerdict,
   type StreakState,
+  type Verdict,
 } from './types';
 
 /** Milliseconds in a calendar day — the unit all day-key arithmetic here uses. */
@@ -43,13 +44,23 @@ export function effectiveDailyGoal(goal: number): number {
 }
 
 /**
+ * Whether an answer counts towards the daily goal. An 'almost' is a hit: the
+ * learner said the number, they just missed an accent. Everything that tallies
+ * counted answers — the day row, the lifetime totals — asks this one function, so
+ * the two can never come to disagree about what "correct" means.
+ */
+export function countsAsCorrect(verdict: Verdict): boolean {
+  return verdict !== 'wrong';
+}
+
+/**
  * Project a round's answers onto the daily-goal vocabulary: display group plus
  * whether the answer counts toward the goal (correct and almost both do).
  */
 export function toGoalVerdicts(records: readonly AnswerRecord[]): GoalVerdict[] {
   return records.map((record) => ({
     group: BUCKET_TO_GROUP[record.bucket],
-    counted: record.verdict !== 'wrong',
+    counted: countsAsCorrect(record.verdict),
   }));
 }
 

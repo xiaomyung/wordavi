@@ -29,6 +29,9 @@ jobs:
               - 'Dockerfile.docs'
               - 'deploy/nginx-docs.conf'
               - 'deploy/security-headers.conf'
+              # The snippet Dockerfile.docs actually copies. Without it here, an
+              # edit to the docs CSP rebuilds nothing and still looks deployed.
+              - 'deploy/security-headers-docs.conf'
 
   app:
     runs-on: ubuntu-latest

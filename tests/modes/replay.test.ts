@@ -245,11 +245,11 @@ describe('id prefix and payload kind must agree', () => {
       initSrs(),
       choice.source,
     );
-    expect(resumed.current).toBeNull();
 
-    // …and the drill carries on with a question that does have four tiles.
-    const next = nextQuestion(resumed).current;
+    // …the drill resumes on a question that does have four tiles, in its place.
+    const next = resumed.current;
     if (next === null) throw new Error('no question after the drop');
+    expect(next.id).not.toBe(corrupt.id);
     expect(choiceOptions(next)).toHaveLength(4);
   });
 });

@@ -1,4 +1,11 @@
-import { type AcceptedAnswer, matchText, type NoteKey, parseDigitAnswer } from '@/engine';
+import {
+  type AcceptedAnswer,
+  matchText,
+  type NoteKey,
+  NUMBER_MAX,
+  type NumberRange,
+  parseDigitAnswer,
+} from '@/engine';
 import { slog } from './log';
 import { makeCountingRng } from './rng';
 import { applyVerdict, initScore } from './score';
@@ -15,6 +22,7 @@ import {
   isAnswerRecord,
   isDigitTarget,
   isQuestion,
+  type LiveRoundConfig,
   type Question,
   type QuestionContext,
   type QuestionSource,
@@ -48,6 +56,35 @@ const NOOP_SOURCE: QuestionSource = {
  */
 function acceptsReplay(source: QuestionSource, question: Question): boolean {
   return source.canReplay?.(question) ?? true;
+}
+
+/**
+ * The learner's configured range, sanitised into a span values can be drawn
+ * from: the two handles in either order, whole numbers, and never outside what
+ * the engine can spell.
+ *
+ * This is the single definition of "the round's range". The modes draw inside
+ * it and {@link fitsRange} admits against it, so generation and admission cannot
+ * come to disagree — the same guarantee `classifyBucket` gives bucket membership.
+ */
+export function roundRange(config: RoundConfig): NumberRange {
+  const lo = Math.floor(Math.min(config.rangeMin, config.rangeMax));
+  const hi = Math.floor(Math.max(config.rangeMin, config.rangeMax));
+  return { min: Math.max(0, lo), max: Math.min(Math.max(0, hi), NUMBER_MAX) };
+}
+
+/**
+ * Whether a question still sits inside the round's number range.
+ *
+ * Only a plain numeral is governed by the slider. A shelf price or a scale
+ * weight has its own natural scale — clamping "medio kilo" to 0 – 100 would gut
+ * the grocery mode (grocery.tsx), so those payloads always fit.
+ */
+function fitsRange(question: Question, config: RoundConfig): boolean {
+  const payload = question.prompt;
+  if (payload.kind !== 'number') return true;
+  const { min, max } = roundRange(config);
+  return payload.value >= min && payload.value <= max;
 }
 
 /* ------------------------------------------------------------------ *
@@ -148,8 +185,14 @@ export function nextQuestion(state: RoundState): RoundState {
     if (item === undefined) return state;
     question = item;
   } else {
-    const due = pickDueWrongItem(state.srs, step, state.lastWrongQueueStep, (q) =>
-      acceptsReplay(state.source, q),
+    // A miss parked in the wrongQueue outlives the range it was made under, so
+    // it is offered back only while it still fits: narrowing the slider to
+    // 0 – 100 must not re-serve the 777 777 the learner missed last week.
+    const due = pickDueWrongItem(
+      state.srs,
+      step,
+      state.lastWrongQueueStep,
+      (q) => acceptsReplay(state.source, q) && fitsRange(q, state.config),
     );
     if (due !== null) {
       question = { ...due.question, fromWrongQueue: true };
@@ -363,30 +406,46 @@ export function isRoundSerialized(value: unknown): value is RoundSerialized {
   );
 }
 
-/** Rehydrate a serialized round, re-injecting the live srs and (optional) source. */
+/**
+ * Rehydrate a serialized round, re-injecting the live srs and (optional) source.
+ *
+ * `live` carries the settings the learner is allowed to change while a round is
+ * parked; they replace what the round was started with. The round's own shape —
+ * its length, its seed, the mode it belongs to — is not among them: those decide
+ * what "question 7 of 20" already means, and re-reading them would rewrite a
+ * round in progress rather than steer the rest of it.
+ */
 export function deserializeRound(
   data: RoundSerialized,
   srs: SrsState,
   source?: QuestionSource,
+  live?: LiveRoundConfig,
 ): RoundState {
   const src = source ?? NOOP_SOURCE;
-  const rng = makeCountingRng(data.config.seed, data.rngDraws);
+  const liveConfig: RoundConfig = { ...data.config, ...live };
+  const rng = makeCountingRng(liveConfig.seed, data.rngDraws);
   const served = [...data.served];
   let step = data.step;
   let current: Question | null = null;
+  let dropped = false;
 
-  if (served.length > data.records.length) {
-    const pending = served.at(-1) ?? null;
-    if (pending !== null && !acceptsReplay(src, pending)) {
-      // The mode cannot present this one, and it is the only thing the resumed
-      // drill would show — so drop it, together with the `served` slot that
-      // finishRound pairs with a record by index, and carry on at the next
-      // question.
+  const pending = served.length > data.records.length ? served.at(-1) : undefined;
+  if (pending !== undefined) {
+    // Two ways the question on stage can be one this round must no longer ask:
+    // the mode cannot present it, or the learner narrowed the range while the
+    // round was parked. A retry replays a fixed list the learner asked for by
+    // name, so only the first applies there.
+    const usable = acceptsReplay(src, pending) && (data.retry || fitsRange(pending, liveConfig));
+    if (usable) {
+      current = pending;
+    } else {
+      // It is the only thing the resumed drill would show — so drop it, together
+      // with the `served` slot that finishRound pairs with a record by index,
+      // and carry on at the next question.
       served.pop();
       step = Math.max(0, step - 1);
+      dropped = true;
       slog('info', 'round.resume.drop', { id: pending.id });
-    } else {
-      current = pending;
     }
   }
 
@@ -406,11 +465,11 @@ export function deserializeRound(
     : [...data.retryItems];
   const config =
     data.retry && retryItems.length !== data.retryItems.length
-      ? { ...data.config, size: retryItems.length }
-      : data.config;
+      ? { ...liveConfig, size: retryItems.length }
+      : liveConfig;
 
   slog('info', 'round.resume', { step, answered: data.records.length });
-  return {
+  const state: RoundState = {
     config,
     rngDraws: data.rngDraws,
     step,
@@ -426,4 +485,14 @@ export function deserializeRound(
     source: src,
     rng,
   };
+
+  // Something had to be dropped, so put a usable question in its place right
+  // here: the learner resumes on the step they left, rather than on the verdict
+  // of the question before it, which reads as the round having rewound. A retry
+  // round draws the replacement from its own list, but any other one has to ask
+  // the source — so a rehydration with no source given is left exactly as it is.
+  // `nextQuestion` is a no-op on a finished or complete round, which is what
+  // covers the rest.
+  const canAsk = state.retry || source !== undefined;
+  return dropped && canAsk ? nextQuestion(state) : state;
 }

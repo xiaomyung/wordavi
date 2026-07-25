@@ -27,7 +27,7 @@ registerMode(groceryMode);
    it is what the big start button plays (see mixed.tsx). */
 registerMode(mixedMode);
 
-export { drawForBucket, NUMBER_BUCKETS, type NumberBucket, planFor, roundRange } from './buckets';
+export { drawForBucket, NUMBER_BUCKETS, type NumberBucket, planFor } from './buckets';
 export { answerValueOf, choiceMode, choiceOptions } from './choice';
 export { digitsMode } from './digits';
 export { groceryMode, grocerySource } from './grocery';

@@ -92,12 +92,18 @@ Meet it and the day is stamped on your home screen. Meet it on consecutive days
 and you build a streak; miss a day and the streak is over, which the app tells you
 plainly rather than showing a number that is no longer true.
 
+Answers count the moment you give them, not when a round ends. Five questions on
+one mode, a few more on another, leaving each of them half-played — it all adds
+up, and a round you never finish still moves the ring.
+
 The statistics screen shows your streak, your totals, this month's accuracy, and a
 bar per skill, so you can see what is weak instead of guessing.
 
 ## Settings worth knowing about
 
-- **Number range** — from single digits up to a million. Start small.
+- **Number range** — from single digits up to a million. Start small. Changing it
+  applies straight away, including to a round you have left part-played: come back
+  to it and the question waiting for you is inside the new range.
 - **Questions per round** — 10, 20, 30, or endless.
 - **Speech speed** — how fast the Spanish is read out. Dragging it plays a sample
   so you can hear the difference. Inside a round there is also a "slower" button

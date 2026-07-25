@@ -1,27 +1,33 @@
 /**
  * The day-goal facts the summary card needs, sampled the moment a round ends.
  *
- * `stampedToday` has to be read *before* the round is counted, and by the time
- * `onFinish` fires the day row already includes it — so the only honest way to
- * ask "was the stamp already there?" is to subtract this round's counted
- * answers back out. Getting it wrong would celebrate the same stamp twice.
+ * "Was the stamp already there?" cannot be recovered by arithmetic here. It used
+ * to be: a round was folded into today's row in one batch, so subtracting its own
+ * counted answers back out gave the figure from before it. Answers are now
+ * counted as they are given ([[adr-027]]), and a round played across midnight has
+ * some of them on yesterday's row — subtracting all of them would under-read
+ * today and re-celebrate a stamp the learner already earned.
+ *
+ * So the answer is carried rather than derived: `commitAnswer` reports the answer
+ * that flipped the day from unmet to met, and the drill passes that on.
  */
 
 import type { SummaryDayState } from '@/screens/SummaryScreen';
-import type { RoundSummary } from '@/session';
 import { effectiveDailyGoal, localDayKey } from '@/session';
 import { getDay, getProgress, getSettings } from '@/storage';
 
-export function summaryDayState(summary: RoundSummary, now: Date = new Date()): SummaryDayState {
+/**
+ * @param stampEarned whether one of this round's answers is what met today's goal
+ * @param now the clock reading that decides which local day is being described
+ */
+export function summaryDayState(stampEarned: boolean, now: Date = new Date()): SummaryDayState {
   const total = effectiveDailyGoal(getSettings().dailyGoal);
-  // `correct` counts every non-wrong answer (correct + almost), exactly what
-  // `summary.correctCount` counts — so the two are subtractable.
   const done = getDay(localDayKey(now))?.correct ?? 0;
   const goalMet = done >= total;
 
   return {
     goalMet,
-    stampedToday: goalMet && done - summary.correctCount >= total,
+    stampedToday: goalMet && !stampEarned,
     streakDays: getProgress().streakCurrent,
     done: Math.min(done, total),
     total,

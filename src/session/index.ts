@@ -1,6 +1,7 @@
 /* Goal, streak & calendar-day keys */
 export {
   applyAnswersToDay,
+  countsAsCorrect,
   DAY_MS,
   dayDiff,
   effectiveDailyGoal,
@@ -29,6 +30,7 @@ export {
   isRoundComplete,
   isRoundSerialized,
   nextQuestion,
+  roundRange,
   serializeRound,
 } from './round';
 /* Scoring */
@@ -65,6 +67,7 @@ export type {
   DayRowLike,
   DisplayGroup,
   GoalVerdict,
+  LiveRoundConfig,
   PromptPayload,
   Question,
   QuestionContext,

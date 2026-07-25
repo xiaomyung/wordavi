@@ -4,6 +4,23 @@ title: Changelog
 
 For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
 
+## 0.2.4 - 2026-07-25
+
+- Answers count towards the daily goal the moment you give them. A round left
+  part-played used to count for nothing at all, which made the goal look like it
+  ignored the single modes — the ones you dip into and leave.
+- Changing the number range now applies to a round you have already started. Come
+  back to a round you left and the question waiting for you is inside the new
+  range, as is everything after it; a number you missed under a wider range stops
+  coming back while a narrower one is set.
+- The installed icon reads at the same size as the mark inside the app. It was
+  framed against the whole image rather than the part a phone actually shows, so
+  it came out about a quarter too large on the home screen.
+- The documentation site stops handing different builds to different visitors.
+  Its scripts asked not to be cached with a directive that still allows a copy to
+  be kept, so the edge held two builds of the same file at once and answered from
+  whichever one a request happened to match.
+
 ## 0.2.3 - 2026-07-25
 
 - The documentation site stops serving one build's scripts alongside another

@@ -24,6 +24,7 @@
   "exclude": [
     "tests/architecture.test.ts",
     "tests/gallery-build-flag.test.ts",
+    "tests/icons.test.ts",
     "tests/components/answer-controls-layers.test.ts",
     "tests/components/scroll-area-layers.test.ts"
   ]

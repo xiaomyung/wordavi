@@ -46,6 +46,19 @@ command after editing a note. The first run clones Quartz into
 `~/.cache/wordavi-quartz` and installs it, which takes about a minute; later runs
 start in seconds.
 
+Quartz is not vendored, but one of its files is patched:
+`docs-site/quartz/components/scripts/graph.inline.ts`, a copy of Quartz's graph
+script kept at the path it has upstream. Both the preview script and the image
+build copy it over the clone's own copy. It makes the graph's captions resolve
+their own overlap — upstream pins each caption above its node and lets them
+collide, which forty notes with long titles turn into a smear, and no amount of
+force tuning helps because the simulation only separates node points. The patch
+fits the caption boxes apart once the layout settles, and hides a caption that
+still will not fit rather than floating it away from its dot; hovering a node
+always shows its own caption. Bumping `QUARTZ_REF` means re-applying two marked
+blocks — `docs-site/README.md` has the recipe, and the console snippet that
+checks no two captions overlap.
+
 ## The commands
 
 | Command | What it does |

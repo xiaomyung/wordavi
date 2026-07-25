@@ -5,6 +5,8 @@ RUN apk add --no-cache git coreutils \
   && git clone --depth 1 --branch "$QUARTZ_REF" https://github.com/jackyzha0/quartz.git . \
   && npm ci
 COPY docs-site/quartz.config.ts docs-site/quartz.layout.ts ./
+# patched graph script, shadowing the clone's copy - see docs-site/README.md
+COPY docs-site/quartz/components/scripts/graph.inline.ts quartz/components/scripts/graph.inline.ts
 COPY docs content
 RUN npx quartz build
 

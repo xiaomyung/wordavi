@@ -368,7 +368,11 @@ export function RangeSlider({
   }
 
   return (
-    <div className={className} data-disabled={disabled || undefined}>
+    <div
+      className={className}
+      data-disabled={disabled || undefined}
+      style={{ paddingInline: 'calc(var(--size-thumb) / 2)' }}
+    >
       <div
         ref={trackRef}
         style={{ ...RAIL_STYLE, opacity: disabled ? 0.6 : 1 }}

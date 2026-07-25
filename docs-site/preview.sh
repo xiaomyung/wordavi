@@ -14,9 +14,6 @@ if [ ! -d "$CACHE" ]; then
   (cd "$CACHE" && npm ci)
 fi
 cp "$REPO/docs-site/quartz.config.ts" "$REPO/docs-site/quartz.layout.ts" "$CACHE/"
-# patched graph script, shadowing the clone's copy - see docs-site/README.md
-cp "$REPO/docs-site/quartz/components/scripts/graph.inline.ts" \
-  "$CACHE/quartz/components/scripts/graph.inline.ts"
 rm -rf "$CACHE/content"
 cp -r "$REPO/docs" "$CACHE/content"
 cd "$CACHE" && npx quartz build --serve --port "$PORT"

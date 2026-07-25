@@ -8,12 +8,22 @@ No account, no sign-up, nothing to pay. Install it and it works with no internet
 
 ## What it looks like
 
-| | |
-| --- | --- |
-| <img src="docs/assets/screenshots/home-dashboard.png" width="330" alt="Home screen with the daily goal and the mode list"> | <img src="docs/assets/screenshots/drill-number-to-words.png" width="330" alt="A drill question showing the numeral 714"> |
-| **Home.** The daily goal fills as you answer, the row of stamps is your streak, and the big button plays a mixed round drawn from every mode your device can run. | **A question.** Read `714`, write it in Spanish. The accent row is right there, and the score and combo tick along at the top. |
-| <img src="docs/assets/screenshots/round-summary.png" width="330" alt="Round summary listing the missed answers with corrections"> | <img src="docs/assets/screenshots/grocery-price-tag.png" width="330" alt="The grocery mode showing a shelf price tag"> |
-| **The summary.** Misses come first, each with the correction underneath — `quinientos uno` was really `seiscientos uno`. One button replays just those, and chains until they are clean. | **Prices and weights.** A shelf tag asks what the cashier would say. Every phrasing a real person uses is accepted, including `medio kilo` for 500 grams. |
+<p align="center">
+  <a href="docs/assets/screenshots/home-dashboard.png"><img src="docs/assets/screenshots/home-dashboard.png" width="23%" alt="Home screen with the daily goal, the streak stamps and the mode list"></a>
+  <a href="docs/assets/screenshots/drill-number-to-words.png"><img src="docs/assets/screenshots/drill-number-to-words.png" width="23%" alt="A drill question showing the numeral 714 with the Spanish typed underneath"></a>
+  <a href="docs/assets/screenshots/round-summary.png"><img src="docs/assets/screenshots/round-summary.png" width="23%" alt="Round summary listing the missed answers with their corrections"></a>
+  <a href="docs/assets/screenshots/grocery-price-tag.png"><img src="docs/assets/screenshots/grocery-price-tag.png" width="23%" alt="The grocery mode showing a shelf price tag reading 4,70 euros"></a>
+</p>
+
+<p align="center"><sub>Tap any screen to see it full size.</sub></p>
+
+**Home** — the daily goal fills as you answer, the row of stamps is your streak, and the big button plays a mixed round drawn from every mode your device can run.
+
+**A question** — read `714`, write it in Spanish. The accent row is right under the field, and the score and combo tick along at the top.
+
+**The summary** — misses come first, each with the correction underneath: `quinientos uno` was really `seiscientos uno`. One button replays just those, and chains until they are clean.
+
+**Prices and weights** — a shelf tag asks what the cashier would say. Every phrasing a real person uses is accepted, including `medio kilo` for 500 grams.
 
 ## How practice works
 

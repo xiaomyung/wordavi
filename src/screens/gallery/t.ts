@@ -1,11 +1,11 @@
 /**
  * RU-pinned translator for the component gallery.
  *
- * The gallery is the app's first i18n consumer, so it initialises the shared
- * i18next instance lazily — on first render, never at import time — which keeps
- * importing this module from App.tsx side-effect free for the normal screens.
- * `getFixedT` pins Russian: the gallery exists to eyeball the strings the
- * primary user actually sees, whatever language the browser reports.
+ * The shared i18next instance is initialised lazily — on first render, never at
+ * import time — so importing this module from App.tsx stays side-effect free for
+ * the normal screens. `getFixedT` pins Russian: the gallery exists to eyeball
+ * the strings the primary user actually sees, whatever language the browser
+ * reports.
  */
 import { init } from '@/i18n';
 

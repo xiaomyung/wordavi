@@ -32,8 +32,8 @@ export default defineConfig({
       // pwaUpdate.ts owns registration; no injected inline script.
       injectRegister: null,
       manifest: {
-        name: 'wordavi — испанские числа',
-        short_name: 'wordavi',
+        name: 'WordAvi — испанские числа',
+        short_name: 'WordAvi',
         description: 'Учим испанские числа: цены, веса, количество.',
         // The plugin writes `lang` whether or not we ask; match index.html
         // rather than let it default to English for a Russian name.
@@ -44,6 +44,14 @@ export default defineConfig({
         orientation: 'portrait',
         background_color: '#FAF2E1',
         theme_color: '#FAF2E1',
+        // Lets `navigator.getInstalledRelatedApps()` (Chrome/Android) tell us
+        // this app is already installed while we are being viewed in a tab, so
+        // the install invitations can stay quiet. `prefer_related_applications`
+        // stays false: the entry is for detection, never to push a store app.
+        related_applications: [
+          { platform: 'webapp', url: 'https://wordavi.com/manifest.webmanifest' },
+        ],
+        prefer_related_applications: false,
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
@@ -68,6 +76,12 @@ export default defineConfig({
         globIgnores: [...UNUSED_FONT_SUBSETS, ...LEGACY_WOFF],
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+      },
+      // Serve the manifest (and a dev SW) during `pnpm dev` too, so install
+      // affordances are testable on localhost instead of appearing prod-only.
+      devOptions: {
+        enabled: true,
+        suppressWarnings: true,
       },
     }),
   ],

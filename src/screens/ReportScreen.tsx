@@ -9,13 +9,12 @@
  */
 import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card } from '@/components';
+import { Button, Card, CloseGlyph } from '@/components';
 import { getRecentLog, log } from '@/services/log';
 import { composeReport, copyReport, sendReport } from '@/services/report';
 import { showToast } from '@/services/toast';
 import { getErrors } from '@/storage';
-
-const NS = 'ui';
+import { UI_NS } from './log-ns';
 
 export interface ReportScreenProps {
   onClose: () => void;
@@ -46,22 +45,6 @@ function releasePreview(url: string): void {
   } catch {
     /* nothing to release */
   }
-}
-
-function CloseGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
 }
 
 export function ReportScreen({ onClose }: ReportScreenProps) {
@@ -96,7 +79,7 @@ export function ReportScreen({ onClose }: ReportScreenProps) {
         return { id, file, url: previewUrl(file) };
       }),
     ]);
-    log.info(NS, 'report screenshots attached', { count: picked.length });
+    log.info(UI_NS, 'report screenshots attached', { count: picked.length });
   }
 
   function removeShot(id: number): void {

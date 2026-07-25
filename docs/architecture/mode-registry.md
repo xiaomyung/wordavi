@@ -145,6 +145,14 @@ Two rules keep the mix honest:
 
 Tapping a mode row is unchanged — that plays only that mode, start to finish.
 
+The big button stays the mixed round even when something is left unfinished. A
+parked round takes it over only when the parked round *is* the mixed one; a
+parked single-mode round waits on its own mode row, which shows how far it got
+("continue · 3 of 10") and picks it up when tapped. Starting a new round from the
+big button while a single-mode round is parked replaces that parked round on the
+first answer — there is one parked slot, and no dialog stands between the learner
+and practising.
+
 ## Adding a mode or a whole new subject
 
 Because the registry is flat and typed, extension is additive:

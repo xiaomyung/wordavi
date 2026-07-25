@@ -4,7 +4,7 @@ import { App } from '@/app/App';
 import { init as initI18n } from '@/i18n';
 import type { AnswerZoneProps, PromptProps } from '@/modes';
 import { SWAP_OUT_MS } from '@/screens/drill/useDrillRound';
-import type { QuestionSource } from '@/session';
+import type { PromptPayload, QuestionSource } from '@/session';
 import { getProgress, getRound, updateSettings } from '@/storage';
 
 /**
@@ -64,6 +64,9 @@ vi.mock('@/modes', async () => {
     allModes: () => [stubMode],
     MIXED_MODE_ID: 'mixed',
     setMixedAvailability: () => {},
+    // The summary prints each missed prompt through the modes layer's formatter.
+    promptDisplay: (payload: PromptPayload) =>
+      payload.kind === 'number' ? String(payload.value) : '?',
   };
 });
 
@@ -166,8 +169,10 @@ describe('App round lifecycle', () => {
     press('Close');
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/good/i);
-    // The big button starts the mixed round, so that is what stays parked.
+    // The big button starts the mixed round, so that is what stays parked — and
+    // a parked mixed round is the one case where the big button continues.
     expect(getRound()?.modeId).toBe('mixed');
-    expect(screen.getByRole('button', { name: 'Continue · 1 of 10' })).toBeInTheDocument();
+    press('Continue · 1 of 10');
+    expect(screen.getByText('2 of 10')).toBeInTheDocument();
   });
 });

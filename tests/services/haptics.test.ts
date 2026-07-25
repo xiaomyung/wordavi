@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setNavProp } from '../helpers/nav';
 
 function setVibrate(fn: ((pattern: number | number[]) => boolean) | undefined): void {
-  Object.defineProperty(navigator, 'vibrate', { value: fn, configurable: true, writable: true });
+  setNavProp('vibrate', fn);
 }
 
 async function freshHaptics(): Promise<{

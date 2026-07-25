@@ -124,7 +124,7 @@ export function StreakSection() {
         <Case label="30px — the stats-screen variant">
           <StreakStamps days={STREAK_WEEK} size={30} />
         </Case>
-        <Note>{t('stats.streak_today_sub', { n: 3 })}</Note>
+        <Note>{t('stats.streak_today_sub', { count: 3 })}</Note>
       </Stack>
     </Section>
   );

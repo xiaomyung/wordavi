@@ -66,26 +66,23 @@ export function clampRatio(ratio: number): number {
 
 /** Lowest segment whose upper detent is >= value (detents map to the lower segment). */
 function segmentForValue(value: number): number {
-  for (let i = 0; i < SEGMENTS.length; i += 1) {
-    if (value <= segAt(i).hi) return i;
-  }
-  return SEGMENTS.length - 1;
+  const found = SEGMENTS.findIndex((seg) => value <= seg.hi);
+  // Only reachable above the top detent (clamped callers never get here).
+  return found === -1 ? SEGMENTS.length - 1 : found;
 }
 
 /** Segment used when stepping UP: the one with lo <= value < hi. */
 function stepUpSegment(value: number): number {
-  for (let i = 0; i < SEGMENTS.length; i += 1) {
-    if (value < segAt(i).hi) return i;
-  }
-  return SEGMENTS.length - 1;
+  const found = SEGMENTS.findIndex((seg) => value < seg.hi);
+  // At (or above) the ceiling there is nothing above: step inside the last one.
+  return found === -1 ? SEGMENTS.length - 1 : found;
 }
 
 /** Segment used when stepping DOWN: the one with lo < value <= hi. */
 function stepDownSegment(value: number): number {
-  for (let i = SEGMENTS.length - 1; i >= 0; i -= 1) {
-    if (value > segAt(i).lo) return i;
-  }
-  return 0;
+  const found = SEGMENTS.findLastIndex((seg) => value > seg.lo);
+  // At (or below) the floor there is nothing below: step inside the first one.
+  return found === -1 ? 0 : found;
 }
 
 /** Map a value (clamped to domain) to its rail position ratio in [0, 1]. */
@@ -143,18 +140,11 @@ export function prevStop(value: number): number {
 /** Smallest detent strictly greater than `value` (capped at RANGE_MAX). */
 export function nextDetent(value: number): number {
   const v = clampValue(value);
-  for (const d of DETENTS) {
-    if (d > v) return d;
-  }
-  return RANGE_MAX;
+  return DETENTS.find((detent) => detent > v) ?? RANGE_MAX;
 }
 
 /** Largest detent strictly less than `value` (floored at RANGE_MIN). */
 export function prevDetent(value: number): number {
   const v = clampValue(value);
-  for (let i = DETENTS.length - 1; i >= 0; i -= 1) {
-    const d = DETENTS[i];
-    if (d !== undefined && d < v) return d;
-  }
-  return RANGE_MIN;
+  return DETENTS.findLast((detent) => detent < v) ?? RANGE_MIN;
 }

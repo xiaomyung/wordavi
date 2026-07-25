@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as install from '@/services/install';
 import { log } from '@/services/log';
+import { setNavProp } from '../helpers/nav';
 
 /**
  * install.ts attaches its `beforeinstallprompt`/`appinstalled` listeners once,
@@ -25,10 +26,6 @@ function makePromptEvent(
   event.prompt = opts.prompt ?? vi.fn().mockResolvedValue(undefined);
   event.userChoice = Promise.resolve({ outcome: opts.outcome ?? 'accepted', platform: 'web' });
   return event;
-}
-
-function setNavProp(name: string, value: unknown): void {
-  Object.defineProperty(navigator, name, { value, configurable: true });
 }
 
 describe('install', () => {

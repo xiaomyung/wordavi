@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { tick as hapticTick, wrongReveal } from '@/services/haptics';
-import { log } from '@/services/log';
 import { playVerdict, setEnabled as setSoundsEnabled } from '@/services/sounds';
 import type {
   AnswerRecord,
-  DayRowLike,
   Question,
   QuestionSource,
   RoundConfig,
@@ -15,36 +13,21 @@ import type {
 } from '@/session';
 import {
   answerQuestion,
-  applyAnswersToDay,
   buildRetryRound,
   closeRound,
   createRound,
   deserializeRound,
   deserializeSrs,
-  evaluateStreak,
   finishRound,
-  isGoalMet,
   isRoundComplete,
   isRoundSerialized,
   nextQuestion,
   serializeRound,
   serializeSrs,
-  toGoalVerdicts,
 } from '@/session';
 import type { SavedRound, Settings } from '@/storage';
-import {
-  clearRound,
-  getDay,
-  getProgress,
-  getSettings,
-  getSrs,
-  setRound as saveRound,
-  setDay,
-  setProgress,
-  setSrs,
-} from '@/storage';
-
-const NS = 'drill';
+import { getSettings, getSrs, setRound as saveRound, setSrs } from '@/storage';
+import { commitRound } from './commit-round';
 
 /** Old prompt fade-out before the next question mounts (motion.md). */
 export const SWAP_OUT_MS = 120;
@@ -76,12 +59,6 @@ export interface DrillRoundApi {
   advance: () => void;
   /** Ends the round now (endless close button, graceful offline exit). */
   finish: () => void;
-}
-
-function todayLocal(): string {
-  const now = new Date();
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 /**
@@ -128,7 +105,8 @@ function buildRound(options: UseDrillRoundOptions, settings: Settings): RoundSta
 
 /**
  * Round lifecycle for the drill screen: setup/resume, grading, persistence after
- * every answer, and the day/streak roll-up on finish.
+ * every answer, and — through {@link commitRound} — the day/streak roll-up the
+ * finished round leaves behind.
  *
  * The authoritative round lives in a ref rather than state — timers, the
  * visibilitychange listener and the unmount flush all need the freshest value,
@@ -204,45 +182,7 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
     commit(closed);
     const summary = finishRound(closed);
 
-    setSrs(serializeSrs(closed.srs));
-    clearRound();
-
-    const date = todayLocal();
-    const existing = getDay(date);
-    const base: DayRowLike = existing ?? { date, answered: 0, correct: 0, byGroup: {} };
-    const day = applyAnswersToDay(base, toGoalVerdicts(summary.verdicts));
-    setDay(day);
-
-    const progress = getProgress();
-    const streak = evaluateStreak(
-      {
-        current: progress.streakCurrent,
-        best: progress.streakBest,
-        lastGoalDate: progress.lastGoalDate,
-      },
-      date,
-      isGoalMet(day, settingsRef.current?.dailyGoal ?? 0),
-    );
-    setProgress({
-      ...progress,
-      streakCurrent: streak.current,
-      streakBest: streak.best,
-      lastGoalDate: streak.lastGoalDate,
-      bestCombo: Math.max(progress.bestCombo, summary.bestCombo),
-      totalAnswered: progress.totalAnswered + summary.total,
-      totalCorrect: progress.totalCorrect + summary.correctCount,
-    });
-
-    log.info(NS, 'round summary', {
-      modeId: summary.modeId,
-      total: summary.total,
-      correct: summary.correctCount,
-      almost: summary.almostCount,
-      wrong: summary.wrongCount,
-      points: summary.points,
-      bestCombo: summary.bestCombo,
-      streak: streak.current,
-    });
+    commitRound(summary, closed.srs);
 
     optionsRef.current.onFinish(summary);
   }, [commit]);
@@ -291,8 +231,8 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
   const awaitingNext = served.length === records.length && records.length > 0;
 
   return {
-    question: round.current ?? (awaitingNext ? (served[served.length - 1] ?? null) : null),
-    record: awaitingNext ? (records[records.length - 1] ?? null) : null,
+    question: round.current ?? (awaitingNext ? (served.at(-1) ?? null) : null),
+    record: awaitingNext ? (records.at(-1) ?? null) : null,
     step: round.step,
     size: round.config.size,
     score: round.score,

@@ -3,6 +3,7 @@ import { choiceMode } from './choice';
 import { digitsMode } from './digits';
 import { groceryMode } from './grocery';
 import { listenMode } from './listen';
+import { modeIdOf } from './questionId';
 import { speakMode } from './speak';
 import type { AnswerZoneProps, LearningMode, ModeId, PromptProps } from './types';
 import { MIXED_MODE_ID } from './types';
@@ -83,12 +84,6 @@ function availableModes(): readonly LearningMode[] {
 /* ------------------------------------------------------------------ *
  * Question → its origin mode
  * ------------------------------------------------------------------ */
-
-/** The mode id every question id is prefixed with (`words:n475` → `words`). */
-function modeIdOf(questionId: string): string {
-  const separator = questionId.indexOf(':');
-  return separator === -1 ? '' : questionId.slice(0, separator);
-}
 
 /**
  * The mode a question came from. Falls back to `words` for an id no mode

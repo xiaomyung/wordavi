@@ -1,10 +1,10 @@
-import { useCallback } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { allModes, MIXED_MODE_ID } from '@/modes';
 import { CrashScreen } from '@/screens/CrashScreen';
 import { DrillScreen } from '@/screens/DrillScreen';
-import { GalleryScreen } from '@/screens/GalleryScreen';
-import type { HomeScreenProps } from '@/screens/HomeScreen';
-import { HomeScreen } from '@/screens/HomeScreen';
+import type { HomeScreenProps, ParkedRound } from '@/screens/HomeScreen';
+import { HomeScreen, parkedRoundFrom } from '@/screens/HomeScreen';
+import { UI_NS } from '@/screens/log-ns';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { ReportScreen } from '@/screens/ReportScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
@@ -12,6 +12,7 @@ import { StatsScreen } from '@/screens/StatsScreen';
 import { SummaryScreen } from '@/screens/SummaryScreen';
 import { log } from '@/services/log';
 import { getRound, getSettings, updateSettings } from '@/storage';
+import { currentAvailableModeIds } from './availability';
 import { summaryDayState } from './day-state';
 import { ErrorBoundary } from './ErrorBoundary';
 import { ScreenTransition } from './ScreenTransition';
@@ -21,7 +22,14 @@ import { ToastHost } from './ToastHost';
 import { useHomeModes } from './useHomeModes';
 import { usePwaUpdate } from './usePwaUpdate';
 
-const NS = 'ui';
+/**
+ * The gallery is a design-review surface, not part of the app: split out so the
+ * bundle the learner downloads carries every specimen of every component only
+ * when `?gallery` actually asks for it.
+ */
+const GalleryScreen = lazy(async () => ({
+  default: (await import('@/screens/GalleryScreen')).GalleryScreen,
+}));
 
 /** What "start a round" means before anything has ever been played. */
 const DEFAULT_MODE_ID = 'words';
@@ -45,6 +53,11 @@ function activeModeId(): string {
   return getSettings().lastMode ?? allModes()[0]?.id ?? DEFAULT_MODE_ID;
 }
 
+/** The round left mid-way, as home needs to see it (mode included). */
+function parkedRound(): ParkedRound | null {
+  return parkedRoundFrom(getRound());
+}
+
 /**
  * Home owns the only live capability subscriptions in the app, so they mount
  * and unmount with the screen that needs them rather than with the router.
@@ -59,19 +72,19 @@ function ScreenRouter() {
 
   const go = useCallback(
     (next: Screen) => {
-      log.info(NS, 'navigate', { to: next.kind });
+      log.info(UI_NS, 'navigate', { to: next.kind });
       navigate(next);
     },
     [navigate],
   );
 
   const goBack = useCallback(() => {
-    log.info(NS, 'navigate', { to: 'back' });
+    log.info(UI_NS, 'navigate', { to: 'back' });
     back();
   }, [back]);
 
   const goHome = useCallback(() => {
-    log.info(NS, 'navigate', { to: 'home' });
+    log.info(UI_NS, 'navigate', { to: 'home' });
     reset({ kind: 'home' });
   }, [reset]);
 
@@ -79,7 +92,7 @@ function ScreenRouter() {
   const startMode = useCallback(
     (modeId: string) => {
       updateSettings({ lastMode: modeId });
-      log.info(NS, 'navigate', { to: 'drill', modeId });
+      log.info(UI_NS, 'navigate', { to: 'drill', modeId });
       navigate({ kind: 'drill', modeId });
     },
     [navigate],
@@ -91,13 +104,19 @@ function ScreenRouter() {
    * last row the learner picked.
    */
   const startMixed = useCallback(() => {
-    log.info(NS, 'navigate', { to: 'drill', modeId: MIXED_MODE_ID });
+    log.info(UI_NS, 'navigate', { to: 'drill', modeId: MIXED_MODE_ID });
     navigate({ kind: 'drill', modeId: MIXED_MODE_ID });
   }, [navigate]);
 
   switch (screen.kind) {
     case 'gallery':
-      return <GalleryScreen />;
+      // No fallback: the chunk is local and the gallery is never on the
+      // learner's path, so a flash of nothing beats a flash of skeleton.
+      return (
+        <Suspense fallback={null}>
+          <GalleryScreen />
+        </Suspense>
+      );
 
     case 'onboarding':
       return (
@@ -116,11 +135,16 @@ function ScreenRouter() {
     case 'home':
       return (
         <HomeRoute
+          parkedRound={parkedRound()}
+          // A row starts its own mode, and the drill picks the parked round up
+          // when that mode matches — so a parked single-mode round continues
+          // from its row.
           onStartMode={startMode}
           onStartMixed={startMixed}
-          // The parked round may belong to a mode other than the last one
-          // started; resuming means going back to *its* mode.
-          onResume={() => startMode(getRound()?.modeId ?? activeModeId())}
+          // Continuing the parked *mixed* round is the same navigation as
+          // starting one: the drill resumes it because the mode matches, and
+          // `lastMode` stays the learner's own row choice.
+          onResume={startMixed}
           onOpenSettings={() => go({ kind: 'settings' })}
           onOpenStats={() => go({ kind: 'stats' })}
         />
@@ -137,6 +161,11 @@ function ScreenRouter() {
       return (
         <DrillScreen
           modeId={modeId}
+          // Only the app layer may ask the services what this browser can serve,
+          // so a mixed round is handed the list rather than sampling it itself.
+          // Read here, at the round's start: a resumed or retried mixed round is
+          // filtered by the capabilities of *this* moment.
+          availableModeIds={currentAvailableModeIds()}
           {...(saved !== null && saved.modeId === modeId ? { resume: saved } : {})}
           {...(retryOf !== undefined ? { retryOf } : {})}
           onFinish={(summary) => {

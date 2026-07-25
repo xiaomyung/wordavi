@@ -3,9 +3,7 @@
  * still there after a reload. No save button exists — that is the contract.
  */
 import { expect, test } from '@playwright/test';
-import { drillCounter, expectHome, gotoApp, seedApp, startMode } from './helpers';
-
-const WORDS_MODE = /Число → словами/;
+import { drillCounter, expectHome, gotoApp, seedApp, startMode, WORDS_MODE } from './helpers';
 
 async function openSettings(page: import('@playwright/test').Page): Promise<void> {
   await page.getByRole('button', { name: 'Настройки' }).click();

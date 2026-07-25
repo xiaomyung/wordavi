@@ -21,8 +21,12 @@ export interface ChoiceButtonProps
   ref?: Ref<HTMLButtonElement>;
 }
 
-/** 22px verdict stamp (no size token) — circled check / cross, currentColor stroke. */
-function Stamp({ kind }: { kind: 'check' | 'cross' }) {
+/**
+ * The tile's own 22px verdict stamp (no size token) — circled check / cross,
+ * currentColor stroke. Deliberately not the shared `Stamp`: that one is the
+ * 26px answer-field stamp with its pop animation.
+ */
+function TileStamp({ kind }: { kind: 'check' | 'cross' }) {
   return (
     <span
       className={cx(
@@ -47,7 +51,7 @@ function Stamp({ kind }: { kind: 'check' | 'cross' }) {
 }
 
 /**
- * Multiple-choice tile (2x2 grid). 26px numeral (no type token, tabular). After
+ * Multiple-choice tile (2x2 grid). --text-choice numeral (26, tabular). After
  * reveal it is non-interactive: aria-disabled, no press physics, click ignored.
  */
 export function ChoiceButton({
@@ -71,15 +75,15 @@ export function ChoiceButton({
       onClick={inert ? undefined : onClick}
       className={cx(
         'flex h-(--size-choice) w-full items-center justify-center gap-2 rounded-button border-2',
-        'font-display text-[1.625rem] font-bold text-text numerals',
+        'font-display text-choice font-bold text-text numerals',
         STATE[state],
         className,
       )}
       {...rest}
     >
       {children}
-      {state === 'revealedCorrect' && <Stamp kind="check" />}
-      {state === 'chosenWrong' && <Stamp kind="cross" />}
+      {state === 'revealedCorrect' && <TileStamp kind="check" />}
+      {state === 'chosenWrong' && <TileStamp kind="cross" />}
     </Pressable>
   );
 }

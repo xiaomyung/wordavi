@@ -167,6 +167,59 @@ describe('speak zones', () => {
     expect(onMicDenied).toHaveBeenCalledTimes(1);
   });
 
+  it('reports a network failure to the drill and shows the offline hint until it escalates', () => {
+    const spy = recognitionSpy();
+    const onRecognitionError = vi.fn();
+    renderZone({ services: spy.services, onRecognitionError });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Держите и говорите' }), {
+      pointerId: 1,
+    });
+    act(() => {
+      spy.fire().onError('network');
+    });
+
+    expect(onRecognitionError).toHaveBeenCalledWith('network');
+    // The mode cannot look at the environment: offline copy is its only guess,
+    // and the drill replaces it by setting `recognitionUnavailable`.
+    expect(
+      screen.getByText('Нет интернета. Всё письменное работает; голос вернётся с сетью.'),
+    ).toBeInTheDocument();
+  });
+
+  it('swaps to typing with the browser-recogniser copy when the drill retires the mic', () => {
+    renderZone({ recognitionUnavailable: true });
+
+    expect(
+      screen.getByText(
+        'Распознавание речи не работает в этом браузере. Попробуйте Chrome — или введите ответ текстом.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveAttribute('data-mode', 'words');
+    // No mic to hold, and nothing to enable in browser settings either.
+    expect(screen.queryByRole('button', { name: 'Держите и говорите' })).toBeNull();
+    expect(screen.queryByText('Микрофон недоступен')).toBeNull();
+  });
+
+  it('keeps the denied copy when the mic is both denied and unavailable', () => {
+    renderZone({ micDenied: true, recognitionUnavailable: true, onMicHelp: vi.fn() });
+
+    expect(screen.getByText('Микрофон недоступен')).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'Распознавание речи не работает в этом браузере. Попробуйте Chrome — или введите ответ текстом.',
+      ),
+    ).toBeNull();
+    expect(screen.getByRole('button', { name: 'Как включить микрофон?' })).toBeInTheDocument();
+  });
+
+  it('submits typed text from the retired-recogniser fallback', () => {
+    const onSubmit = vi.fn();
+    renderZone({ recognitionUnavailable: true, onSubmit });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: ' veintiséis ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить' }));
+    expect(onSubmit).toHaveBeenCalledWith('veintiséis');
+  });
+
   it('shows an inline hint when nothing was heard', () => {
     const spy = recognitionSpy();
     renderZone({ services: spy.services });

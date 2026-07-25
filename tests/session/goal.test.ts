@@ -4,10 +4,14 @@ import {
   applyAnswersToDay,
   type DayRowLike,
   dayDiff,
+  effectiveDailyGoal,
   evaluateStreak,
   type GoalVerdict,
   isGoalMet,
+  localDayKey,
+  localMonthKey,
   type StreakState,
+  shiftDayKey,
   toGoalVerdicts,
 } from '@/session';
 
@@ -86,6 +90,30 @@ describe('toGoalVerdicts', () => {
     );
     expect(day).toMatchObject({ answered: 2, correct: 1 });
     expect(isGoalMet(day, 1)).toBe(true);
+  });
+});
+
+describe('effectiveDailyGoal', () => {
+  it('never lets a day be met before a single answer', () => {
+    expect(effectiveDailyGoal(0)).toBe(1);
+    expect(effectiveDailyGoal(-5)).toBe(1);
+    expect(effectiveDailyGoal(Number.NaN)).toBe(1);
+    expect(effectiveDailyGoal(20)).toBe(20);
+  });
+});
+
+describe('calendar day keys', () => {
+  it('formats a local date as YYYY-MM-DD and YYYY-MM', () => {
+    const date = new Date(2026, 6, 5, 23, 30); // local 2026-07-05
+    expect(localDayKey(date)).toBe('2026-07-05');
+    expect(localMonthKey(date)).toBe('2026-07');
+  });
+
+  it('shifts a key by whole days across month and year ends', () => {
+    expect(shiftDayKey('2026-07-25', 1)).toBe('2026-07-26');
+    expect(shiftDayKey('2026-07-01', -1)).toBe('2026-06-30');
+    expect(shiftDayKey('2026-12-31', 1)).toBe('2027-01-01');
+    expect(shiftDayKey('2026-02-28', 1)).toBe('2026-03-01'); // 2026 non-leap
   });
 });
 

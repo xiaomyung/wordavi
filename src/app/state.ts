@@ -64,7 +64,7 @@ export function initialAppState(screen: Screen = { kind: 'home' }): AppState {
 
 export function currentScreen(state: AppState): Screen {
   // The stack is never empty by construction; the fallback keeps the type honest.
-  return state.stack[state.stack.length - 1] ?? { kind: 'home' };
+  return state.stack.at(-1) ?? { kind: 'home' };
 }
 
 export function appReducer(state: AppState, action: AppAction): AppState {

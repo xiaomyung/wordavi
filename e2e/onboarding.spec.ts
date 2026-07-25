@@ -13,18 +13,23 @@ import {
 } from './helpers';
 
 /**
- * Language → practice → app → ready. Stops before the two exits.
+ * Install → language → practice → app → ready. Stops before the two exits.
  *
- * The install step is deliberately absent here: chromium fires no
- * `beforeinstallprompt` under test and this is not iOS, so the affordance is
- * 'hidden' and the flow is the four steps a desktop-class browser sees. The
- * install step's own matrix is covered in tests/screens/onboarding.test.tsx,
- * where the affordance can be driven directly.
+ * Chromium under test fires no `beforeinstallprompt` and this is not iOS, so the
+ * install step opens in its 'manual' state — the same five-step flow Brave and
+ * Firefox users get. The prompt/iOS/standalone branches of the matrix are
+ * covered in tests/screens/onboarding.test.tsx, where the affordance can be
+ * driven directly.
  */
+async function skipInstallStep(page: import('@playwright/test').Page): Promise<void> {
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Установите на телефон');
+  await page.getByRole('button', { name: 'Продолжить в браузере' }).click();
+}
+
 async function walkToLastStep(page: import('@playwright/test').Page): Promise<void> {
   await gotoApp(page);
+  await skipInstallStep(page);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Привет!');
-  await expect(page.getByText('Установите на телефон')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Русский' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('С чего начнём?');
@@ -36,7 +41,7 @@ async function walkToLastStep(page: import('@playwright/test').Page): Promise<vo
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Пять минут в день');
 }
 
-test('a first visit walks the four steps and lands in the first round', async ({ page }) => {
+test('a first visit walks every step and lands in the first round', async ({ page }) => {
   await walkToLastStep(page);
 
   // The mic ask sits on the last step and is skippable by simply not tapping it:
@@ -52,6 +57,18 @@ test('a first visit walks the four steps and lands in the first round', async ({
   await expect(modeOverline(page)).not.toBeEmpty();
 });
 
+test('the install step offers the browser-menu recipe before anything else', async ({ page }) => {
+  await gotoApp(page);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Установите на телефон');
+
+  await page.getByRole('button', { name: 'Установить приложение' }).click();
+  await expect(page.getByText('Установить через меню браузера')).toBeVisible();
+
+  // Never a gate: the ghost carries on into the rest of onboarding.
+  await page.getByRole('button', { name: 'Продолжить в браузере' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Привет!');
+});
+
 test('the ghost exit ends onboarding on home, with the gate closed for good', async ({ page }) => {
   await walkToLastStep(page);
 
@@ -65,6 +82,7 @@ test('the ghost exit ends onboarding on home, with the gate closed for good', as
 
 test('a step can be walked back without losing the language choice', async ({ page }) => {
   await gotoApp(page);
+  await skipInstallStep(page);
   await page.getByRole('button', { name: 'Русский' }).click();
   await page.getByRole('button', { name: 'Дальше' }).click();
 
@@ -79,6 +97,7 @@ test('a step can be walked back without losing the language choice', async ({ pa
 
 test('onboarding settings are the real ones and stick', async ({ page }) => {
   await gotoApp(page);
+  await skipInstallStep(page);
   await page.getByRole('button', { name: 'Русский' }).click();
 
   // Step 2 renders the live settings controls: the round stepper writes through.

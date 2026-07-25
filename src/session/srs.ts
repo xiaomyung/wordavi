@@ -100,6 +100,24 @@ function cloneSrs(srs: SrsState): SrsState {
  * ------------------------------------------------------------------ */
 
 export const WRONG_QUEUE_CAP = 50;
+
+/**
+ * A wrongQueue item may be injected at most once every three served questions,
+ * so a rough patch never turns the round into a re-test. Rounds start at
+ * `-WRONG_QUEUE_MIN_GAP` so the very first question is already eligible.
+ */
+export const WRONG_QUEUE_MIN_GAP = 3;
+
+/** Consecutive non-wrong answers that retire a wrongQueue item. */
+const QUEUE_EXIT_STREAK = 2;
+
+/** How many recent answers per bucket feed accuracy/error rate. */
+const LAST20_WINDOW = 20;
+/** Mastery needs this accuracy over the window AND this many lifetime attempts. */
+const MASTERY_ACCURACY = 0.9;
+const MASTERY_MIN_ATTEMPTS = 10;
+/** Weight multiplier applied to a bucket's error rate. */
+const ERROR_WEIGHT = 3;
 const MASTERY_FLOOR = 0.2;
 
 export function accuracyOf(stat: BucketStat): number {
@@ -116,12 +134,14 @@ export function errorRateOf(stat: BucketStat): number {
 
 /** masteryFloor = 0.2 when accuracy >= 90% over last 20 AND attempts >= 10, else 1. */
 export function masteryFloorOf(stat: BucketStat): number {
-  return accuracyOf(stat) >= 0.9 && stat.attempts >= 10 ? MASTERY_FLOOR : 1;
+  return accuracyOf(stat) >= MASTERY_ACCURACY && stat.attempts >= MASTERY_MIN_ATTEMPTS
+    ? MASTERY_FLOOR
+    : 1;
 }
 
 /** weight = (1 + 3 * errorRate) * masteryFloor. */
 export function weightOf(stat: BucketStat): number {
-  return (1 + 3 * errorRateOf(stat)) * masteryFloorOf(stat);
+  return (1 + ERROR_WEIGHT * errorRateOf(stat)) * masteryFloorOf(stat);
 }
 
 export function bucketWeight(srs: SrsState, bucket: SkillBucket): number {
@@ -180,7 +200,7 @@ export function pickDueWrongItem(
   step: number,
   lastWrongQueueStep: number,
 ): WrongQueueItem | null {
-  if (step - lastWrongQueueStep < 3) return null;
+  if (step - lastWrongQueueStep < WRONG_QUEUE_MIN_GAP) return null;
   let best: WrongQueueItem | null = null;
   for (const it of srs.wrongQueue) {
     if (srs.answeredCount >= it.dueAt && (best === null || it.dueAt < best.dueAt)) {
@@ -206,28 +226,24 @@ export function updateSrsOnAnswer(srs: SrsState, q: Question, verdict: Verdict):
   const stat = next.buckets[q.bucket] ?? emptyBucket();
   stat.attempts += 1;
   if (nonWrong) stat.correct += 1;
-  stat.last20 = [...stat.last20, nonWrong].slice(-20);
+  stat.last20 = [...stat.last20, nonWrong].slice(-LAST20_WINDOW);
   next.buckets[q.bucket] = stat;
 
   const idx = next.wrongQueue.findIndex((it) => it.question.id === q.id);
   if (idx >= 0) {
     const item = next.wrongQueue[idx] as WrongQueueItem;
-    if (nonWrong) {
-      const cc = item.consecutiveCorrect + 1;
-      if (cc >= 2) {
-        next.wrongQueue.splice(idx, 1);
-        slog('debug', 'srs.wrongQueue.exit', { id: q.id });
-      } else {
-        item.consecutiveCorrect = cc;
-        item.reappearances += 1;
-        item.dueAt = next.answeredCount + dueDelay(item.reappearances);
-      }
+    // A miss resets the streak; either way an item that stays in the queue is
+    // rescheduled by its (now higher) reappearance count.
+    const consecutiveCorrect = nonWrong ? item.consecutiveCorrect + 1 : 0;
+    if (consecutiveCorrect >= QUEUE_EXIT_STREAK) {
+      next.wrongQueue.splice(idx, 1);
+      slog('debug', 'srs.wrongQueue.exit', { id: q.id });
     } else {
-      item.consecutiveCorrect = 0;
+      item.consecutiveCorrect = consecutiveCorrect;
       item.reappearances += 1;
       item.dueAt = next.answeredCount + dueDelay(item.reappearances);
     }
-  } else if (!nonWrong) {
+  } else if (verdict === 'wrong') {
     pushWrong(next, q);
   }
 
@@ -267,7 +283,11 @@ export function deserializeSrs(value: unknown): SrsState {
   for (const bucket of SKILL_BUCKETS) {
     const stat = rawBuckets[bucket];
     buckets[bucket] = isBucketStat(stat)
-      ? { attempts: stat.attempts, correct: stat.correct, last20: stat.last20.slice(-20) }
+      ? {
+          attempts: stat.attempts,
+          correct: stat.correct,
+          last20: stat.last20.slice(-LAST20_WINDOW),
+        }
       : emptyBucket();
   }
 

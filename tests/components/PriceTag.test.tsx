@@ -50,7 +50,7 @@ describe('PriceTag', () => {
       'before:top-1/2',
       'before:-translate-y-1/2',
       'before:rounded-full',
-      'before:border-[1.5px]',
+      'before:border-(length:--stroke-hairline)',
       'before:border-hole-ring',
       'before:bg-hole-bg',
     ]) {

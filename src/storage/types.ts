@@ -1,6 +1,13 @@
 export type UiLang = 'ru' | 'en' | 'es';
 export type Theme = 'auto' | 'light' | 'dark';
-export type RoundSize = 10 | 20 | 30 | 'endless';
+/**
+ * The round lengths the settings screen offers. Narrower on purpose than the
+ * session layer's own `RoundSize` (any positive count or 'endless'), which also
+ * has to describe a retry round sized to its miss list.
+ */
+export type RoundSizeSetting = 10 | 20 | 30 | 'endless';
+/** @deprecated Use {@link RoundSizeSetting} — `RoundSize` collides with the session type. */
+export type RoundSize = RoundSizeSetting;
 export type SpeechRate = 'slow' | 'normal' | 'fast';
 
 export interface Settings {
@@ -9,7 +16,7 @@ export interface Settings {
   rangeMin: number;
   rangeMax: number;
   acceptNoAccents: boolean;
-  roundSize: RoundSize;
+  roundSize: RoundSizeSetting;
   speechRate: SpeechRate;
   dailyGoal: number;
   soundsEnabled: boolean;
@@ -60,7 +67,12 @@ export interface ErrorEntry {
   updatedAt: string;
 }
 
-export type StorageObserverKind = 'corrupt' | 'migrated' | 'reset';
+/**
+ * `writeFailed` means the slot could not be persisted at all (quota exhausted,
+ * private-mode storage): the in-memory value the setter returned is still good,
+ * but it will not survive a reload.
+ */
+export type StorageObserverKind = 'corrupt' | 'migrated' | 'reset' | 'writeFailed';
 
 export interface StorageObserverEvent {
   key: string;

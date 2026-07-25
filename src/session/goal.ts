@@ -7,7 +7,40 @@ import {
   type StreakState,
 } from './types';
 
-const DAY_MS = 86_400_000;
+/** Milliseconds in a calendar day — the unit all day-key arithmetic here uses. */
+export const DAY_MS = 86_400_000;
+
+function pad2(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
+/** Local calendar day as YYYY-MM-DD (the key shape the storage day rows use). */
+export function localDayKey(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+/** Local calendar month as YYYY-MM (the key `computeStats` aggregates on). */
+export function localMonthKey(date: Date): string {
+  return localDayKey(date).slice(0, 7);
+}
+
+/** Shift a YYYY-MM-DD key by whole days (UTC math, so DST never shifts a date). */
+export function shiftDayKey(key: string, deltaDays: number): string {
+  const parts = key.split('-');
+  const utc =
+    Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])) + deltaDays * DAY_MS;
+  const shifted = new Date(utc);
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+/**
+ * The goal a day is actually measured against. A stored 0 (or a corrupt
+ * negative) would otherwise be met before the learner answered anything, which
+ * would stamp the day and grow the streak for free.
+ */
+export function effectiveDailyGoal(goal: number): number {
+  return Math.max(1, goal || 0);
+}
 
 /**
  * Project a round's answers onto the daily-goal vocabulary: display group plus
@@ -66,13 +99,9 @@ export function isGoalMet(day: DayRowLike, dailyGoal: number): boolean {
  * gap, and is idempotent for repeated same-day calls. `best` is always preserved.
  */
 export function evaluateStreak(prev: StreakState, today: string, goalMet: boolean): StreakState {
-  if (!goalMet) {
-    return { current: prev.current, best: prev.best, lastGoalDate: prev.lastGoalDate };
-  }
-  if (prev.lastGoalDate === today) {
-    // Already stamped today — idempotent.
-    return { current: prev.current, best: prev.best, lastGoalDate: prev.lastGoalDate };
-  }
+  // Nothing to stamp yet, or today is already stamped (repeat calls are
+  // idempotent) — either way the streak is unchanged.
+  if (!goalMet || prev.lastGoalDate === today) return { ...prev };
   const consecutive = prev.lastGoalDate !== null && dayDiff(prev.lastGoalDate, today) === 1;
   const current = consecutive ? prev.current + 1 : 1;
   const best = Math.max(prev.best, current);

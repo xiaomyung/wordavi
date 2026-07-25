@@ -10,6 +10,18 @@ import type { Rng } from './rng';
  * transposition) fill in behind them, with a plain ±2..9 fallback last.
  */
 
+/** How many distractors a choice question needs (four tiles = answer + three). */
+const DISTRACTOR_COUNT = 3;
+
+/** Widest ±k the plain near-miss fallback reaches inside the range. */
+const NEAR_RANGE = 9;
+
+/**
+ * Widest ±k the out-of-range last resort reaches. Only a pathologically tiny
+ * range gets here, and it must still come back with three distinct values.
+ */
+const MAX_WIDEN = 50;
+
 function unique(values: number[]): number[] {
   return [...new Set(values)];
 }
@@ -49,7 +61,7 @@ function hundredsSwap(n: number): number[] {
 function transposeLastTwo(n: number): number[] {
   const s = String(n);
   if (s.length < 2) return [];
-  const swapped = Number(`${s.slice(0, -2)}${s[s.length - 1]}${s[s.length - 2]}`);
+  const swapped = Number(`${s.slice(0, -2)}${s.at(-1)}${s.at(-2)}`);
   return swapped === n ? [] : [swapped];
 }
 
@@ -61,7 +73,8 @@ export function confusablesOf(answer: number): number[] {
   return unique([...teenTensSwap(answer), ...swapSixSeven(answer), ...hundredsSwap(answer)]);
 }
 
-function shuffle<T>(values: readonly T[], rng: Rng): T[] {
+/** Fisher-Yates over a seeded rng — deterministic for a given rng stream. */
+export function shuffle<T>(values: readonly T[], rng: Rng): T[] {
   const out = values.slice();
   for (let i = out.length - 1; i > 0; i--) {
     const j = rng.int(0, i);
@@ -73,7 +86,7 @@ function shuffle<T>(values: readonly T[], rng: Rng): T[] {
 }
 
 /**
- * Build up to three distinct distractors for `answer`, all ≠ answer and inside
+ * Build the three distractors `answer` needs, all ≠ answer and inside
  * [min, max] when feasible. Primary confusables are drawn first (so at least
  * one is present whenever the answer has any), then generic near-misses, then a
  * ±2..9 fallback; a final out-of-range widen covers pathologically tiny ranges.
@@ -94,19 +107,19 @@ export function buildDistractors(answer: number, rng: Rng, range: NumberRange): 
 
   const result: number[] = [];
   const add = (v: number): void => {
-    if (usable(v) && !result.includes(v) && result.length < 3) result.push(v);
+    if (usable(v) && !result.includes(v) && result.length < DISTRACTOR_COUNT) result.push(v);
   };
 
   for (const v of shuffle(primary.filter(inRange), rng)) add(v);
   for (const v of shuffle(secondary.filter(inRange), rng)) add(v);
 
-  if (result.length < 3) {
+  if (result.length < DISTRACTOR_COUNT) {
     const near: number[] = [];
-    for (let k = 2; k <= 9; k++) near.push(answer + k, answer - k);
+    for (let k = 2; k <= NEAR_RANGE; k++) near.push(answer + k, answer - k);
     for (const v of shuffle(near.filter(inRange), rng)) add(v);
   }
   // Last resort for tiny ranges: widen without the range constraint.
-  for (let k = 2; result.length < 3 && k <= 50; k++) {
+  for (let k = 2; result.length < DISTRACTOR_COUNT && k <= MAX_WIDEN; k++) {
     add(answer + k);
     add(answer - k);
   }

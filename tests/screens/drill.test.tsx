@@ -48,6 +48,8 @@ vi.mock('@/modes', async () => {
     onSubmit,
     micDenied,
     onMicDenied,
+    recognitionUnavailable,
+    onRecognitionError,
     labels,
   }: AnswerZoneProps) {
     const [typed, setTyped] = useState('');
@@ -63,6 +65,11 @@ vi.mock('@/modes', async () => {
       }),
       h('span', { 'data-testid': 'expected' }, verdict === null ? '' : expectedDisplay),
       h('span', { 'data-testid': 'mic-denied' }, String(micDenied)),
+      h(
+        'span',
+        { 'data-testid': 'recognition-unavailable' },
+        String(recognitionUnavailable === true),
+      ),
       h('span', { 'data-testid': 'label-check' }, labels['common.check'] ?? ''),
       verdict === null
         ? h(
@@ -75,6 +82,11 @@ vi.mock('@/modes', async () => {
         ? h('button', { type: 'button', onClick: () => onSubmit('zzz') }, 'answer wrong')
         : null,
       h('button', { type: 'button', onClick: onMicDenied }, 'deny mic'),
+      h(
+        'button',
+        { type: 'button', onClick: () => onRecognitionError?.('network') },
+        'fail recognition',
+      ),
     );
   }
 
@@ -102,6 +114,10 @@ const MODE_ID = 'stub';
 
 function setSearch(search: string): void {
   window.history.replaceState({}, '', `/${search}`);
+}
+
+function setOnline(value: boolean): void {
+  Object.defineProperty(navigator, 'onLine', { value, configurable: true });
 }
 
 function promptValue(): string {
@@ -154,6 +170,7 @@ describe('DrillScreen', () => {
   afterEach(() => {
     vi.useRealTimers();
     setSearch('');
+    setOnline(true);
   });
 
   it('renders the shared skeleton: progress, counter, score row and mode overline', () => {
@@ -326,6 +343,29 @@ describe('DrillScreen', () => {
 
     press('deny mic');
     expect(screen.getByTestId('mic-denied')).toHaveTextContent('true');
+  });
+
+  it('retires the microphone for the round when recognition fails while online', () => {
+    setOnline(true);
+    renderDrill();
+    expect(screen.getByTestId('recognition-unavailable')).toHaveTextContent('false');
+
+    press('fail recognition');
+    expect(screen.getByTestId('recognition-unavailable')).toHaveTextContent('true');
+
+    // Sticky: the next question answers by keyboard too, rather than holding the
+    // mic into the same dead backend again.
+    answerRight();
+    goNext();
+    expect(screen.getByTestId('recognition-unavailable')).toHaveTextContent('true');
+  });
+
+  it('leaves the microphone alone when the network error is merely being offline', () => {
+    setOnline(false);
+    renderDrill();
+
+    press('fail recognition');
+    expect(screen.getByTestId('recognition-unavailable')).toHaveTextContent('false');
   });
 
   it('renders nothing for an unknown mode instead of a broken drill', () => {

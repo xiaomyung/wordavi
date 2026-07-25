@@ -18,9 +18,8 @@ import {
   promptNumber,
   seedApp,
   startMode,
+  WORDS_MODE,
 } from './helpers';
-
-const WORDS_MODE = /Число → словами/;
 
 test.beforeEach(async ({ page }) => {
   await seedApp(page);

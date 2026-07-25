@@ -8,20 +8,20 @@ import {
   pickBucket,
   pickDueWrongItem,
   updateSrsOnAnswer,
+  WRONG_QUEUE_MIN_GAP,
 } from './srs';
-import type {
-  Accepted,
-  AcceptedDigits,
-  AnswerRecord,
-  Question,
-  QuestionContext,
-  QuestionSource,
-  RoundConfig,
-  RoundSerialized,
-  RoundState,
-  RoundSummary,
-  SrsState,
-  Verdict,
+import {
+  type AnswerRecord,
+  isDigitTarget,
+  type Question,
+  type QuestionContext,
+  type QuestionSource,
+  type RoundConfig,
+  type RoundSerialized,
+  type RoundState,
+  type RoundSummary,
+  type SrsState,
+  type Verdict,
 } from './types';
 
 /**
@@ -42,10 +42,6 @@ const NOOP_SOURCE: QuestionSource = {
 /* ------------------------------------------------------------------ *
  * Verdict computation
  * ------------------------------------------------------------------ */
-
-function isDigitTarget(accepted: Accepted): accepted is AcceptedDigits {
-  return typeof (accepted as AcceptedDigits).intVal === 'number';
-}
 
 /** Normalize an answer to the string the engine parses (es-ES comma decimal). */
 function toGivenString(given: string | number): string {
@@ -102,7 +98,7 @@ export function createRound(
     served: [],
     records: [],
     score: initScore(),
-    lastWrongQueueStep: -3,
+    lastWrongQueueStep: -WRONG_QUEUE_MIN_GAP,
     finished: false,
     retry: false,
     retryItems: [],
@@ -266,7 +262,7 @@ export function buildRetryRound(
     served: [],
     records: [],
     score: initScore(),
-    lastWrongQueueStep: -3,
+    lastWrongQueueStep: -WRONG_QUEUE_MIN_GAP,
     finished: false,
     retry: true,
     retryItems,
@@ -335,7 +331,7 @@ export function deserializeRound(
 ): RoundState {
   const rng = makeCountingRng(data.config.seed, data.rngDraws);
   const pending = data.served.length > data.records.length;
-  const current = pending ? (data.served[data.served.length - 1] ?? null) : null;
+  const current = pending ? (data.served.at(-1) ?? null) : null;
   slog('info', 'round.resume', { step: data.step, answered: data.records.length });
   return {
     config: data.config,

@@ -42,7 +42,7 @@ test('a practised history renders totals, month accuracy and skill bars', async 
   await openStats(page);
 
   await expect(page.getByText('рекорд — 6 дней')).toBeVisible();
-  // 154 lifetime answers, printed with the es-ES thin-space grouping.
+  // 154 lifetime answers — three digits, so no group separator to print yet.
   await expect(page.getByText(/^154$/)).toBeVisible();
   await expect(page.getByText('ответов всего')).toBeVisible();
   await expect(page.getByText('точность за месяц')).toBeVisible();

@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
-import { PillButton, PriceTag } from '@/components';
+import { PillButton, PriceTag, SpeakerGlyph } from '@/components';
 import { generatePrice, generateQuantity, priceToWords, quantityToWords } from '@/engine';
 import type { Question, QuestionSource, SkillBucket } from '@/session';
+import { PromptStage, promptDisplay, promptSpanish, TypedAnswer, useSpeakOnDemand } from './prompt';
+import { questionId } from './questionId';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
-import { PromptStage, promptDisplay, promptSpanish, SpeakerGlyph, TypedAnswer } from './ui';
 
 /**
  * grocery — shelf price / scale weight → what the cashier says (drill-grocery.html).
@@ -24,6 +24,8 @@ import { PromptStage, promptDisplay, promptSpanish, SpeakerGlyph, TypedAnswer } 
  * their own natural scale, and clamping "medio kilo" to a 0–100 range would only
  * gut the mode. Every bucket it declares is therefore always eligible.
  */
+
+const GROCERY_MODE_ID = 'grocery';
 
 const GROCERY_BUCKETS = [
   'price_cents',
@@ -74,7 +76,7 @@ const LABEL_KEYS = [
 
 function priceQuestion(euros: number, cents: number): Question {
   return {
-    id: `grocery:p${euros}.${cents}`,
+    id: questionId(GROCERY_MODE_ID, `p${euros}.${cents}`),
     bucket: 'price_cents',
     prompt: { kind: 'price', euros, cents },
     accepted: priceToWords(euros, cents),
@@ -83,7 +85,7 @@ function priceQuestion(euros: number, cents: number): Question {
 
 function weightQuestion(grams: number): Question {
   return {
-    id: `grocery:q${grams}`,
+    id: questionId(GROCERY_MODE_ID, `q${grams}`),
     // Re-stamped by the round via classifyBucket; kept honest here anyway.
     bucket: grams % 250 === 0 ? 'qty_fractions' : 'qty_grams',
     prompt: { kind: 'quantity', grams },
@@ -116,15 +118,7 @@ export const grocerySource: QuestionSource = {
 
 function GroceryPrompt({ question, services, slower, labels }: PromptProps) {
   const phrase = promptSpanish(question.prompt);
-  const [speaking, setSpeaking] = useState(false);
-
-  const speak = useCallback(() => {
-    setSpeaking(true);
-    services
-      .speak(phrase, { slower })
-      .catch(() => undefined)
-      .finally(() => setSpeaking(false));
-  }, [services, phrase, slower]);
+  const { speaking, speak } = useSpeakOnDemand(services, phrase, slower);
 
   return (
     <PromptStage>
@@ -156,7 +150,7 @@ function GroceryAnswer({ question, verdict, onSubmit, labels }: AnswerZoneProps)
 }
 
 export const groceryMode: LearningMode = {
-  id: 'grocery',
+  id: GROCERY_MODE_ID,
   titleKey: 'modes.grocery.title',
   exampleKey: 'modes.grocery.example',
   requires: ['tts'],

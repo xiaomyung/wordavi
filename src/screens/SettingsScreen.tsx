@@ -12,26 +12,23 @@
  */
 import { type ChangeEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, CardRow, Pressable } from '@/components';
+import { BackGlyph, Button, Card, CardRow, Pressable } from '@/components';
 import { log } from '@/services/log';
 import { showToast } from '@/services/toast';
 import { clearAllData, exportData, importData } from '@/storage';
+import { InstallSteps, installRecipeFor, runInstallPrompt, useInstallOffer } from './install-offer';
+import { UI_NS } from './log-ns';
 import {
   AccentsSetting,
-  BackGlyph,
   GoalSetting,
-  InstallSteps,
-  installAffordance,
   LanguageSetting,
   RangeSetting,
   RoundSetting,
-  runInstallPrompt,
   SoundsSetting,
   SpeechRateSetting,
   ThemeSetting,
-  UI_NS,
   useSettingsState,
-} from './settingsParts';
+} from './settings/rows';
 
 export interface SettingsScreenProps {
   onBack: () => void;
@@ -77,13 +74,19 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
   const [confirmingReset, setConfirmingReset] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const affordance = installAffordance();
+  const { affordance, markInstalled } = useInstallOffer();
+
+  async function promptToInstall(): Promise<void> {
+    const outcome = await runInstallPrompt();
+    if (outcome === 'accepted') markInstalled();
+  }
 
   function handleInstall(): void {
     if (affordance === 'prompt') {
-      void runInstallPrompt();
+      void promptToInstall();
       return;
     }
+    // Everything else is a recipe: Safari's share sheet, or the browser menu.
     setInstallStepsOpen(true);
   }
 
@@ -177,7 +180,12 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
           />
         </Card>
 
-        {installStepsOpen ? <InstallSteps onClose={() => setInstallStepsOpen(false)} /> : null}
+        {installStepsOpen ? (
+          <InstallSteps
+            recipe={installRecipeFor(affordance)}
+            onClose={() => setInstallStepsOpen(false)}
+          />
+        ) : null}
 
         <Card variant="grouped">
           <CardRow label={t('settings.report_problem')} onPress={onReport} />

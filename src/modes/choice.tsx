@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Button, ChoiceButton, type ChoiceState } from '@/components';
-import { buildDistractors, createRng, formatNumber, parseDigitAnswer, type Rng } from '@/engine';
+import { buildDistractors, createRng, formatNumber, parseDigitAnswer, shuffle } from '@/engine';
 import type { Question } from '@/session';
 import { numberSource } from './buckets';
+import { PromptStage, promptSpanish, SpanishPhrase } from './prompt';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
-import { PromptStage, promptSpanish, SpanishPhrase } from './ui';
 
 /**
  * choice — es-ES words → one of four numbers (drill-choice.html).
@@ -27,18 +27,6 @@ import { PromptStage, promptSpanish, SpanishPhrase } from './ui';
 const OPTION_COUNT = 4;
 
 const LABEL_KEYS = ['common.check', 'drill.choice_hint'] as const;
-
-/** Fisher-Yates over a seeded rng — deterministic for a given question id. */
-function shuffle(values: readonly number[], rng: Rng): number[] {
-  const out = values.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = rng.int(0, i);
-    const a = out[i] as number;
-    out[i] = out[j] as number;
-    out[j] = a;
-  }
-  return out;
-}
 
 /**
  * The numeric answer of a choice question: the payload value when it is a plain

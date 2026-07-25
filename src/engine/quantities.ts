@@ -5,6 +5,13 @@ import type { AcceptedAnswer, AnswerVariant } from './types';
 /** A weight to be spoken, held in grams (the lossless internal unit). */
 export type Quantity = { kind: 'weight'; grams: number };
 
+/**
+ * Grams in a kilo — the only unit conversion the engine performs. Shared with
+ * format.ts (display) and generators.ts (whole-kilo draws) so the three never
+ * disagree about where the kilo boundary is.
+ */
+export const GRAMS_PER_KILO = 1000;
+
 /** "un kilo" / "dos kilos" — apocope on the singular. */
 function kilosPhrase(kg: number): string {
   return kg === 1 ? 'un kilo' : `${numberToWords(kg)} kilos`;
@@ -22,8 +29,8 @@ function gramos(grams: number): string {
 
 /** Decimal-kg reading of a weight, e.g. 1200 g → "uno coma dos". */
 function decimalKgWords(grams: number): string {
-  const kg = Math.floor(grams / 1000);
-  const remainder = grams % 1000;
+  const kg = Math.floor(grams / GRAMS_PER_KILO);
+  const remainder = grams % GRAMS_PER_KILO;
   const fracDigits = String(remainder).padStart(3, '0').replace(/0+$/, '');
   return `${numberToWords(kg)} coma ${fracDigitsToWords(fracDigits)}`;
 }
@@ -67,8 +74,8 @@ export function quantityToWords(q: Quantity): AcceptedAnswer {
   }
 
   // Whole kilos.
-  if (g % 1000 === 0) {
-    const kg = g / 1000;
+  if (g % GRAMS_PER_KILO === 0) {
+    const kg = g / GRAMS_PER_KILO;
     return buildAccepted(kilosPhrase(kg), [
       { text: kilogramosPhrase(kg) },
       { text: gramos(g), note: 'crossUnit' },
@@ -76,8 +83,8 @@ export function quantityToWords(q: Quantity): AcceptedAnswer {
   }
 
   // Whole kilos plus a half (2500, 3500, …) — 1500 handled above.
-  if (g % 1000 === 500) {
-    const kg = Math.floor(g / 1000);
+  if (g % GRAMS_PER_KILO === 500) {
+    const kg = Math.floor(g / GRAMS_PER_KILO);
     return buildAccepted(`${kilosPhrase(kg)} y medio`, [
       { text: `${kilogramosPhrase(kg)} y medio` },
       { text: gramos(g), note: 'crossUnit' },
@@ -86,14 +93,14 @@ export function quantityToWords(q: Quantity): AcceptedAnswer {
   }
 
   // Sub-kilo amounts that are not a named fraction → plain grams.
-  if (g < 1000) {
+  if (g < GRAMS_PER_KILO) {
     return buildAccepted(gramos(g), []);
   }
 
   // Other decimal kilos (1200, 1800, 2200, …): the "1,2 kg" reading is
   // canonical (mirrors the display), grams and "kilo doscientos" are variants.
-  const kg = Math.floor(g / 1000);
-  const remainder = g % 1000;
+  const kg = Math.floor(g / GRAMS_PER_KILO);
+  const remainder = g % GRAMS_PER_KILO;
   const variants: AnswerVariant[] = [
     { text: gramos(g), note: 'crossUnit' },
     { text: `${kilosPhrase(kg)} ${numberToWords(remainder)}`, note: 'colloquial' },

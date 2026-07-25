@@ -59,8 +59,8 @@ export function Toggle({
             'absolute top-1/2 left-[3px] size-(--size-knob) -translate-y-1/2 rounded-full',
             'transition-transform duration-(--duration-toggle) ease-(--ease-out-soft)',
             checked
-              ? 'translate-x-6 bg-on-accent shadow-[0_1.5px_0_var(--color-accent-shelf)]'
-              : 'translate-x-0 border border-border bg-surface-raised shadow-[0_1.5px_0_var(--color-border-strong)]',
+              ? 'translate-x-6 bg-on-accent shadow-[0_var(--stroke-hairline)_0_var(--color-accent-shelf)]'
+              : 'translate-x-0 border border-border bg-surface-raised shadow-[0_var(--stroke-hairline)_0_var(--color-border-strong)]',
           )}
         />
       </span>

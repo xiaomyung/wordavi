@@ -53,7 +53,7 @@ describe('StopSlider rendering & aria', () => {
     expect(el).toHaveAttribute('aria-label', 'Скорость речи');
   });
 
-  it('renders every stop label as a tick', () => {
+  it('renders every stop label under the rail', () => {
     render(<Controlled start={0} />);
     for (const stop of STOPS) expect(screen.getByText(stop)).toBeInTheDocument();
   });
@@ -67,10 +67,10 @@ describe('StopSlider rendering & aria', () => {
 describe('StopSlider geometry & focus ring', () => {
   it('pins the stop labels to the same ratios the thumb travels', () => {
     const { container } = render(<Controlled start={1} />);
-    const row = [...container.querySelectorAll<HTMLElement>('[data-tick]')];
-    expect(row.map((tick) => tick.textContent)).toEqual([...STOPS]);
-    expect(row.map((tick) => tick.style.left)).toEqual(['0%', '50%', '100%']);
-    expect(row.map((tick) => tick.style.transform)).toEqual([
+    const row = [...container.querySelectorAll<HTMLElement>('[data-stop]')];
+    expect(row.map((stop) => stop.textContent)).toEqual([...STOPS]);
+    expect(row.map((stop) => stop.style.left)).toEqual(['0%', '50%', '100%']);
+    expect(row.map((stop) => stop.style.transform)).toEqual([
       'none',
       'translateX(-50%)',
       'translateX(-100%)',

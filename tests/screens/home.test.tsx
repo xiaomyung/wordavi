@@ -1,11 +1,28 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n, { init } from '@/i18n';
-import type { HomeModeItem, HomeScreenProps } from '@/screens/HomeScreen';
-import { HomeScreen, savedRoundProgress } from '@/screens/HomeScreen';
+import type { HomeModeItem, HomeScreenProps, ParkedRound } from '@/screens/HomeScreen';
+import { HomeScreen, parkedRoundFrom } from '@/screens/HomeScreen';
+import {
+  canPromptInstall,
+  isInstalled,
+  isIos,
+  isStandalone,
+  promptInstall,
+} from '@/services/install';
 import type { AnswerRecord, RoundSerialized, RoundSize } from '@/session';
 import type { SavedRound } from '@/storage';
-import { getSettings, setDay, setRound, setSettings, updateProgress } from '@/storage';
+import { getSettings, setDay, setSettings, updateProgress } from '@/storage';
+
+// The install invitation reads the affordance from this service; the defaults
+// leave it 'hidden', which is what every other home test expects to see.
+/** Stands in for the service's own availability bus (prompt captured / installed). */
+const installBus = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
+
+vi.mock('@/services/install', async () => {
+  const { installMock } = await import('../helpers/mocks');
+  return installMock(installBus);
+});
 
 /** Friday 24 July 2026, 09:00 local — the date the home mockup renders. */
 const MORNING = new Date(2026, 6, 24, 9, 0, 0);
@@ -77,6 +94,23 @@ function serializedRound(
   };
 }
 
+/** A parked round as the app hands it to the screen. */
+function parked(modeId: string, done: number, total: RoundSize): ParkedRound {
+  return { modeId, done, total };
+}
+
+/** History is what turns "start the first round" into "start a round". */
+function seedHistory(): void {
+  updateProgress({
+    streakCurrent: 1,
+    streakBest: 1,
+    lastGoalDate: TODAY,
+    bestCombo: 3,
+    totalAnswered: 60,
+    totalCorrect: 50,
+  });
+}
+
 function seedDay(correct: number, answered = correct): void {
   setDay({ date: TODAY, answered, correct, byGroup: {} });
 }
@@ -87,8 +121,17 @@ beforeAll(() => {
 
 beforeEach(() => {
   localStorage.clear();
+  // Call counts must not leak between tests — the install mocks live for the
+  // whole file, unlike the per-render prop spies.
+  vi.clearAllMocks();
   vi.useFakeTimers();
   vi.setSystemTime(MORNING);
+  vi.mocked(isStandalone).mockReturnValue(false);
+  vi.mocked(canPromptInstall).mockReturnValue(false);
+  vi.mocked(isIos).mockReturnValue(false);
+  vi.mocked(isInstalled).mockResolvedValue(false);
+  vi.mocked(promptInstall).mockResolvedValue('accepted');
+  installBus.listeners.clear();
 });
 
 afterEach(() => {
@@ -168,9 +211,8 @@ describe('HomeScreen streak plurals', () => {
 });
 
 describe('HomeScreen round CTA', () => {
-  it('offers to resume with "N of M" when a round is parked', () => {
-    setRound('words', serializedRound(12, 30));
-    const props = renderHome();
+  it('offers to resume with "N of M" when the parked round is the mixed one', () => {
+    const props = renderHome({ parkedRound: parked('mixed', 12, 30) });
 
     const cta = screen.getByRole('button', { name: 'Продолжить · 12 из 30' });
     fireEvent.click(cta);
@@ -180,8 +222,7 @@ describe('HomeScreen round CTA', () => {
   });
 
   it('shows the endless marker instead of a question count', () => {
-    setRound('words', serializedRound(7, 'endless'));
-    renderHome();
+    renderHome({ parkedRound: parked('mixed', 7, 'endless') });
     expect(screen.getByRole('button', { name: 'Продолжить · 7 из ∞' })).toBeInTheDocument();
   });
 
@@ -194,14 +235,7 @@ describe('HomeScreen round CTA', () => {
 
   it('starts a mixed round once there is history, whatever was played last', () => {
     setSettings({ ...getSettings(), lastMode: 'grocery' });
-    updateProgress({
-      streakCurrent: 1,
-      streakBest: 1,
-      lastGoalDate: TODAY,
-      bestCombo: 3,
-      totalAnswered: 60,
-      totalCorrect: 50,
-    });
+    seedHistory();
     const props = renderHome();
 
     fireEvent.click(screen.getByRole('button', { name: 'Начать раунд' }));
@@ -209,24 +243,63 @@ describe('HomeScreen round CTA', () => {
     expect(props.onStartMode).not.toHaveBeenCalled();
   });
 
-  it('never resumes a finished round', () => {
-    setRound('words', serializedRound(30, 30, { finished: true }));
-    renderHome();
+  it('never lets a parked single-mode round take over the big button', () => {
+    seedHistory();
+    const props = renderHome({ parkedRound: parked('words', 4, 10) });
+
     expect(screen.queryByRole('button', { name: /Продолжить/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Начать раунд' }));
+    expect(props.onStartMixed).toHaveBeenCalledTimes(1);
+    expect(props.onResume).not.toHaveBeenCalled();
+    expect(props.onStartMode).not.toHaveBeenCalled();
   });
 });
 
-describe('savedRoundProgress', () => {
+describe('HomeScreen parked round hint', () => {
+  it('marks the row of a parked single-mode round, and resumes it from there', () => {
+    const props = renderHome({ parkedRound: parked('words', 4, 10) });
+
+    const row = screen.getByRole('button', { name: /Число → словами/ });
+    expect(within(row).getByText('продолжить · 4 из 10')).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(props.onStartMode).toHaveBeenCalledWith('words');
+  });
+
+  it('marks no row for a parked mixed round — it has none', () => {
+    renderHome({ parkedRound: parked('mixed', 4, 10) });
+    expect(within(screen.getByRole('list')).queryByText(/продолжить ·/)).not.toBeInTheDocument();
+  });
+
+  it('leaves a paused row explaining itself rather than the parked round', () => {
+    renderHome({ parkedRound: parked('listen', 2, 10) });
+
+    const row = screen.getByRole('button', { name: /На слух/ });
+    expect(within(row).getByText('офлайн')).toBeInTheDocument();
+    expect(within(row).queryByText(/продолжить ·/)).not.toBeInTheDocument();
+  });
+});
+
+describe('parkedRoundFrom', () => {
   it('returns null without a slot, for junk, and for a finished round', () => {
-    expect(savedRoundProgress(null)).toBeNull();
+    expect(parkedRoundFrom(null)).toBeNull();
     const junk: SavedRound = { modeId: 'words', updatedAt: 'now', state: { nope: true } };
-    expect(savedRoundProgress(junk)).toBeNull();
+    expect(parkedRoundFrom(junk)).toBeNull();
     const finished: SavedRound = {
       modeId: 'words',
       updatedAt: 'now',
       state: serializedRound(30, 30, { finished: true }),
     };
-    expect(savedRoundProgress(finished)).toBeNull();
+    expect(parkedRoundFrom(finished)).toBeNull();
+  });
+
+  it('carries the slot’s own mode, not the round config’s', () => {
+    const saved: SavedRound = {
+      modeId: 'mixed',
+      updatedAt: 'now',
+      state: serializedRound(3, 10),
+    };
+    expect(parkedRoundFrom(saved)).toEqual({ modeId: 'mixed', done: 3, total: 10 });
   });
 
   it('reports the retry length as the total for a retry round', () => {
@@ -251,7 +324,7 @@ describe('savedRoundProgress', () => {
         ],
       }),
     };
-    expect(savedRoundProgress(saved)).toEqual({ done: 1, total: 2 });
+    expect(parkedRoundFrom(saved)).toEqual({ modeId: 'words', done: 1, total: 2 });
   });
 });
 
@@ -309,5 +382,108 @@ describe('HomeScreen header', () => {
 
     fireEvent(window, new Event('online'));
     expect(within(header).queryByText('офлайн')).not.toBeInTheDocument();
+  });
+});
+
+describe('HomeScreen install invitation', () => {
+  const INVITE = /Можно установить как приложение/;
+
+  function invite(): HTMLElement | null {
+    return screen.queryByText(INVITE);
+  }
+
+  it('invites with the browser-menu recipe when no prompt event exists', () => {
+    // Brave/Firefox never fire beforeinstallprompt — the offer is still real.
+    renderHome();
+    expect(invite()).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(screen.getByText('Установить через меню браузера')).toBeInTheDocument();
+    expect(screen.getByText(/Откройте меню браузера/)).toBeInTheDocument();
+    expect(promptInstall).not.toHaveBeenCalled();
+
+    // Tapping again folds the recipe away.
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(screen.queryByText('Установить через меню браузера')).toBeNull();
+  });
+
+  it('stays away when the device says the app is already installed', async () => {
+    vi.mocked(isInstalled).mockResolvedValue(true);
+    renderHome();
+    await act(async () => undefined);
+    expect(invite()).toBeNull();
+  });
+
+  it('upgrades to the real prompt when the browser captures one', async () => {
+    renderHome();
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(screen.getByText('Установить через меню браузера')).toBeInTheDocument();
+
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    await act(async () => {
+      for (const listener of installBus.listeners) listener();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(promptInstall).toHaveBeenCalled();
+  });
+
+  it('stays away when the app already runs standalone', () => {
+    vi.mocked(isStandalone).mockReturnValue(true);
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    renderHome();
+    expect(invite()).toBeNull();
+  });
+
+  it('invites quietly between the round button and the mode list', () => {
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    renderHome();
+
+    const caption = screen.getByText(INVITE);
+    const cta = screen.getByRole('button', { name: 'Начать первый раунд' });
+    const modes = screen.getByText('режимы');
+    expect(cta.compareDocumentPosition(caption) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(caption.compareDocumentPosition(modes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('fires the captured prompt and steps aside once accepted', async () => {
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    // A real accepted prompt consumes the captured event, so the offer stops
+    // being true the moment it resolves.
+    vi.mocked(promptInstall).mockImplementation(async () => {
+      vi.mocked(canPromptInstall).mockReturnValue(false);
+      return 'accepted';
+    });
+    renderHome();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(promptInstall).toHaveBeenCalled();
+
+    await act(async () => undefined);
+    expect(invite()).toBeNull();
+  });
+
+  it('shows the iOS recipe instead of the generic one', () => {
+    vi.mocked(isIos).mockReturnValue(true);
+    renderHome();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Установить' }));
+    expect(screen.getByText('Установить на iPhone')).toBeInTheDocument();
+    expect(screen.queryByText('Установить через меню браузера')).toBeNull();
+    expect(promptInstall).not.toHaveBeenCalled();
+  });
+
+  it('disappears when the browser reports the app installed', async () => {
+    vi.mocked(canPromptInstall).mockReturnValue(true);
+    renderHome();
+    expect(invite()).not.toBeNull();
+
+    // What install.ts does on `appinstalled`: drop the event, tell subscribers.
+    vi.mocked(canPromptInstall).mockReturnValue(false);
+    vi.mocked(isStandalone).mockReturnValue(true);
+    await act(async () => {
+      for (const listener of installBus.listeners) listener();
+    });
+    expect(invite()).toBeNull();
   });
 });

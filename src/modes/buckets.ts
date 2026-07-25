@@ -7,6 +7,7 @@ import {
   type RoundConfig,
   type SkillBucket,
 } from '@/session';
+import { questionId } from './questionId';
 
 /**
  * Bucket → value-range mapping for the five number modes (words, digits,
@@ -86,7 +87,7 @@ const ENUMERATED: ReadonlySet<NumberBucket> = new Set([
 /** How a bucket will produce a value once the round's range is known. */
 type BucketPlan = { list: readonly number[] } | { span: NumberRange };
 
-export function isNumberBucket(bucket: SkillBucket): bucket is NumberBucket {
+function isNumberBucket(bucket: SkillBucket): bucket is NumberBucket {
   return (NUMBER_BUCKETS as readonly SkillBucket[]).includes(bucket);
 }
 
@@ -115,7 +116,10 @@ export function planFor(bucket: NumberBucket, range: NumberRange): BucketPlan | 
   return list.length > 0 ? { list } : null;
 }
 
-/** Draw one value from a plan. Consumes 1 rng draw (list) or 2 (span). */
+/**
+ * Draw one value from a plan. Consumes 1 rng draw (list), 2 (span), or 0 when
+ * the span has collapsed to a single value (the engine returns it outright).
+ */
 function drawFrom(rng: Rng, plan: BucketPlan): number {
   return 'list' in plan ? rng.pick(plan.list) : generateNumber(rng, plan.span);
 }
@@ -129,9 +133,9 @@ export function drawForBucket(rng: Rng, bucket: NumberBucket, range: NumberRange
   return plan === null ? null : drawFrom(rng, plan);
 }
 
-/** Stable question id: same mode + same value = same SRS/wrongQueue item. */
-export function numberQuestionId(modeId: string, value: number): string {
-  return `${modeId}:n${value}`;
+/** A number question's id: the mode, then `n` and the value it drew. */
+function numberQuestionId(modeId: string, value: number): string {
+  return questionId(modeId, `n${value}`);
 }
 
 /**

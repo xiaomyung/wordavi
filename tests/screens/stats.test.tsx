@@ -7,15 +7,11 @@ import { StatsScreen } from '@/screens/StatsScreen';
 import type { SrsState } from '@/session';
 import { initSrs, serializeSrs } from '@/session';
 import { getSettings, setDay, setSettings, setSrs, updateProgress } from '@/storage';
+import { plainSpaces } from '../helpers/text';
 
 const NOW = new Date(2026, 6, 24, 12, 0, 0);
 const TODAY = '2026-07-24';
 const YESTERDAY = '2026-07-23';
-
-/** Testing-library collapses whitespace, so the engine's thin spaces read as plain ones. */
-function plainSpaces(text: string): string {
-  return text.replace(/\s/g, ' ');
-}
 
 function seededSrs(): SrsState {
   const srs = initSrs();

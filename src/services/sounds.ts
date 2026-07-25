@@ -31,7 +31,7 @@ function getContextCtor(): typeof AudioContext | null {
   if (typeof AudioContext !== 'undefined') return AudioContext;
   const prefixed = typeof window !== 'undefined' ? window.webkitAudioContext : undefined;
   if (prefixed) {
-    log.warn(NS, 'falling back to webkitAudioContext', {});
+    log.warn(NS, 'falling back to webkitAudioContext');
     return prefixed;
   }
   return null;
@@ -41,7 +41,7 @@ function ensureContext(): AudioContext | null {
   if (audioCtx) return audioCtx;
   const Ctor = getContextCtor();
   if (!Ctor) {
-    log.warn(NS, 'AudioContext unavailable', {});
+    log.warn(NS, 'AudioContext unavailable');
     return null;
   }
   audioCtx = new Ctor();

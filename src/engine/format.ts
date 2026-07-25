@@ -5,9 +5,14 @@
  * Unit *labels* (kg/g, €) are localised by the UI; the engine only shapes the
  * numeric value and, for currency, appends the € sign the price question owns.
  */
+import { GRAMS_PER_KILO } from './quantities';
 
-/** U+2009 THIN SPACE — the es-ES thousands separator used across the app. */
-const THIN_SPACE = ' ';
+/**
+ * U+2009 THIN SPACE — the es-ES thousands separator used across the app, and
+ * the separator a caller must put before a unit ("250 g") to match what these
+ * formatters emit. Exported so no caller has to re-type the invisible glyph.
+ */
+export const THIN_SPACE = ' ';
 
 /** Insert a thin space between every group of three integer digits. */
 function groupThousands(intDigits: string): string {
@@ -49,10 +54,10 @@ export interface FormattedWeight {
  * unit label.
  */
 export function formatWeight(grams: number): FormattedWeight {
-  if (grams < 1000) {
+  if (grams < GRAMS_PER_KILO) {
     return { value: formatNumber(grams), unit: 'g' };
   }
-  const kg = grams / 1000;
+  const kg = grams / GRAMS_PER_KILO;
   const trimmed = kg.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
   const parts = trimmed.split('.');
   const intPart = parts[0] ?? '0';

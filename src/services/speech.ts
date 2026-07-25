@@ -5,6 +5,7 @@
  * codes down to the small set screens need to react to.
  */
 import { log } from '@/services/log';
+import { isOnline } from '@/services/online';
 
 const NS = 'speech';
 const MAX_ALTERNATIVES = 5;
@@ -63,7 +64,7 @@ function collectAlternatives(result: SpeechRecognitionResult): string[] {
 export function startRecognition(options: StartRecognitionOptions): RecognitionHandle {
   const lang = options.lang ?? DEFAULT_LANG;
 
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+  if (!isOnline()) {
     log.warn(NS, 'recognition blocked: offline', { lang });
     options.onError('network');
     return NOOP_HANDLE;
@@ -99,7 +100,21 @@ export function startRecognition(options: StartRecognitionOptions): RecognitionH
 
   recognition.onerror = (event) => {
     const kind = mapErrorCode(event.error);
-    log.error(NS, 'recognition error', { code: event.error, kind });
+    // Saying nothing, or the screen stopping recognition, is ordinary drill
+    // traffic — only a genuinely broken recogniser is an error.
+    if (kind === 'no-speech' || kind === 'aborted') {
+      log.warn(NS, 'recognition error', { code: event.error, kind });
+    } else {
+      log.error(NS, 'recognition error', { code: event.error, kind });
+    }
+    // A 'network' error while the tab is online is not a connectivity problem:
+    // the browser ships the API but its cloud recogniser is unreachable (Brave
+    // and other Chromium forks). The kind stays honest - callers tell the two
+    // apart by asking `navigator.onLine` themselves - but the distinction is
+    // worth a breadcrumb in a report from a learner who "had internet".
+    if (kind === 'network' && isOnline()) {
+      log.warn(NS, 'recognition backend unreachable', { online: true });
+    }
     options.onError(kind);
   };
 

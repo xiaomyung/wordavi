@@ -11,10 +11,11 @@ import { getRound, updateSettings } from '@/storage';
  * that the screen swaps prompt zone, answer zone and overline per question and
  * still runs one round.
  *
- * The capability probes are pinned so the mix is a known one: with no voice and
- * no recognition, the modes left are the three written ones (words, digits,
- * choice), which is exactly the mixture that makes the drill change answer
- * *type* mid-round.
+ * The mix is pinned to the three written modes (words, digits, choice) the way
+ * the app pins it — through the `availableModeIds` prop — because that is
+ * exactly the mixture that makes the drill change answer *type* mid-round. The
+ * voice probes are stubbed too, so nothing reaches for a synthesiser happy-dom
+ * does not have.
  */
 vi.mock('@/services/tts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/tts')>();
@@ -28,7 +29,10 @@ vi.mock('@/services/speech', async (importOriginal) => {
 
 const ROUND_SIZE = 10;
 
-/** RU titles of the three modes a voice-less browser can run. */
+/** The modes a voice-less browser can run — what the app would hand the drill. */
+const WRITTEN_MODE_IDS = ['words', 'digits', 'choice'] as const;
+
+/** RU titles of those same three modes. */
 const WRITTEN_TITLES = ['Число → словами', 'Слова → число', 'Выбор из четырёх'];
 
 function setSearch(search: string): void {
@@ -70,7 +74,14 @@ function goNext(): void {
 }
 
 function renderMixed(onFinish = vi.fn()) {
-  render(<DrillScreen modeId="mixed" onFinish={onFinish} onExit={vi.fn()} />);
+  render(
+    <DrillScreen
+      modeId="mixed"
+      availableModeIds={WRITTEN_MODE_IDS}
+      onFinish={onFinish}
+      onExit={vi.fn()}
+    />,
+  );
   return onFinish;
 }
 

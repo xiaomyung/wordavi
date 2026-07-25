@@ -33,7 +33,7 @@ describe('prompt formatting helpers', () => {
     expect(promptSpanish({ kind: 'number', value: 914 })).toBe('novecientos catorce');
     expect(promptSpanish({ kind: 'price', euros: 2, cents: 35 })).toBe('dos con treinta y cinco');
     expect(promptSpanish({ kind: 'quantity', grams: 500 })).toBe('medio kilo');
-    expect(promptSpanish({ kind: 'decimal', intPart: 3, fracDigits: 5 })).toBe('tres coma cinco');
+    expect(promptSpanish({ kind: 'decimal', intPart: 3, fracDigits: '5' })).toBe('tres coma cinco');
   });
 });
 
@@ -227,7 +227,7 @@ describe('listen zones', () => {
     renderPrompt(services, true, onToggleSlower);
     await act(async () => {});
     expect(services.speak).toHaveBeenCalledWith('doscientos cincuenta', { slower: true });
-    const pill = screen.getByRole('button', { name: 'медленнее ×0,75' });
+    const pill = screen.getByRole('button', { name: 'медленнее ×0,5' });
     expect(pill).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(pill);
     expect(onToggleSlower).toHaveBeenCalledTimes(1);

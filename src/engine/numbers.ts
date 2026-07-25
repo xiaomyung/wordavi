@@ -21,7 +21,7 @@ const MAX = 999_999_999_999;
 const MILLION = 1_000_000;
 const THOUSAND = 1_000;
 
-/** cero … veintinueve. Indices 16–29 are the fused, accented forms. */
+/** cero … veintinueve. Indices 16–29 are fused single words (four accented). */
 const WORDS_0_29 = [
   'cero',
   'uno',

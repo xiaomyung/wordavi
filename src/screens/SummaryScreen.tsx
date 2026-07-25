@@ -10,12 +10,13 @@ import type { TFunction } from 'i18next';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, GoalRing, Stamp, StreakStamps } from '@/components';
-import { formatNumber, formatPrice, formatWeight } from '@/engine';
+import { formatWeight } from '@/engine';
+import { findMode, promptDisplay } from '@/modes';
 import { dayStamp as hapticDayStamp } from '@/services/haptics';
-import { playVerdict, isEnabled as soundsEnabled } from '@/services/sounds';
-import type { Accepted, PromptPayload, RoundSummary, Verdict } from '@/session';
-import { getSettings } from '@/storage';
-import { localDayKey } from './streak-window';
+import { playVerdict } from '@/services/sounds';
+import type { PromptPayload, RoundSummary, Verdict } from '@/session';
+import { localDayKey } from '@/session';
+import { expectedDisplayOf } from './expected';
 
 /* ------------------------------------------------------------------ *
  * Props
@@ -50,46 +51,35 @@ const DAY_STAMP_DELAY_MS = 420;
 /** Warm, never grading: the congratulation shows from a clearly good round up. */
 const CONGRATS_ACCURACY = 0.6;
 
-const MODE_TITLE_KEYS = {
-  words: 'modes.words.title',
-  digits: 'modes.digits.title',
-  listen: 'modes.listen.title',
-  choice: 'modes.choice.title',
-  speak: 'modes.speak.title',
-  grocery: 'modes.grocery.title',
-  mixed: 'modes.mixed.title',
-} as const;
-
 /* ------------------------------------------------------------------ *
  * Pure helpers
  * ------------------------------------------------------------------ */
 
+/**
+ * The round's mode, named by the mode itself. A summary can outlive the mode
+ * that produced it (a restored backup, a mode dropped from a later build), so
+ * an unknown id degrades to itself rather than to an empty subtitle.
+ */
 function modeTitle(modeId: string, t: TFunction): string {
-  const key = MODE_TITLE_KEYS[modeId as keyof typeof MODE_TITLE_KEYS];
-  return key === undefined ? modeId : t(key);
+  const titleKey = findMode(modeId)?.titleKey;
+  // Mode title keys are plain strings by contract, so they go through the
+  // untyped-key overload; the key itself is the fallback.
+  return titleKey === undefined ? modeId : t(titleKey, { defaultValue: titleKey });
 }
 
-/** The prompt as the drill showed it (Spanish content formatting, es-ES). */
+/**
+ * The prompt as the drill showed it (Spanish content formatting, es-ES).
+ *
+ * One deliberate departure from the drill's own `promptDisplay`: a weight is
+ * printed with the unit in the UI language ("1,5 кг"), because this list is
+ * read as prose about the round rather than as the prompt itself.
+ */
 function promptText(prompt: PromptPayload, t: TFunction): string {
-  switch (prompt.kind) {
-    case 'number':
-      return formatNumber(prompt.value);
-    case 'price':
-      return formatPrice(prompt.euros, prompt.cents);
-    case 'decimal':
-      return `${formatNumber(prompt.intPart)},${prompt.fracDigits}`;
-    case 'quantity': {
-      const weight = formatWeight(prompt.grams);
-      return `${weight.value} ${weight.unit === 'kg' ? t('units.kg') : t('units.g')}`;
-    }
+  if (prompt.kind === 'quantity') {
+    const weight = formatWeight(prompt.grams);
+    return `${weight.value} ${weight.unit === 'kg' ? t('units.kg') : t('units.g')}`;
   }
-}
-
-/** The one answer the correction line prints: canonical words, or the digits. */
-function canonicalAnswer(accepted: Accepted): string {
-  if ('canonical' in accepted) return accepted.canonical;
-  const digits = formatNumber(accepted.intVal);
-  return accepted.fracDigits === undefined ? digits : `${digits},${accepted.fracDigits}`;
+  return promptDisplay(prompt);
 }
 
 interface SummaryRow {
@@ -126,7 +116,7 @@ function buildRows(summary: RoundSummary, t: TFunction): SummaryRows {
         verdict: 'wrong',
         prompt: question === undefined ? null : promptText(question.prompt, t),
         given: record.given,
-        correction: question === undefined ? null : canonicalAnswer(question.accepted),
+        correction: question === undefined ? null : expectedDisplayOf(question),
       });
       return;
     }
@@ -195,9 +185,6 @@ export function SummaryScreen({
   const stampTimer = useRef<number | null>(null);
 
   const rows = useMemo(() => buildRows(summary, t), [summary, t]);
-  // Sounds are opt-in; the service also gates itself, this keeps the screen
-  // honest even when nothing has pushed the setting into it yet.
-  const soundsOn = useMemo(() => getSettings().soundsEnabled || soundsEnabled(), []);
   const todayKey = useMemo(() => localDayKey(new Date()), []);
 
   useEffect(
@@ -215,7 +202,9 @@ export function SummaryScreen({
       if (dayState.stampedToday) return;
       setStampPops(true);
       hapticDayStamp();
-      if (soundsOn) playVerdict('correct');
+      // The sounds service gates itself on the learner's setting; asking it
+      // twice here only invited the two answers to disagree.
+      playVerdict('correct');
     }, DAY_STAMP_DELAY_MS);
   }
 

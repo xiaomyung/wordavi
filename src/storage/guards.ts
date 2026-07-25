@@ -8,7 +8,7 @@ import type {
   SrsSlot,
 } from './types';
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -60,7 +60,7 @@ function isByGroup(value: unknown): value is Record<string, DayGroupStat> {
   return isRecord(value) && Object.values(value).every(isDayGroupStat);
 }
 
-export function isDayRow(value: unknown): value is DayRow {
+function isDayRow(value: unknown): value is DayRow {
   if (!isRecord(value)) return false;
   return (
     typeof value.date === 'string' &&
@@ -87,7 +87,7 @@ export function isSrsSlot(value: unknown): value is SrsSlot {
   return typeof value.updatedAt === 'string' && 'state' in value;
 }
 
-export function isErrorEntry(value: unknown): value is ErrorEntry {
+function isErrorEntry(value: unknown): value is ErrorEntry {
   if (!isRecord(value)) return false;
   if (typeof value.t !== 'number') return false;
   if (typeof value.message !== 'string') return false;

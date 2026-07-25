@@ -44,6 +44,26 @@ export interface AnswerInputProps {
 
 const MAX_LINES = 2;
 
+/**
+ * Fallbacks for the measurements this component reads off the live DOM. A test
+ * DOM (or a stylesheet that has not applied yet) reports empty computed values,
+ * and a NaN would blow up the auto-grow — so each read falls back to the value
+ * answer-controls.css actually ships: the field's own padding and line box.
+ */
+const FALLBACK_PAD_X = 16;
+const FALLBACK_PAD_Y = 14;
+const FALLBACK_LINE_RATIO = 1.35;
+const FALLBACK_LINE_PX = 24;
+
+/**
+ * Backstop removal of the inserted-letter flash. The animation is
+ * --duration-flash (300ms) and normally cleans itself up on `animationend`;
+ * this is longer on purpose, so a browser that never fires that event (or a
+ * tab backgrounded mid-animation) still drops the node instead of leaving it
+ * over the field forever.
+ */
+const FLASH_CLEANUP_MS = 500;
+
 export function AnswerInput({
   value,
   onChange,
@@ -71,7 +91,7 @@ export function AnswerInput({
       mirror.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
       mirror.style.font = style.font;
       wrap.appendChild(mirror);
-      const left = (Number.parseFloat(style.paddingLeft) || 16) + mirror.offsetWidth;
+      const left = (Number.parseFloat(style.paddingLeft) || FALLBACK_PAD_X) + mirror.offsetWidth;
       wrap.removeChild(mirror);
 
       const flash = document.createElement('span');
@@ -79,11 +99,11 @@ export function AnswerInput({
       flash.setAttribute('aria-hidden', 'true');
       flash.textContent = char;
       flash.style.left = `${left}px`;
-      flash.style.top = `${Number.parseFloat(style.paddingTop) || 14}px`;
+      flash.style.top = `${Number.parseFloat(style.paddingTop) || FALLBACK_PAD_Y}px`;
       wrap.appendChild(flash);
       const remove = () => flash.remove();
       flash.addEventListener('animationend', remove, { once: true });
-      window.setTimeout(remove, 500);
+      window.setTimeout(remove, FLASH_CLEANUP_MS);
     },
     [value],
   );
@@ -99,7 +119,9 @@ export function AnswerInput({
     if (!area.scrollHeight) return;
     const style = getComputedStyle(area);
     const line =
-      Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.35 || 24;
+      Number.parseFloat(style.lineHeight) ||
+      Number.parseFloat(style.fontSize) * FALLBACK_LINE_RATIO ||
+      FALLBACK_LINE_PX;
     const padY =
       (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0);
     const borderY =

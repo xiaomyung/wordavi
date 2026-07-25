@@ -1,6 +1,7 @@
 import type { KeyboardEvent, PointerEvent, Ref } from 'react';
 import { useRef } from 'react';
 import { cx } from './cx';
+import { MicGlyph } from './glyphs';
 import './answer-controls.css';
 
 export type MicState = 'idle' | 'holding' | 'denied';
@@ -20,31 +21,13 @@ export interface MicButtonProps {
 
 const HOLD_KEYS = new Set([' ', 'Spacebar', 'Enter']);
 
-function MicGlyph({ crossed }: { crossed: boolean }) {
-  return (
-    <svg
-      width="38"
-      height="38"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
-      <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" />
-      {crossed && <path d="M4 4l16 16" strokeWidth="2.4" />}
-    </svg>
-  );
-}
+/** The mic drawing at button scale (mic-button.md); the glyph's own default is inline size. */
+const MIC_GLYPH_PX = 38;
 
 /**
  * Press-and-hold "speak" button (mic-button.md). Purely presentational: it
  * receives its state via props and emits hold callbacks — it touches no
- * SpeechRecognition or media APIs (services wire those later). Holding shows
+ * SpeechRecognition or media APIs (the drill's services own those). Holding shows
  * the two pulsing rings (the app's only looping animation). Works with a
  * pointer (with capture) and the keyboard (Space/Enter, repeat-guarded).
  */
@@ -128,7 +111,7 @@ export function MicButton({
         onKeyDown={handleKeyDown}
         onKeyUp={handleKeyUp}
       >
-        <MicGlyph crossed={denied} />
+        <MicGlyph size={MIC_GLYPH_PX} crossed={denied} />
       </button>
     </span>
   );

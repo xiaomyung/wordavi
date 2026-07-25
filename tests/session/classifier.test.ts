@@ -49,7 +49,7 @@ describe('bucket classifier — numbers', () => {
 describe('bucket classifier — non-number payloads', () => {
   const table: [PromptPayload, SkillBucket][] = [
     [{ kind: 'price', euros: 4, cents: 75 }, 'price_cents'],
-    [{ kind: 'decimal', intPart: 3, fracDigits: 14 }, 'decimals'],
+    [{ kind: 'decimal', intPart: 3, fracDigits: '14' }, 'decimals'],
     [{ kind: 'quantity', grams: 500 }, 'qty_fractions'],
     [{ kind: 'quantity', grams: 250 }, 'qty_fractions'],
     [{ kind: 'quantity', grams: 1500 }, 'qty_fractions'],

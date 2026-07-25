@@ -1,5 +1,7 @@
 import { pushError, readRawString, STORAGE_KEYS, writeRawString } from '@/storage';
 
+const NS = 'log';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface LogEntry {
@@ -13,6 +15,11 @@ export interface LogEntry {
 const RING_CAP = 400;
 const MAX_SERIALIZED_BYTES = 64 * 1024;
 const PERSIST_DEBOUNCE_MS = 1000;
+/**
+ * Default excerpt size for {@link serializeLog}. Mirrors `BODY_MAX_CHARS` in
+ * services/report.ts — the report composer is the only caller that matters and
+ * it budgets the excerpt against the same cap.
+ */
 const DEFAULT_SERIALIZE_CHARS = 1800;
 const MAX_DATA_CHARS = 2000;
 
@@ -31,14 +38,25 @@ function isLogEntry(value: unknown): value is LogEntry {
   );
 }
 
+/**
+ * Set when the persisted ring turned out to be unreadable. Reported at the very
+ * bottom of this module rather than here: `log` (and the buffer it appends to)
+ * does not exist yet while the initial load runs.
+ */
+let corruptOnLoad = false;
+
 function loadInitialBuffer(): LogEntry[] {
   const raw = readRawString(STORAGE_KEYS.log);
   if (raw === null) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      corruptOnLoad = true;
+      return [];
+    }
     return parsed.filter(isLogEntry).slice(-RING_CAP);
   } catch {
+    corruptOnLoad = true;
     return [];
   }
 }
@@ -87,26 +105,26 @@ function mirrorToConsole(entry: LogEntry): void {
 }
 
 /**
- * Newest entries that fit under the byte cap, serialized once.
+ * The newest entries whose serialized form fits in `maxChars` (the enclosing
+ * brackets and the separating commas included).
  *
- * Measures each entry a single time and sums from the tail rather than
- * dropping one entry at a time and re-stringifying the whole ring: a drill
- * that logs fat `data` payloads can otherwise push hundreds of KB of string
- * work through the debounce tick. The oldest entry always survives if it is
- * alone over the cap — an empty log slot is worse than an oversized one.
+ * Measures each entry a single time and sums from the tail rather than dropping
+ * one entry at a time and re-stringifying the whole ring: a drill that logs fat
+ * `data` payloads can otherwise push hundreds of KB of string work through the
+ * debounce tick. The newest entry always survives even when it alone busts the
+ * budget — an empty log slot is worse than an oversized one.
  */
-function serializeForPersist(entries: readonly LogEntry[]): string {
-  if (entries.length === 0) return '[]';
+function pickWithinBudget(entries: readonly LogEntry[], maxChars: number): LogEntry[] {
   let total = 2; // the enclosing brackets
   let first = entries.length;
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const kept = first < entries.length;
     const additional = JSON.stringify(entries[i]).length + (kept ? 1 : 0); // + comma
-    if (kept && total + additional > MAX_SERIALIZED_BYTES) break;
+    if (kept && total + additional > maxChars) break;
     total += additional;
     first = i;
   }
-  return JSON.stringify(entries.slice(first));
+  return entries.slice(first);
 }
 
 export function persistLogNow(): void {
@@ -114,7 +132,7 @@ export function persistLogNow(): void {
     clearTimeout(persistTimer);
     persistTimer = null;
   }
-  writeRawString(STORAGE_KEYS.log, serializeForPersist(buffer));
+  writeRawString(STORAGE_KEYS.log, JSON.stringify(pickWithinBudget(buffer, MAX_SERIALIZED_BYTES)));
 }
 
 function schedulePersist(): void {
@@ -155,23 +173,19 @@ export const log = {
   },
 };
 
+// The one self-log: the ring exists from here on, so the dropped slot can be
+// reported through the same channel every other corrupt-storage read uses.
+if (corruptOnLoad) {
+  corruptOnLoad = false;
+  log.warn(NS, 'corrupt log buffer dropped');
+}
+
 export function getRecentLog(n: number = RING_CAP): LogEntry[] {
   return buffer.slice(-n);
 }
 
 export function serializeLog(maxChars: number = DEFAULT_SERIALIZE_CHARS): string {
-  const picked: LogEntry[] = [];
-  let total = 2;
-  for (let i = buffer.length - 1; i >= 0; i -= 1) {
-    const entry = buffer[i];
-    if (!entry) continue;
-    const piece = JSON.stringify(entry);
-    const additional = piece.length + (picked.length > 0 ? 1 : 0);
-    if (total + additional > maxChars && picked.length > 0) break;
-    picked.unshift(entry);
-    total += additional;
-  }
-  return JSON.stringify(picked);
+  return JSON.stringify(pickWithinBudget(buffer, maxChars));
 }
 
 export function clearLog(): void {

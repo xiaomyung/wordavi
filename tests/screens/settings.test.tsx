@@ -2,7 +2,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { init, setLanguage } from '@/i18n';
 import { SettingsScreen } from '@/screens/SettingsScreen';
-import { canPromptInstall, isIos, isStandalone, promptInstall } from '@/services/install';
+import {
+  canPromptInstall,
+  isInstalled,
+  isIos,
+  isStandalone,
+  promptInstall,
+} from '@/services/install';
 import { setEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
 import { showToast } from '@/services/toast';
@@ -11,6 +17,9 @@ import { clearAllData, exportData, getSettings, updateSettings } from '@/storage
 // Partial mocks: the real modules still initialise i18next / storage, only the
 // live side effects are swapped for spies so a test can assert them without
 // repainting the document or changing the rendered language mid-file.
+/** Stands in for the service's own availability bus (prompt captured / installed). */
+const installBus = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
+
 vi.mock('@/i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/i18n')>();
   return { ...actual, setLanguage: vi.fn() };
@@ -31,12 +40,10 @@ vi.mock('@/services/toast', async (importOriginal) => {
   return { ...actual, showToast: vi.fn() };
 });
 
-vi.mock('@/services/install', () => ({
-  canPromptInstall: vi.fn(() => false),
-  isIos: vi.fn(() => false),
-  isStandalone: vi.fn(() => false),
-  promptInstall: vi.fn(async () => 'accepted'),
-}));
+vi.mock('@/services/install', async () => {
+  const { installMock } = await import('../helpers/mocks');
+  return installMock(installBus);
+});
 
 // Storage stays real (the screen's whole job is writing to it); clearAllData and
 // updateSettings are wrapped in spies that still call through, so a wipe and a
@@ -76,6 +83,8 @@ describe('SettingsScreen', () => {
     vi.mocked(canPromptInstall).mockReturnValue(false);
     vi.mocked(isIos).mockReturnValue(false);
     vi.mocked(promptInstall).mockResolvedValue('accepted');
+    vi.mocked(isInstalled).mockResolvedValue(false);
+    installBus.listeners.clear();
     Object.defineProperty(URL, 'createObjectURL', {
       configurable: true,
       writable: true,
@@ -292,9 +301,21 @@ describe('SettingsScreen', () => {
     expect(screen.queryByRole('button', { name: /Установить приложение/ })).toBeNull();
   });
 
-  it('hides the install row when no prompt was captured outside iOS', () => {
+  it('offers the browser-menu recipe when no prompt was captured', () => {
     renderScreen();
-    expect(screen.queryByRole('button', { name: /Установить приложение/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Установить приложение/ }));
+
+    expect(screen.getByText('Установить через меню браузера')).toBeInTheDocument();
+    expect(screen.getByText(/Откройте меню браузера/)).toBeInTheDocument();
+    expect(promptInstall).not.toHaveBeenCalled();
+  });
+
+  it('hides the install row when the device says the app is installed', async () => {
+    vi.mocked(isInstalled).mockResolvedValue(true);
+    renderScreen();
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Установить приложение/ })).toBeNull();
+    });
   });
 
   it('fires the captured install prompt from the install row', () => {
@@ -304,11 +325,12 @@ describe('SettingsScreen', () => {
     expect(promptInstall).toHaveBeenCalled();
   });
 
-  it('shows the iOS add-to-home-screen steps instead of a prompt', () => {
+  it('shows the iOS add-to-home-screen steps instead of the generic recipe', () => {
     vi.mocked(isIos).mockReturnValue(true);
     renderScreen();
     fireEvent.click(screen.getByRole('button', { name: /Установить приложение/ }));
     expect(screen.getByText('Установить на iPhone')).toBeInTheDocument();
+    expect(screen.queryByText('Установить через меню браузера')).toBeNull();
     expect(screen.getByText(/Нажмите «Поделиться»/)).toBeInTheDocument();
     expect(screen.getByText(/На экран Домой/)).toBeInTheDocument();
     expect(promptInstall).not.toHaveBeenCalled();

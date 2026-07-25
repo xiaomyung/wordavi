@@ -1,5 +1,6 @@
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { cx } from './cx';
+import { MicGlyph } from './glyphs';
 import { Stamp, type Verdict } from './Stamp';
 import './answer-controls.css';
 
@@ -28,26 +29,8 @@ const VARIANT_CLASS: Record<Verdict, string> = {
   wrong: 'wa-verdict--wrong',
 };
 
-function CrossedMicIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
-      <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" />
-      <path d="M4 4l16 16" strokeWidth="2.4" />
-    </svg>
-  );
-}
+/** Inline stamp size next to the verdict line (the field's own stamp is 26). */
+const STAMP_PX = 22;
 
 /**
  * The verdict line under the answer zone. Enters with a fade + 6px rise
@@ -64,16 +47,25 @@ export function VerdictBlock({
   className,
   ...rest
 }: VerdictBlockProps) {
-  const muted = variant === 'muted' || verdict === undefined;
-  const toneClass = verdict !== undefined && !muted ? VARIANT_CLASS[verdict] : 'wa-verdict--muted';
+  // One decision drives both the tone and the icon: a verdict is shown only
+  // when there is one and the caller has not asked for the neutral info line.
+  const tone = variant === 'muted' ? undefined : verdict;
 
   return (
-    <div className={cx('wa-verdict', toneClass, className)} role="status" {...rest}>
+    <div
+      className={cx(
+        'wa-verdict',
+        tone === undefined ? 'wa-verdict--muted' : VARIANT_CLASS[tone],
+        className,
+      )}
+      role="status"
+      {...rest}
+    >
       <span className="wa-verdict-icon">
-        {verdict !== undefined && !muted ? (
-          <Stamp verdict={verdict} size={22} />
+        {tone === undefined ? (
+          (icon ?? <MicGlyph crossed />)
         ) : (
-          (icon ?? <CrossedMicIcon />)
+          <Stamp verdict={tone} size={STAMP_PX} />
         )}
       </span>
       <div>

@@ -1,10 +1,19 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { init, setLanguage } from '@/i18n';
+import i18n, { init, setLanguage } from '@/i18n';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
-import { canPromptInstall, isIos, isStandalone, promptInstall } from '@/services/install';
+import {
+  canPromptInstall,
+  isInstalled,
+  isIos,
+  isStandalone,
+  promptInstall,
+} from '@/services/install';
 import { applyTheme } from '@/services/theme';
-import { getSettings } from '@/storage';
+import { getSettings, updateSettings } from '@/storage';
+
+/** Stands in for the service's own availability bus (prompt captured / installed). */
+const installBus = vi.hoisted(() => ({ listeners: new Set<() => void>() }));
 
 vi.mock('@/i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/i18n')>();
@@ -21,12 +30,10 @@ vi.mock('@/services/sounds', async (importOriginal) => {
   return { ...actual, setEnabled: vi.fn() };
 });
 
-vi.mock('@/services/install', () => ({
-  canPromptInstall: vi.fn(() => false),
-  isIos: vi.fn(() => false),
-  isStandalone: vi.fn(() => false),
-  promptInstall: vi.fn(async () => 'accepted'),
-}));
+vi.mock('@/services/install', async () => {
+  const { installMock } = await import('../helpers/mocks');
+  return installMock(installBus);
+});
 
 function renderScreen() {
   const onDone = vi.fn();
@@ -34,8 +41,18 @@ function renderScreen() {
   return { ...view, onDone };
 }
 
-/** Steps 1 → 4 with the defaults, leaving the screen on the "ready" step. */
+/**
+ * Leave the install step. In the default test environment nothing captured a
+ * `beforeinstallprompt` and this is not iOS, so the affordance is 'manual' and
+ * the step is the first thing on screen — exactly like Brave, Firefox or dev.
+ */
+function skipInstall(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Продолжить в браузере' }));
+}
+
+/** Install → language → practice → app, leaving the screen on the "ready" step. */
 function walkToReadyStep(): void {
+  skipInstall();
   fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
   fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
@@ -87,37 +104,67 @@ describe('OnboardingScreen', () => {
     vi.mocked(canPromptInstall).mockReturnValue(false);
     vi.mocked(isIos).mockReturnValue(false);
     vi.mocked(promptInstall).mockResolvedValue('accepted');
+    vi.mocked(isInstalled).mockResolvedValue(false);
+    installBus.listeners.clear();
     setMediaDevices(grantingMedia(() => undefined));
   });
 
   it('opens on the language step with all three choices', () => {
     const { container } = renderScreen();
+    skipInstall();
     expect(screen.getByText('Привет! · ¡Hola!')).toBeInTheDocument();
+    expect(step()).toBe(2);
 
     // The tile is the shared app mark: brand tile, w + acute, no punch hole.
-    const tile = container.querySelector('[data-app-tile]');
+    const tile = container.querySelector('[data-step="1"] [data-app-tile]');
     expect(tile).not.toBeNull();
     expect(tile).toHaveClass('bg-brand-tile', 'text-brand-glyph');
     expect(tile?.querySelectorAll('svg path')).toHaveLength(2);
 
-    expect(step()).toBe(1);
     for (const name of [/Русский/, /English/, /Español/]) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
     expect(screen.getByText('для смелых')).toBeInTheDocument();
   });
 
+  it('opens in the detected language and highlights it', async () => {
+    // What bootstrap does on a first run in an English browser: the detected
+    // language is already stored and in force before onboarding renders.
+    updateSettings({ uiLang: 'en' });
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+    try {
+      renderScreen();
+
+      // Step one speaks it too, before any language button has been touched.
+      expect(screen.getByText('Install it on your phone')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Continue in the browser' }));
+
+      const english = screen.getByRole('button', { name: /English/ });
+      expect(english).toHaveClass('bg-accent');
+      expect(english).toHaveAttribute('aria-current', 'true');
+      expect(screen.getByRole('button', { name: /Русский/ })).not.toHaveClass('bg-accent');
+    } finally {
+      await act(async () => {
+        await i18n.changeLanguage('ru');
+      });
+    }
+  });
+
   it('sets the language live, persists it and advances', () => {
     renderScreen();
+    skipInstall();
     fireEvent.click(screen.getByRole('button', { name: /English/ }));
     expect(setLanguage).toHaveBeenCalledWith('en');
     expect(getSettings().uiLang).toBe('en');
     expect(screen.getByText('С чего начнём?')).toBeInTheDocument();
-    expect(step()).toBe(2);
+    expect(step()).toBe(3);
   });
 
   it('renders the real practice controls with the stored defaults', () => {
     renderScreen();
+    skipInstall();
     fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
 
     expect(screen.getByText('0 — 100')).toBeInTheDocument();
@@ -133,34 +180,37 @@ describe('OnboardingScreen', () => {
 
   it('writes practice changes straight to settings', () => {
     renderScreen();
+    skipInstall();
     fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
     fireEvent.click(screen.getByRole('switch', { name: 'Принимать ответы без акцентов' }));
     expect(getSettings().acceptNoAccents).toBe(false);
   });
 
-  it('walks steps 2 → 3 → 4 and back again', () => {
+  it('walks the settings steps and back again', () => {
     renderScreen();
+    skipInstall();
     fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
 
     expect(screen.getByText('Как удобнее?')).toBeInTheDocument();
-    expect(step()).toBe(3);
+    expect(step()).toBe(4);
     expect(screen.getByRole('radio', { name: 'Авто' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByRole('slider', { name: 'Скорость речи' })).toBeInTheDocument();
     expect(screen.getByText('ответов в день · можно меньше')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
-    expect(step()).toBe(4);
+    expect(step()).toBe(5);
     expect(screen.getByText('4,75 €')).toBeInTheDocument();
     expect(screen.getByText(/Цель — 20 ответов в день/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
-    expect(step()).toBe(3);
+    expect(step()).toBe(4);
     expect(screen.getByText('Как удобнее?')).toBeInTheDocument();
   });
 
   it('applies an app-step change live', () => {
     renderScreen();
+    skipInstall();
     fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Светлая' }));
@@ -188,9 +238,13 @@ describe('OnboardingScreen', () => {
     const { container } = renderScreen();
     expect(container.querySelector('[data-step="0"]')).toHaveClass('wa-step-enter');
     expect(container.querySelector('.wa-step-leave')).toBeNull();
+    skipInstall();
+    await waitFor(() => {
+      expect(container.querySelector('.wa-step-leave')).toBeNull();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Русский/ }));
-    expect(container.querySelector('[data-step="1"]')).toHaveClass('wa-step-enter');
+    expect(container.querySelector('[data-step="2"]')).toHaveClass('wa-step-enter');
     const leaving = container.querySelector('.wa-step-leave');
     expect(leaving).not.toBeNull();
     // The outgoing copy is scenery only: out of the a11y tree, untouchable.
@@ -201,7 +255,7 @@ describe('OnboardingScreen', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Дальше' }));
     fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
-    expect(container.querySelector('[data-step="1"]')).toHaveClass('wa-step-enter');
+    expect(container.querySelector('[data-step="2"]')).toHaveClass('wa-step-enter');
     expect(container.querySelector('.wa-step-leave')).not.toBeNull();
     await waitFor(() => {
       expect(container.querySelector('.wa-step-leave')).toBeNull();
@@ -209,11 +263,30 @@ describe('OnboardingScreen', () => {
   });
 
   describe('install step', () => {
-    it('is skipped entirely when there is nothing to offer', () => {
+    it('leads with the browser-menu recipe when no prompt event exists', () => {
+      // Brave disables beforeinstallprompt by policy; Firefox has no such event.
       renderScreen();
-      expect(screen.getByText('Привет! · ¡Hola!')).toBeInTheDocument();
-      expect(screen.queryByText('Установите на телефон')).toBeNull();
-      expect(stepCount()).toBe(4);
+      expect(screen.getByText('Установите на телефон')).toBeInTheDocument();
+      expect(step()).toBe(1);
+      expect(stepCount()).toBe(5);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Установить приложение' }));
+      expect(screen.getByText('Установить через меню браузера')).toBeInTheDocument();
+      expect(screen.getByText(/Откройте меню браузера/)).toBeInTheDocument();
+      expect(promptInstall).not.toHaveBeenCalled();
+    });
+
+    it('steps aside when the device reports the app already installed', async () => {
+      vi.mocked(isInstalled).mockResolvedValue(true);
+      renderScreen();
+
+      // Auto-advance, then the cross-fade copy of the install step retires too.
+      await waitFor(() => {
+        expect(screen.getByText('Привет! · ¡Hola!')).toBeInTheDocument();
+      });
+      await waitFor(() => {
+        expect(screen.queryByText('Установите на телефон')).toBeNull();
+      });
     });
 
     it('is skipped when the app already runs standalone', () => {
@@ -235,13 +308,14 @@ describe('OnboardingScreen', () => {
       expect(promptInstall).toHaveBeenCalled();
     });
 
-    it('shows the iOS recipe instead of a prompt', () => {
+    it('shows the iOS recipe instead of the generic one', () => {
       vi.mocked(isIos).mockReturnValue(true);
       renderScreen();
 
       expect(stepCount()).toBe(5);
       fireEvent.click(screen.getByRole('button', { name: 'Установить приложение' }));
       expect(screen.getByText('Установить на iPhone')).toBeInTheDocument();
+      expect(screen.queryByText('Установить через меню браузера')).toBeNull();
       expect(promptInstall).not.toHaveBeenCalled();
     });
 

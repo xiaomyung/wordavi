@@ -44,7 +44,7 @@
   "drill": {
     "listen": "listen",
     "listen_again": "Tap to listen again",
-    "slower": "slower ×0.75",
+    "slower": "slower ×0.5",
     "hold_to_talk": "Hold to talk",
     "release_hint": "release to check · we store nothing",
     "type_instead": "Type instead",
@@ -56,6 +56,7 @@
     "mic_denied": "Microphone unavailable",
     "mic_denied_sub": "Allow access in your browser settings — or just type the answer.",
     "mic_help_link": "How do I enable the microphone?",
+    "recognition_unavailable": "Speech recognition isn't working in this browser. Try Chrome — or just type the answer.",
     "counter": "{{n}} of {{total}}",
     "counter_endless": "{{n}} · ∞",
     "points": "pts",
@@ -87,6 +88,7 @@
     "streak_n_one": "{{count}} day",
     "streak_n_other": "{{count}} days",
     "continue_cta": "Continue · {{done}} of {{total}}",
+    "row_continue": "continue · {{done}} of {{total}}",
     "start_cta": "Start the first round",
     "start_round": "Start a round",
     "offline_chip": "offline",
@@ -95,7 +97,9 @@
     "mode_paused_voice": "needs a Spanish voice",
     "mode_paused_mic": "needs microphone access",
     "voice_chip": "voice",
-    "mic_chip": "microphone"
+    "mic_chip": "microphone",
+    "install_invite": "You can install it as an app — works offline, opens from your home screen",
+    "install_cta": "Install"
   },
   "summary": {
     "title": "Round complete",
@@ -116,10 +120,10 @@
     "range_tick_0": "0",
     "range_tick_10": "10",
     "range_tick_100": "100",
-    "range_tick_1k": "1k",
-    "range_tick_10k": "10k",
-    "range_tick_100k": "100k",
-    "range_tick_1m": "1m",
+    "range_tick_1k": "1K",
+    "range_tick_10k": "10K",
+    "range_tick_100k": "100K",
+    "range_tick_1m": "1M",
     "accents_label": "Accept answers without accents",
     "accents_sub": "veintiseis = veintiséis · marked as almost correct",
     "questions_per_round_label": "Questions per round",
@@ -222,7 +226,10 @@
   "install_sheet": {
     "title": "Install on iPhone",
     "step1": "Tap Share",
-    "step2": "Choose Add to Home Screen"
+    "step2": "Choose Add to Home Screen",
+    "manual_title": "Install from the browser menu",
+    "manual_step1": "Open the browser menu (⋮ or ≡)",
+    "manual_step2": "Choose “Install app” or “Add to Home screen”"
   },
   "voice_sheet": {
     "title": "Add a Spanish voice",

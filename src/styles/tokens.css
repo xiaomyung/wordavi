@@ -89,8 +89,10 @@
      accent / on-accent pair. Theme-STABLE on purpose — the installed icon,
      the favicon and the onboarding tile are one drawing, and a mark that
      repainted itself with the theme would stop being the same mark. They are
-     deliberately absent from the .dark block, and the only place they may be
-     used outside services/theme.ts and index.html is that mark. */
+     deliberately absent from the .dark block, and the mark is the only thing
+     allowed to use them: today that is the onboarding app tile, with
+     public/favicon.svg repeating the same two values as literals because a
+     standalone icon file cannot read a token. */
   --color-brand-tile: #e08344;
   --color-brand-glyph: #2a1005;
 
@@ -110,6 +112,8 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
 
   /* orphan type sizes (small supplementary text not in the core scale) */
+  --text-cta: 1.0625rem; /* 17 - default CTA label ("--text-label +2", buttons.md) */
+  --text-choice: 1.625rem; /* 26 - choice-tile numeral (choice-buttons.md) */
   --text-sub-strong: 0.9375rem; /* 15 */
   --text-sub: 0.8125rem; /* 13 */
   --text-flag: 0.6875rem; /* 11 - needs-practice badge */
@@ -163,6 +167,18 @@
   /* thin radii */
   --radius-progress: 2px; /* progress rule cap */
   --radius-track: 3px; /* slider track */
+
+  /* the recurring 1.5px hairline: secondary CTA, paused/dashed shells, the
+     price-tag hole ring, the toggle/segmented knob underside. One stroke, one
+     token — the design contract names the colour but never the width. */
+  --stroke-hairline: 1.5px;
+
+  /* prose measure: how wide a centred paragraph is allowed to run before it
+     wraps. 310px is the drill's own Spanish-phrase clamp (drill-digits.html),
+     the widest of the app's prose clamps, so the token adopts that value; the
+     onboarding/crash copy keeps its slightly narrower 19rem until someone
+     converges the two deliberately. */
+  --measure-prose: 19.375rem; /* 310 */
 
   /* paused surface (design left this un-tokenized; warm cream) */
   --color-surface-paused: #fbf5e7;

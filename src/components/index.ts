@@ -14,6 +14,17 @@ export type { DotsProps } from './Dots';
 export { Dots } from './Dots';
 export type { GoalRingArc, GoalRingProps, GoalRingSize } from './GoalRing';
 export { GoalRing, goalRingArc } from './GoalRing';
+export {
+  BackGlyph,
+  ChartGlyph,
+  CloseGlyph,
+  GearGlyph,
+  MicGlyph,
+  OfflineGlyph,
+  RowChevron,
+  SettingsGlyph,
+  SpeakerGlyph,
+} from './glyphs';
 export type { MicButtonProps, MicState } from './MicButton';
 export { MicButton } from './MicButton';
 export type { ModeRowProps } from './ModeRow';

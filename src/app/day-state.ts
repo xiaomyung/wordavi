@@ -8,14 +8,12 @@
  */
 
 import type { SummaryDayState } from '@/screens/SummaryScreen';
-import { localDayKey } from '@/screens/streak-window';
 import type { RoundSummary } from '@/session';
+import { effectiveDailyGoal, localDayKey } from '@/session';
 import { getDay, getProgress, getSettings } from '@/storage';
 
 export function summaryDayState(summary: RoundSummary, now: Date = new Date()): SummaryDayState {
-  // A goal of zero would stamp every day before a single answer; the home
-  // screen guards it the same way.
-  const total = Math.max(1, getSettings().dailyGoal);
+  const total = effectiveDailyGoal(getSettings().dailyGoal);
   // `correct` counts every non-wrong answer (correct + almost), exactly what
   // `summary.correctCount` counts — so the two are subtractable.
   const done = getDay(localDayKey(now))?.correct ?? 0;

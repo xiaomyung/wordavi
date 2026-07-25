@@ -3,8 +3,9 @@ import { numberToWords, wordsWithApocope } from './numbers';
 import type { AcceptedAnswer, AnswerVariant } from './types';
 
 /**
- * es-ES cashier phrasings for a EUR price. See the design notes at the bottom
- * for what is canonical vs. an accepted variant and why each note is applied.
+ * es-ES cashier phrasings for a EUR price. Each branch of
+ * {@link priceToWords} documents what is canonical there, which variants are
+ * accepted, and why they carry the note they do.
  *
  * The "euros"/"céntimos" noun triggers apocope ("un euro", "veintiún euros",
  * "un céntimo"); the bare number that stands in for a dropped noun does not

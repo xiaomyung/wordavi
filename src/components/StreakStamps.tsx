@@ -82,7 +82,7 @@ export function StreakStamps({ days, size, popIndex, className, ref, ...rest }: 
               'flex shrink-0 items-center justify-center rounded-full',
               day.state === 'done' && 'border-2 border-correct bg-correct-tint text-correct',
               day.state === 'today' && 'border-2 border-dashed border-accent',
-              day.state === 'future' && 'border-[1.5px] border-border',
+              day.state === 'future' && 'border-(length:--stroke-hairline) border-border',
               index === popIndex && 'wa-stamp-pop',
             )}
           >

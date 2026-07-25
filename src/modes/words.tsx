@@ -1,8 +1,8 @@
 import { buildAccepted, numberToWords } from '@/engine';
 import { numberSource } from './buckets';
+import { NumeralPrompt, PromptStage, TypedAnswer } from './prompt';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
-import { NumeralPrompt, PromptStage, TypedAnswer } from './ui';
 
 /**
  * words — number → es-ES spelling (drill-text.html).

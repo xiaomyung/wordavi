@@ -1,6 +1,9 @@
 /**
  * The parked round: a drill that is left mid-way survives a reload and comes
  * back where it was, rather than restarting or vanishing.
+ *
+ * A single-mode round comes back on *its own row*: the big button is always the
+ * mixed round, so it never quietly turns into one mode's continuation.
  */
 import { expect, test } from '@playwright/test';
 import {
@@ -13,11 +16,14 @@ import {
   promptNumber,
   seedApp,
   startMode,
+  startRound,
+  WORDS_MODE,
 } from './helpers';
 
-const WORDS_MODE = /Число → словами/;
+/** The big button's two labels — never a "continue" for a single-mode round. */
+const START_CTA = /^Начать (первый )?раунд$/;
 
-test('a reload offers to continue the parked round at the same question', async ({ page }) => {
+test('a reload offers the parked round on its own mode row', async ({ page }) => {
   await seedApp(page);
   await gotoApp(page, { seed: '512' });
   await expectHome(page);
@@ -35,12 +41,14 @@ test('a reload offers to continue the parked round at the same question', async 
   await page.reload();
 
   await expectHome(page);
-  const resume = page.getByRole('button', {
-    name: `Продолжить · 3 из ${E2E_ROUND_SIZE}`,
-  });
-  await expect(resume).toBeVisible();
+  // The big button stays the mixed round, and the words row carries the hint.
+  await expect(page.getByRole('button', { name: START_CTA })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Продолжить/ })).toHaveCount(0);
 
-  await resume.click();
+  const row = page.getByRole('button', { name: WORDS_MODE });
+  await expect(row.getByText(`продолжить · 3 из ${E2E_ROUND_SIZE}`)).toBeVisible();
+
+  await row.click();
 
   // Same question, same counter, same score — not a fresh round.
   await expect(drillCounter(page)).toHaveText(`3 из ${E2E_ROUND_SIZE}`);
@@ -62,6 +70,26 @@ test('leaving a round from the drill keeps it resumable', async ({ page }) => {
 
   await expectHome(page);
   await expect(
-    page.getByRole('button', { name: `Продолжить · 1 из ${E2E_ROUND_SIZE}` }),
+    page.getByRole('button', { name: WORDS_MODE }).getByText(`продолжить · 1 из ${E2E_ROUND_SIZE}`),
   ).toBeVisible();
+  await expect(page.getByRole('button', { name: START_CTA })).toBeVisible();
+});
+
+test('the big button starts a fresh mixed round while a single-mode one is parked', async ({
+  page,
+}) => {
+  await seedApp(page);
+  await gotoApp(page, { seed: '514' });
+  await startMode(page, WORDS_MODE);
+
+  await answerWords(page, true);
+  await advance(page);
+  await expect(drillCounter(page)).toHaveText(`2 из ${E2E_ROUND_SIZE}`);
+  await page.getByRole('button', { name: 'Закрыть' }).click();
+  await expectHome(page);
+
+  await startRound(page);
+
+  // Question one of a brand new round, not question two of the parked one.
+  await expect(drillCounter(page)).toHaveText(`1 из ${E2E_ROUND_SIZE}`);
 });

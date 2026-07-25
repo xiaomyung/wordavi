@@ -1,25 +1,10 @@
 import { useState } from 'react';
 import type { MicState } from '@/components';
-import { MicButton, PillButton, SpeakerButton, Transcript } from '@/components';
+import { MicButton, PillButton, SpeakerButton, SpeakerGlyph, Transcript } from '@/components';
 import { Case, Note, Row, Section, Stack } from './kit';
 import { galleryT } from './t';
 
 const SAMPLE_TRANSCRIPT = 'cuatrocientos setenta y cin';
-
-function SpeakerGlyph() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor" />
-    </svg>
-  );
-}
 
 export function MicSection() {
   const t = galleryT();

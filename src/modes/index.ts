@@ -1,7 +1,7 @@
 /**
  * Public API of the `modes` layer.
  *
- * Importing this barrel registers all six modes (the side effect below), so
+ * Importing this barrel registers all seven modes (the side effect below), so
  * `allModes()` is populated for any consumer that reaches the registry through
  * it. Layer contract: modes may use react, `@/engine`, `@/session`,
  * `@/components` and i18n *keys* — never `@/services`, `@/storage` or screens.
@@ -33,6 +33,8 @@ export { digitsMode } from './digits';
 export { groceryMode, grocerySource } from './grocery';
 export { listenMode } from './listen';
 export { mixedMode, modeOfQuestion, setMixedAvailability } from './mixed';
+export { numeralFontSizePx, promptDisplay, promptSpanish } from './prompt';
+export { modeIdOf, questionId } from './questionId';
 export { allModes, findMode, getMode, modeRequires, registerMode } from './registry';
 export { pickGiven, speakMode } from './speak';
 export type {
@@ -49,5 +51,4 @@ export type {
   SingleModeId,
 } from './types';
 export { labelOf, MIXED_MODE_ID, MODE_ORDER } from './types';
-export { numeralFontSizePx, promptDisplay, promptSpanish } from './ui';
 export { wordsMode } from './words';

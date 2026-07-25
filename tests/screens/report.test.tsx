@@ -11,7 +11,12 @@ vi.mock('@/services/report', () => ({
     userText: input.userText,
     screenshots: input.screenshots,
   })),
-  sendReport: vi.fn(async () => ({ ok: true, channel: 'mailto', manualAttachHint: false })),
+  sendReport: vi.fn(async () => ({
+    ok: true,
+    channel: 'mailto',
+    manualAttachHint: false,
+    droppedScreenshots: 0,
+  })),
   copyReport: vi.fn(async () => ({ ok: true })),
 }));
 
@@ -48,6 +53,7 @@ describe('ReportScreen', () => {
       ok: true,
       channel: 'mailto',
       manualAttachHint: false,
+      droppedScreenshots: 0,
     });
     vi.mocked(copyReport).mockResolvedValue({ ok: true });
     Object.defineProperty(URL, 'createObjectURL', {
@@ -109,6 +115,7 @@ describe('ReportScreen', () => {
       ok: true,
       channel: 'mailto',
       manualAttachHint: true,
+      droppedScreenshots: 1,
     });
     const { container } = renderScreen();
     attach(container, screenshot());
@@ -124,6 +131,7 @@ describe('ReportScreen', () => {
       ok: false,
       channel: 'mailto',
       manualAttachHint: false,
+      droppedScreenshots: 0,
       error: 'boom',
     });
     renderScreen();

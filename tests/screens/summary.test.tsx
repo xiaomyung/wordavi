@@ -6,16 +6,12 @@ import type { SummaryDayState, SummaryScreenProps } from '@/screens/SummaryScree
 import { SummaryScreen } from '@/screens/SummaryScreen';
 import type { AnswerRecord, PromptPayload, Question, RoundSummary, Verdict } from '@/session';
 import { getSettings, setSettings } from '@/storage';
+import { plainSpaces } from '../helpers/text';
 
 /** GoalRing's reduced-motion fallback timer; the sweep "lands" here in tests. */
 const RING_MS = 650;
 /** motion.md: the day stamp pops 420ms after the ring lands. */
 const STAMP_DELAY_MS = 420;
-
-/** Testing-library collapses whitespace, so the engine's thin spaces read as plain ones. */
-function plainSpaces(text: string): string {
-  return text.replace(/\s/g, ' ');
-}
 
 function question(id: string, prompt: PromptPayload, canonical: string): Question {
   return {

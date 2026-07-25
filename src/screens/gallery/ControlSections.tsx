@@ -2,19 +2,18 @@ import { useState } from 'react';
 import type { SegmentedOption } from '@/components';
 import { RangeSlider, Segmented, Stepper, StopSlider, Toggle } from '@/components';
 import { formatNumber } from '@/engine';
+import type { RoundSizeSetting, UiLang } from '@/storage';
 import { Case, Note, noop, Row, Section, Stack } from './kit';
 import { galleryT } from './t';
 
-/** Questions-per-round stops; the last one is the endless round (∞). */
-const ROUND_STOPS = [10, 15, 20, 25, 30, Number.POSITIVE_INFINITY];
-
-type UiLang = 'ru' | 'en' | 'es';
+/** The settings screen's own stops — the last one is the endless round (∞). */
+const ROUND_STOPS: readonly RoundSizeSetting[] = [10, 20, 30, 'endless'];
 
 export function SwitchesSection() {
   const t = galleryT();
   const [accents, setAccents] = useState(true);
   const [sounds, setSounds] = useState(false);
-  const [roundIndex, setRoundIndex] = useState(2);
+  const [roundIndex, setRoundIndex] = useState(1);
   const [lang, setLang] = useState<UiLang>('ru');
 
   const round = ROUND_STOPS[roundIndex] ?? 20;
@@ -58,7 +57,7 @@ export function SwitchesSection() {
               setRoundIndex((index) => Math.min(ROUND_STOPS.length - 1, index + 1))
             }
           >
-            {Number.isFinite(round) ? round : t('common.endless')}
+            {round === 'endless' ? t('common.endless') : round}
           </Stepper>
         </Case>
         <Case label="Segmented — three RU/EN/ES options, roving tabindex">

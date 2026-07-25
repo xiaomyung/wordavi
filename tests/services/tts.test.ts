@@ -266,7 +266,7 @@ describe('tts', () => {
       await flushMicrotasks();
 
       const utterance = synth.speak.mock.calls[0]?.[0] as FakeUtterance;
-      expect(utterance.rate).toBeCloseTo(0.75 * 0.75);
+      expect(utterance.rate).toBeCloseTo(0.75 * 0.5);
       utterance.onend?.();
       await promise;
     });
@@ -293,10 +293,27 @@ describe('tts', () => {
       await flushMicrotasks();
 
       const utterance = synth.speak.mock.calls[0]?.[0] as FakeUtterance;
-      utterance.onerror?.({ error: 'canceled' });
+      utterance.onerror?.({ error: 'synthesis-failed' });
       await promise;
 
       expect(errorSpy).toHaveBeenCalledWith('tts', 'speech synthesis error', expect.anything());
+    });
+
+    it('logs a cancellation at debug rather than as a failure', async () => {
+      const synth = installFakeSynthesis([makeVoice({ lang: 'es-ES', localService: true })]);
+      const { tts, log } = await freshTts();
+      const errorSpy = vi.spyOn(log, 'error').mockClear();
+      const debugSpy = vi.spyOn(log, 'debug').mockClear();
+
+      const promise = tts.speak('cinco');
+      await flushMicrotasks();
+
+      const utterance = synth.speak.mock.calls[0]?.[0] as FakeUtterance;
+      utterance.onerror?.({ error: 'canceled' });
+      await promise;
+
+      expect(debugSpy).toHaveBeenCalledWith('tts', 'speak canceled', expect.anything());
+      expect(errorSpy).not.toHaveBeenCalledWith('tts', 'speech synthesis error', expect.anything());
     });
 
     it('tracks isSpeaking across the utterance lifecycle', async () => {

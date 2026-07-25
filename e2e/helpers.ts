@@ -133,9 +133,13 @@ export async function seedApp(page: Page, options: SeedOptions = {}): Promise<vo
 }
 
 /**
- * `YYYY-MM-DD` for a day `offset` days before `base`. Specs that freeze the
- * browser clock must pass the same instant as `base`, or the seeded day rows
- * land outside the streak window the app is looking at.
+ * `YYYY-MM-DD` for a day `offset` days before `base` — the shape
+ * `session/goal.ts` writes. It is spelled out again here rather than imported:
+ * that module's graph reaches `src/session/types.ts`, whose `@/engine` import
+ * the e2e tsconfig cannot resolve (it maps no `@/`, on purpose).
+ *
+ * Specs that freeze the browser clock must pass the same instant as `base`, or
+ * the seeded day rows land outside the streak window the app is looking at.
  */
 export function dayKey(offset = 0, base: Date = new Date()): string {
   const date = new Date(base.getTime());
@@ -216,6 +220,9 @@ export async function expectHome(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Добр');
   await expect(page.getByText('Дневная цель')).toBeVisible();
 }
+
+/** The RU title of the typed-words mode — the one most flow specs drive. */
+export const WORDS_MODE = /Число → словами/;
 
 /** Open a mode from the home list by its RU title. */
 export async function startMode(page: Page, title: string | RegExp): Promise<void> {

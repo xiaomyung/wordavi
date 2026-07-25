@@ -36,7 +36,7 @@ export function Toast({ open, text, icon, action, className, ref, ...rest }: Toa
       {...rest}
     >
       {icon ? <span className="shrink-0 text-text-muted">{icon}</span> : null}
-      <span className="flex-1 text-[14px] font-semibold text-text">{text}</span>
+      <span className="flex-1 text-label font-semibold text-text">{text}</span>
       {action ? (
         <button
           type="button"
@@ -66,8 +66,7 @@ export interface ToasterProps {
 
 /**
  * Bottom-centered stacking container — the default placement from toast.md.
- * Screens that need a different position (top-of-safe-area on Home, above
- * the CTA on drill screens) render `Toast` directly instead of this wrapper.
+ * A screen that needs another position renders `Toast` directly instead.
  */
 export function Toaster({ items, className }: ToasterProps) {
   return (

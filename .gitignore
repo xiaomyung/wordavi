@@ -16,3 +16,4 @@ CLAUDE.md
 *.tsbuildinfo
 design-handoff/
 *.canvas
+dev-dist/

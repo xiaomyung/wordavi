@@ -32,7 +32,7 @@ describe('pwa update', () => {
 
   it('offers the update as a toast when the learner is not drilling', async () => {
     const { pwaUpdate, toast } = await freshModules();
-    pwaUpdate.initPwaUpdate(() => 'home');
+    pwaUpdate.initPwaUpdate({ isBusy: () => false });
     await vi.waitFor(() => expect(needRefresh).toBeDefined());
 
     needRefresh?.();
@@ -47,8 +47,8 @@ describe('pwa update', () => {
 
   it('parks the offer during a drill and makes it on the next screen change', async () => {
     const { pwaUpdate, toast } = await freshModules();
-    let screenKind = 'drill';
-    pwaUpdate.initPwaUpdate(() => screenKind);
+    let busy = true;
+    pwaUpdate.initPwaUpdate({ isBusy: () => busy });
     await vi.waitFor(() => expect(needRefresh).toBeDefined());
 
     needRefresh?.();
@@ -58,14 +58,14 @@ describe('pwa update', () => {
     pwaUpdate.notifyScreenChanged();
     expect(toast.getToast()).toBeNull();
 
-    screenKind = 'summary';
+    busy = false;
     pwaUpdate.notifyScreenChanged();
     expect(toast.getToast()).not.toBeNull();
   });
 
   it('offers a parked update only once', async () => {
     const { pwaUpdate, toast } = await freshModules();
-    pwaUpdate.initPwaUpdate(() => 'home');
+    pwaUpdate.initPwaUpdate({ isBusy: () => false });
     await vi.waitFor(() => expect(needRefresh).toBeDefined());
 
     needRefresh?.();

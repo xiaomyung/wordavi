@@ -1,5 +1,4 @@
 import {
-  type CSSProperties,
   type FocusEvent,
   type KeyboardEvent,
   type PointerEvent,
@@ -20,6 +19,18 @@ import {
   snap,
   valueToRatio,
 } from './rangeScale';
+import {
+  capturePointer,
+  percent,
+  RAIL_STYLE,
+  THUMB_CIRCLE_STYLE,
+  THUMB_HIT_STYLE,
+  THUMB_SHADOW,
+  THUMB_SHADOW_FOCUS,
+  TICKS_STYLE,
+  TRACK_STYLE,
+  tickStyle,
+} from './slider-shared';
 
 type Thumb = 'lo' | 'hi';
 
@@ -57,92 +68,6 @@ export interface RangeSliderProps {
   /** Disables interaction and removes the thumbs from the tab order. */
   disabled?: boolean;
   className?: string;
-}
-
-const RAIL_STYLE: CSSProperties = {
-  position: 'relative',
-  height: 'var(--spacing-touch)',
-  touchAction: 'none',
-};
-
-const TRACK_STYLE: CSSProperties = {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  top: '50%',
-  transform: 'translateY(-50%)',
-  height: 'calc(var(--radius-track) * 2)',
-  borderRadius: 'var(--radius-track)',
-};
-
-/**
- * The 44px hit target is invisible scaffolding: no box, no ring, no native
- * chrome. `outline`/`boxShadow` are pinned here because the global
- * `:focus-visible` rule would otherwise paint a rectangular ring around this
- * square — the ring belongs to the round thumb below.
- */
-const THUMB_HIT_STYLE: CSSProperties = {
-  position: 'absolute',
-  top: '50%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: 'var(--spacing-touch)',
-  height: 'var(--spacing-touch)',
-  transform: 'translate(-50%, -50%)',
-  touchAction: 'none',
-  cursor: 'grab',
-  appearance: 'none',
-  background: 'transparent',
-  border: 0,
-  borderRadius: '50%',
-  padding: 0,
-  outline: 'none',
-  boxShadow: 'none',
-  WebkitTapHighlightColor: 'transparent',
-};
-
-const THUMB_CIRCLE_STYLE: CSSProperties = {
-  flex: '0 0 auto',
-  width: 'var(--size-thumb)',
-  height: 'var(--size-thumb)',
-  borderRadius: '50%',
-  background: 'var(--color-surface-raised)',
-  border: '2px solid var(--color-accent)',
-};
-
-const THUMB_SHADOW = '0 2px 0 var(--color-border-strong)';
-const THUMB_SHADOW_FOCUS = 'var(--shadow-focus), 0 2px 0 var(--color-border-strong)';
-
-/** Tick labels are absolute, so the row carries its own line-box height. */
-const TICKS_STYLE: CSSProperties = { position: 'relative', height: '1.4em', lineHeight: 1.4 };
-
-/** Rail position as a percentage string, trimmed of float dust. */
-function percent(ratio: number): string {
-  return `${Math.round(ratio * 1e4) / 1e2}%`;
-}
-
-/**
- * Tick labels share the thumbs' coordinate system: the row spans exactly the
- * rail and every label is pinned to its detent ratio (detents sit at equal
- * visual spacing, so label `i` of `n` sits at `i / (n - 1)`). The two end
- * labels hang inward instead of centring, so neither overflows the rail.
- */
-function tickStyle(index: number, count: number): CSSProperties {
-  const ratio = count > 1 ? index / (count - 1) : 0;
-  let transform = 'translateX(-50%)';
-  if (index === 0) transform = 'none';
-  else if (index === count - 1) transform = 'translateX(-100%)';
-  return { position: 'absolute', left: percent(ratio), transform, whiteSpace: 'nowrap' };
-}
-
-/** Pointer capture is best-effort — absent in some test DOMs. */
-function capturePointer(el: Element, pointerId: number): void {
-  try {
-    el.setPointerCapture(pointerId);
-  } catch {
-    /* environment without pointer capture */
-  }
 }
 
 /**

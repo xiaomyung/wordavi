@@ -45,6 +45,12 @@ export interface SendReportResult {
   ok: boolean;
   channel: ReportChannel;
   manualAttachHint: boolean;
+  /**
+   * Screenshots the chosen channel could not carry. `mailto:` can't attach
+   * files at all, so a degraded send drops every one of them — the caller has
+   * to say so instead of letting them vanish silently.
+   */
+  droppedScreenshots: number;
   error?: string;
 }
 
@@ -122,7 +128,7 @@ function formatReportBody(payload: ReportPayload): string {
     length: text.length,
     max: BODY_MAX_CHARS,
   });
-  return text.slice(0, BODY_MAX_CHARS - TRUNCATION_MARKER.length) + TRUNCATION_MARKER;
+  return `${text.slice(0, BODY_MAX_CHARS - TRUNCATION_MARKER.length)}${TRUNCATION_MARKER}`;
 }
 
 function canShareFiles(nav: Navigator, files: File[]): boolean {
@@ -134,11 +140,29 @@ function canShareFiles(nav: Navigator, files: File[]): boolean {
   }
 }
 
+/**
+ * The navigator that can share this payload, or null. Web Share is only worth
+ * using when there are screenshots to attach — a text-only report reads better
+ * in a mail draft the learner can edit.
+ */
+function shareableWith(payload: ReportPayload): Navigator | null {
+  if (typeof navigator === 'undefined') return null;
+  if (typeof navigator.share !== 'function') return null;
+  if (payload.screenshots.length === 0) return null;
+  return canShareFiles(navigator, payload.screenshots) ? navigator : null;
+}
+
 function sendMailto(payload: ReportPayload): SendReportResult {
   const subject = encodeURIComponent(`Wordavi report v${payload.version}`);
   const body = encodeURIComponent(formatReportBody(payload));
   const href = `mailto:${MAILTO_TARGET}?subject=${subject}&body=${body}`;
-  const manualAttachHint = payload.screenshots.length > 0;
+  // mailto can't carry attachments, so every pending screenshot is lost here.
+  const droppedScreenshots = payload.screenshots.length;
+  const manualAttachHint = droppedScreenshots > 0;
+
+  if (droppedScreenshots > 0) {
+    log.warn(NS, 'screenshots dropped', { count: droppedScreenshots });
+  }
 
   try {
     if (typeof window !== 'undefined') {
@@ -146,23 +170,24 @@ function sendMailto(payload: ReportPayload): SendReportResult {
     }
   } catch (err) {
     log.error(NS, 'mailto navigation failed', { error: String(err) });
-    return { ok: false, channel: 'mailto', manualAttachHint, error: String(err) };
+    return {
+      ok: false,
+      channel: 'mailto',
+      manualAttachHint,
+      droppedScreenshots,
+      error: String(err),
+    };
   }
 
-  log.info(NS, 'report sent', { channel: 'mailto', manualAttachHint });
-  return { ok: true, channel: 'mailto', manualAttachHint };
+  log.info(NS, 'report sent', { channel: 'mailto', manualAttachHint, droppedScreenshots });
+  return { ok: true, channel: 'mailto', manualAttachHint, droppedScreenshots };
 }
 
 /** Tries Web Share (with screenshots) first, falls back to mailto. Never throws. */
 export async function sendReport(payload: ReportPayload): Promise<SendReportResult> {
-  const nav = typeof navigator !== 'undefined' ? navigator : undefined;
-  const shareable =
-    !!nav &&
-    typeof nav.share === 'function' &&
-    payload.screenshots.length > 0 &&
-    canShareFiles(nav, payload.screenshots);
+  const nav = shareableWith(payload);
 
-  if (shareable && nav) {
+  if (nav !== null) {
     try {
       await nav.share({
         title: `Wordavi report v${payload.version}`,
@@ -170,33 +195,81 @@ export async function sendReport(payload: ReportPayload): Promise<SendReportResu
         files: payload.screenshots,
       });
       log.info(NS, 'report sent', { channel: 'share', fileCount: payload.screenshots.length });
-      return { ok: true, channel: 'share', manualAttachHint: false };
+      return { ok: true, channel: 'share', manualAttachHint: false, droppedScreenshots: 0 };
     } catch (err) {
       log.warn(NS, 'share failed, falling back to mailto', { error: String(err) });
       return sendMailto(payload);
     }
   }
 
+  const globalNav = typeof navigator === 'undefined' ? undefined : navigator;
   log.warn(NS, 'share unsupported, falling back to mailto', {
-    shareAvailable: !!nav?.share,
-    canShareAvailable: !!nav?.canShare,
+    shareAvailable: typeof globalNav?.share === 'function',
+    canShareAvailable: typeof globalNav?.canShare === 'function',
     screenshotCount: payload.screenshots.length,
   });
   return sendMailto(payload);
 }
 
-/** Copies the full diagnostics text (no char cap) to the clipboard. Never throws. */
+/**
+ * Pre-Clipboard-API copy path: a throwaway textarea plus the deprecated
+ * `document.execCommand('copy')`. Insecure origins (the LAN-http dev server,
+ * for one) expose no `navigator.clipboard` at all, so without this the copy
+ * button in the report sheet would be dead exactly where reports get tested.
+ * Returns whether the text landed on the clipboard; never throws.
+ */
+function copyViaExecCommand(text: string): boolean {
+  if (typeof document === 'undefined') return false;
+  let textarea: HTMLTextAreaElement | null = null;
+  try {
+    textarea = document.createElement('textarea');
+    textarea.value = text;
+    // Off-screen rather than hidden: `display: none` makes select() a no-op.
+    textarea.setAttribute('readonly', '');
+    textarea.setAttribute('aria-hidden', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    return document.execCommand('copy') === true;
+  } catch {
+    return false;
+  } finally {
+    textarea?.remove();
+  }
+}
+
+/**
+ * Copies the full diagnostics text (no char cap) to the clipboard. Prefers the
+ * async Clipboard API and falls back to `execCommand` when it is missing or
+ * refuses. Never throws.
+ */
 export async function copyReport(payload: ReportPayload): Promise<CopyReportResult> {
   const text = formatDiagnosticsText(payload);
-  try {
-    if (typeof navigator === 'undefined' || typeof navigator.clipboard?.writeText !== 'function') {
-      throw new Error('clipboard API unavailable');
+  const clipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+  let clipboardError = 'clipboard API unavailable';
+
+  if (typeof clipboard?.writeText === 'function') {
+    try {
+      await clipboard.writeText(text);
+      log.info(NS, 'report copied to clipboard', { length: text.length });
+      return { ok: true };
+    } catch (err) {
+      clipboardError = String(err);
     }
-    await navigator.clipboard.writeText(text);
-    log.info(NS, 'report copied to clipboard', { length: text.length });
-    return { ok: true };
-  } catch (err) {
-    log.error(NS, 'report copy failed', { error: String(err) });
-    return { ok: false, error: String(err) };
   }
+
+  log.warn(NS, 'clipboard write unavailable, trying legacy copy', { error: clipboardError });
+
+  if (copyViaExecCommand(text)) {
+    log.info(NS, 'copied via legacy fallback', { length: text.length });
+    return { ok: true };
+  }
+
+  const error = `${clipboardError}; legacy copy failed`;
+  log.warn(NS, 'report copy failed', { error });
+  return { ok: false, error };
 }

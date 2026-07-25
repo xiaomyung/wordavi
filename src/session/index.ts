@@ -1,8 +1,19 @@
-/* Goal & streak */
-export { applyAnswersToDay, dayDiff, evaluateStreak, isGoalMet, toGoalVerdicts } from './goal';
+/* Goal, streak & calendar-day keys */
+export {
+  applyAnswersToDay,
+  DAY_MS,
+  dayDiff,
+  effectiveDailyGoal,
+  evaluateStreak,
+  isGoalMet,
+  localDayKey,
+  localMonthKey,
+  shiftDayKey,
+  toGoalVerdicts,
+} from './goal';
 /* Logging injection */
 export type { SessionLogger, SessionLogLevel } from './log';
-export { setSessionLogger, slog } from './log';
+export { setSessionLogger } from './log';
 /* Deterministic rng (engine-seeded, draw-counting) */
 export { makeCountingRng } from './rng';
 /* Rounds */
@@ -37,6 +48,7 @@ export {
   serializeSrs,
   updateSrsOnAnswer,
   WRONG_QUEUE_CAP,
+  WRONG_QUEUE_MIN_GAP,
   weightOf,
 } from './srs';
 
@@ -73,5 +85,6 @@ export {
   BUCKET_TO_GROUP,
   DISPLAY_GROUP_ORDER,
   DISPLAY_GROUPS,
+  isDigitTarget,
   SKILL_BUCKETS,
 } from './types';

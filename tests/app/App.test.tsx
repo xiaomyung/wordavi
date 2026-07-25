@@ -126,10 +126,11 @@ describe('App home', () => {
     expect(screen.getByText('475 → cuatrocientos setenta y cinco')).toBeInTheDocument();
   });
 
-  it('renders the component gallery for ?gallery', () => {
+  // The gallery is a lazy chunk, so its first paint is a tick away.
+  it('renders the component gallery for ?gallery', async () => {
     setSearch('?gallery=1');
     render(<App />);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('gallery');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('gallery');
   });
 
   it('pauses the modes whose capabilities the browser cannot serve', () => {
@@ -197,15 +198,33 @@ describe('App home', () => {
     expect(getRound()?.modeId).toBe('mixed');
   });
 
-  it('resumes into the mode the parked round belongs to, not the last one started', () => {
+  it('resumes a parked single-mode round from its own row, not from the big button', () => {
     updateSettings({ lastMode: 'digits' });
     setRound('words', parkedRound());
     render(<App />);
 
-    press(/Continue/);
+    // The big button is the mixed round, always: a parked words round never
+    // takes it over. The row it belongs to is what says "continue".
+    expect(screen.queryByRole('button', { name: /Continue/ })).not.toBeInTheDocument();
+    const row = rowNamed('Number → in words');
+    expect(within(row).getByText('continue · 2 of 10')).toBeInTheDocument();
+
+    fireEvent.click(row);
 
     expect(getSettings().lastMode).toBe('words');
     expect(screen.getByText('3 of 10')).toBeInTheDocument();
+  });
+
+  it('starts a fresh mixed round from the big button while a single-mode round is parked', () => {
+    updateSettings({ lastMode: 'digits' });
+    setRound('words', parkedRound());
+    render(<App />);
+
+    press(/Start/);
+
+    // A round of its own, from question one — not the parked words round.
+    expect(screen.getByText('1 of 10')).toBeInTheDocument();
+    expect(getSettings().lastMode).toBe('digits');
   });
 });
 
@@ -246,13 +265,26 @@ describe('App onboarding gate', () => {
     updateSettings({ onboarded: false });
   });
 
+  /**
+   * Onboarding leads with the install offer (happy-dom fires no
+   * `beforeinstallprompt`, so it opens in its 'manual' state). It is never a
+   * gate, and the affordance matrix is covered in tests/screens/onboarding —
+   * here it is one ghost tap on the way to the steps under test.
+   */
+  function skipInstallStep(): void {
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Install it on your phone');
+    press('Continue in the browser');
+  }
+
   it('holds a first-time learner in onboarding', () => {
     render(<App />);
+    skipInstallStep();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Hello!');
   });
 
   it('lands on home when the learner wants to look around first', () => {
     render(<App />);
+    skipInstallStep();
     press('English');
     press('Next');
     press('Next');
@@ -264,6 +296,7 @@ describe('App onboarding gate', () => {
 
   it('starts the first round straight from the last step', () => {
     render(<App />);
+    skipInstallStep();
     press('English');
     press('Next');
     press('Next');

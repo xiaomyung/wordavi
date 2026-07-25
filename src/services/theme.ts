@@ -1,10 +1,12 @@
 /**
  * Framework-free theme application. Toggles the `dark` class on <html> and keeps
  * the browser theme-color meta in sync. No persistence here - the caller owns
- * the preference and passes it in (storage wiring lands later).
+ * the preference and passes it in.
  */
+import type { Theme } from '@/storage';
 
-export type ThemePref = 'auto' | 'light' | 'dark';
+/** The stored `Settings['theme']` value, under this module's own name. */
+export type ThemePref = Theme;
 
 type EffectiveTheme = 'light' | 'dark';
 

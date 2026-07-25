@@ -19,6 +19,7 @@ export type {
   ErrorEntry,
   Progress,
   RoundSize,
+  RoundSizeSetting,
   SavedRound,
   Settings,
   SpeechRate,

@@ -2,22 +2,40 @@
  * Home screen — visual truth: design-handoff/wordavi-design-v1/screens/home.html
  * (RU light, RU dark, offline frames).
  *
- * Prop-driven: navigation and round-starting are callbacks the app wires up.
- * The screen reads its own dashboard facts (settings, day rows, progress, the
- * parked round) straight from `@/storage`, because nothing else on the app side
- * owns them and they are pure reads.
+ * Prop-driven: navigation and round-starting are callbacks the app wires up, and
+ * the parked round arrives as a prop because the app has to route it too. The
+ * screen reads its own dashboard facts (settings, day rows, progress) straight
+ * from `@/storage`, because nothing else on the app side owns them and they are
+ * pure reads.
  */
 import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StreakStampDay } from '@/components';
-import { Button, Card, Chip, GoalRing, ModeRow, StreakStamps } from '@/components';
+import {
+  Button,
+  Card,
+  ChartGlyph,
+  Chip,
+  GearGlyph,
+  GoalRing,
+  MicGlyph,
+  ModeRow,
+  OfflineGlyph,
+  SpeakerGlyph,
+  StreakStamps,
+} from '@/components';
+import type { ModeId } from '@/modes';
+import { MIXED_MODE_ID } from '@/modes';
+import { isIos } from '@/services/install';
+import { isOnline, onOnlineChanged } from '@/services/online';
 import { showToast } from '@/services/toast';
-import { isRoundSerialized, type RoundSize } from '@/session';
+import { effectiveDailyGoal, isRoundSerialized, localDayKey, type RoundSize } from '@/session';
 import type { SavedRound } from '@/storage';
-import { getDays, getProgress, getRound, getSettings } from '@/storage';
-import { buildStreakWindow, localDayKey } from './streak-window';
+import { getDays, getProgress, getSettings } from '@/storage';
+import { InstallInvite } from './install-offer';
+import { buildStreakWindow } from './streak-window';
 
 /* ------------------------------------------------------------------ *
  * Props
@@ -36,10 +54,16 @@ export interface HomeModeItem {
 
 export interface HomeScreenProps {
   modes: readonly HomeModeItem[];
-  /** A row was tapped: play that one mode. */
+  /**
+   * The round left unfinished, if any. A mixed one takes over the big button; a
+   * single-mode one only marks its own row.
+   */
+  parkedRound?: ParkedRound | null;
+  /** A row was tapped: play that one mode (resuming it when it is the parked one). */
   onStartMode: (modeId: string) => void;
   /** The big button: play a round mixed from every available mode. */
   onStartMixed: () => void;
+  /** The big button again, when the parked round is the mixed one: continue it. */
   onResume: () => void;
   onOpenSettings: () => void;
   onOpenStats: () => void;
@@ -68,23 +92,35 @@ export function greetingKeyFor(hour: number): GreetingKey {
   return 'home.greeting_evening';
 }
 
-export interface SavedRoundProgress {
+/** A resumable round: whose mode it is, and how far it got. */
+export interface ParkedRound {
+  modeId: string;
   done: number;
   total: RoundSize;
 }
 
 /**
- * Read "N of M" out of the parked round slot without rehydrating it: the saved
- * payload is the session layer's `RoundSerialized`, so its own type guard is
- * what decides whether the slot is usable. A finished round never offers a
- * resume — the learner already ended it.
+ * Read the parked round slot without rehydrating it: the saved payload is the
+ * session layer's `RoundSerialized`, so its own type guard is what decides
+ * whether the slot is usable. A finished round is never resumable — the learner
+ * already ended it.
  */
-export function savedRoundProgress(saved: SavedRound | null): SavedRoundProgress | null {
+export function parkedRoundFrom(saved: SavedRound | null): ParkedRound | null {
   if (saved === null) return null;
   const state = saved.state;
   if (!isRoundSerialized(state) || state.finished) return null;
   const total = state.retry ? state.retryItems.length : state.config.size;
-  return { done: state.records.length, total };
+  return { modeId: saved.modeId, done: state.records.length, total };
+}
+
+/** A round's length as the resume copy prints it: the number, or ∞ when endless. */
+function resumeTotalLabel(total: RoundSize, t: TFunction): string {
+  return typeof total === 'number' ? String(total) : t('common.endless');
+}
+
+/** "N of M" for a parked round, with ∞ standing in for an endless one. */
+function progressArgs(parked: ParkedRound, t: TFunction): { done: number; total: string } {
+  return { done: parked.done, total: resumeTotalLabel(parked.total, t) };
 }
 
 interface HomeData {
@@ -92,7 +128,6 @@ interface HomeData {
   doneToday: number;
   streakDays: number;
   stampDays: StreakStampDay[];
-  resume: SavedRoundProgress | null;
   hasHistory: boolean;
 }
 
@@ -101,14 +136,13 @@ function readHomeData(now: Date): HomeData {
   const days = getDays();
   const progress = getProgress();
   const today = localDayKey(now);
-  const dailyGoal = Math.max(1, settings.dailyGoal);
+  const dailyGoal = effectiveDailyGoal(settings.dailyGoal);
 
   return {
     dailyGoal,
     doneToday: days.find((day) => day.date === today)?.correct ?? 0,
     streakDays: progress.streakCurrent,
     stampDays: buildStreakWindow(days, dailyGoal, today),
-    resume: savedRoundProgress(getRound()),
     hasHistory: progress.totalAnswered > 0 || days.length > 0,
   };
 }
@@ -117,10 +151,6 @@ interface PausedNotice {
   sub: string;
   chip: string;
   toast: string;
-}
-
-function isIos(): boolean {
-  return typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
 /** Sub-line, trailing chip and explainer toast for a paused mode row. */
@@ -149,124 +179,57 @@ function pausedNotice(status: HomeModeStatus, t: TFunction): PausedNotice | null
   }
 }
 
-/** Live `navigator.onLine`, kept fresh by the online/offline window events. */
-export function useOnline(): boolean {
-  const [online, setOnline] = useState(
-    () => typeof navigator === 'undefined' || navigator.onLine !== false,
-  );
+/**
+ * Trailing slot of a mode row: a paused row explains itself, an available one
+ * with a parked round offers it back. `null` leaves the chevron in place.
+ */
+function rowTrailing(
+  notice: PausedNotice | null,
+  parked: ParkedRound | null,
+  t: TFunction,
+): ReactNode {
+  if (notice !== null) return <Chip variant="offline">{notice.chip}</Chip>;
+  if (parked !== null) {
+    return <Chip variant="replay">{t('home.row_continue', progressArgs(parked, t))}</Chip>;
+  }
+  return null;
+}
 
-  useEffect(() => {
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
+/**
+ * Live connectivity for the mode rows. The reading and the events both come from
+ * `services/online`, so the screen and everything else that asks (the drill's
+ * offline offer, the availability probe) can never disagree about what "offline"
+ * means.
+ */
+export function useOnline(): boolean {
+  const [online, setOnline] = useState(isOnline);
+
+  useEffect(() => onOnlineChanged(setOnline), []);
 
   return online;
 }
 
 /* ------------------------------------------------------------------ *
- * Glyphs (home.html inline SVGs)
+ * Mode icons (home.html)
  * ------------------------------------------------------------------ */
 
-function ChartGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M5 20V12M12 20V4M19 20v-6" />
-    </svg>
-  );
-}
-
-function GearGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="3.2" />
-      <path d="M19 12a7 7 0 00-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 00-2-1.2L14 3h-4l-.5 2.6a7 7 0 00-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 005 12a7 7 0 00.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 002 1.2L10 21h4l.5-2.6a7 7 0 002-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2z" />
-    </svg>
-  );
-}
-
-function OfflineGlyph() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M2 9a15 15 0 0110.6-4.4M22 9a15 15 0 00-4.8-3.2M6 13a9.5 9.5 0 015.4-2.7M18 13a9.5 9.5 0 00-2-1.6M10 17a4 4 0 014 0M12 21h.01M4 4l16 16" />
-    </svg>
-  );
-}
-
-function SpeakerGlyph() {
-  return (
-    <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor" />
-      <path
-        d="M15.5 8.5a5 5 0 010 7M17.8 6.2a8.2 8.2 0 010 11.6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function MicGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" stroke="none" />
-      <path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21" />
-    </svg>
-  );
-}
-
-const MODE_ICONS: Record<string, ReactNode> = {
+/**
+ * The single glyph in front of a mode row. Keyed by mode id and checked against
+ * `ModeId`, so a renamed mode is a type error rather than a silent letter; the
+ * composite mode has no row, hence `Partial`.
+ */
+const MODE_ICONS = {
   words: '42',
   digits: <span className="italic">ab</span>,
-  listen: <SpeakerGlyph />,
+  listen: <SpeakerGlyph size={19} />,
   choice: '¿',
   speak: <MicGlyph />,
   grocery: '€',
-};
+} satisfies Partial<Record<ModeId, ReactNode>>;
 
 function iconFor(mode: HomeModeItem): ReactNode {
-  return MODE_ICONS[mode.id] ?? mode.title.slice(0, 1);
+  // A mode with no icon of its own falls back to the first letter of its title.
+  return MODE_ICONS[mode.id as keyof typeof MODE_ICONS] ?? mode.title.slice(0, 1);
 }
 
 /* ------------------------------------------------------------------ *
@@ -275,6 +238,7 @@ function iconFor(mode: HomeModeItem): ReactNode {
 
 export function HomeScreen({
   modes,
+  parkedRound = null,
   onStartMode,
   onStartMixed,
   onResume,
@@ -306,12 +270,11 @@ export function HomeScreen({
       ? t('home.goal_almost', goalArgs)
       : t('home.goal_sub', goalArgs);
 
-  const resumeTotal =
-    data.resume === null
-      ? ''
-      : typeof data.resume.total === 'number'
-        ? String(data.resume.total)
-        : t('common.endless');
+  // The big button is always the mixed round: it only turns into "continue"
+  // when the parked round *is* that mixed round. A parked single-mode round
+  // stays on its own row, so this button never quietly becomes one mode.
+  const parkedMixed =
+    parkedRound !== null && parkedRound.modeId === MIXED_MODE_ID ? parkedRound : null;
 
   function pressMode(mode: HomeModeItem, notice: PausedNotice | null): void {
     if (notice === null) {
@@ -367,15 +330,20 @@ export function HomeScreen({
 
         {/* The big button is a *round*, not a mode: it mixes every available
             mode. Picking one mode is what the rows below are for. */}
-        {data.resume === null ? (
+        {parkedMixed === null ? (
           <Button className="w-full" onClick={onStartMixed}>
             {data.hasHistory ? t('home.start_round') : t('home.start_cta')}
           </Button>
         ) : (
           <Button className="w-full" onClick={onResume}>
-            {t('home.continue_cta', { done: data.resume.done, total: resumeTotal })}
+            {t('home.continue_cta', progressArgs(parkedMixed, t))}
           </Button>
         )}
+
+        {/* For anyone who walked past onboarding's install step. Renders itself
+            only while there is something to install, so it is silent on a
+            device that already has the app (or can't install it at all). */}
+        <InstallInvite />
 
         <p className="mt-0.5 font-extrabold text-overline text-text-muted tracking-[0.4px]">
           {t('home.section_modes')}
@@ -384,6 +352,12 @@ export function HomeScreen({
         <ul className="flex list-none flex-col gap-2.5 p-0">
           {modes.map((mode) => {
             const notice = pausedNotice(mode.status, t);
+            // A parked single-mode round is only findable here, so its row says
+            // so — quietly, and never over a paused row's own explanation.
+            const parkedHere =
+              notice === null && parkedRound !== null && parkedRound.modeId === mode.id
+                ? parkedRound
+                : null;
             return (
               <li key={mode.id}>
                 <ModeRow
@@ -392,12 +366,8 @@ export function HomeScreen({
                   sub={notice === null ? mode.example : notice.sub}
                   paused={notice !== null}
                   onPress={() => pressMode(mode, notice)}
-                  {...(notice === null
-                    ? {}
-                    : {
-                        'aria-disabled': true,
-                        trailing: <Chip variant="offline">{notice.chip}</Chip>,
-                      })}
+                  trailing={rowTrailing(notice, parkedHere, t)}
+                  {...(notice === null ? {} : { 'aria-disabled': true })}
                 />
               </li>
             );

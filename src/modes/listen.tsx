@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { PillButton, SpeakerButton } from '@/components';
 import { numberSource } from './buckets';
+import { PromptStage, promptSpanish, TypedAnswer, useSpeakOnDemand } from './prompt';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
-import { PromptStage, promptSpanish, TypedAnswer } from './ui';
 
 /**
  * listen — audio → digits (drill-digits.html, "listening idle" frame).
  *
  * The number is never shown. It plays once by itself when the question appears
- * and then as often as the learner taps; the 0.75x toggle is sticky for the
+ * and then as often as the learner taps; the 0.5x toggle is sticky for the
  * round, so its state lives in the drill and arrives as a prop.
  */
 
@@ -22,17 +22,9 @@ const LABEL_KEYS = [
 
 function ListenPrompt({ question, services, slower, onToggleSlower, labels }: PromptProps) {
   const phrase = promptSpanish(question.prompt);
-  const [playing, setPlaying] = useState(false);
+  const { speaking: playing, speak: play } = useSpeakOnDemand(services, phrase, slower);
   /** Question id already auto-played — replays are user-driven only. */
   const autoPlayed = useRef<string | null>(null);
-
-  const play = useCallback(() => {
-    setPlaying(true);
-    services
-      .speak(phrase, { slower })
-      .catch(() => undefined)
-      .finally(() => setPlaying(false));
-  }, [services, phrase, slower]);
 
   useEffect(() => {
     if (autoPlayed.current === question.id) return;

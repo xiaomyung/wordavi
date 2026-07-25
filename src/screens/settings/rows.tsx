@@ -16,36 +16,18 @@ import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SegmentedOption } from '@/components';
-import {
-  Button,
-  Card,
-  CardRow,
-  RangeSlider,
-  Segmented,
-  Stepper,
-  StopSlider,
-  Toggle,
-} from '@/components';
+import { CardRow, RangeSlider, Segmented, Stepper, StopSlider, Toggle } from '@/components';
 import { formatNumber } from '@/engine';
 import { setLanguage } from '@/i18n';
-import {
-  canPromptInstall,
-  type InstallPromptOutcome,
-  isIos,
-  isStandalone,
-  promptInstall,
-} from '@/services/install';
 import { log } from '@/services/log';
 import { setEnabled as setSoundsEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
-import type { RoundSize, Settings, SpeechRate, Theme, UiLang } from '@/storage';
+import type { RoundSizeSetting, Settings, SpeechRate, Theme, UiLang } from '@/storage';
 import { getSettings, updateSettings } from '@/storage';
-
-/** Log namespace for every user-driven settings change. */
-export const UI_NS = 'ui';
+import { UI_NS } from '../log-ns';
 
 /** Questions per round; the last stop is the endless round rendered as ∞. */
-const ROUND_SIZES: readonly RoundSize[] = [10, 20, 30, 'endless'];
+const ROUND_SIZES: readonly RoundSizeSetting[] = [10, 20, 30, 'endless'];
 const DEFAULT_ROUND_INDEX = 1;
 
 const SPEECH_RATES: readonly SpeechRate[] = ['slow', 'normal', 'fast'];
@@ -343,66 +325,5 @@ export function SoundsSetting({ settings, update }: SettingRowProps) {
         />
       }
     />
-  );
-}
-
-/**
- * Which install affordance this device should offer:
- * - `hidden`: already installed, or a browser that neither captured a prompt
- *   nor needs the manual iOS recipe — showing a dead button would be worse
- *   than showing nothing;
- * - `prompt`: a captured `beforeinstallprompt` is ready to fire;
- * - `ios`: no programmatic prompt exists, so we show Safari's two steps.
- */
-export type InstallAffordance = 'hidden' | 'prompt' | 'ios';
-
-export function installAffordance(): InstallAffordance {
-  if (isStandalone()) return 'hidden';
-  if (canPromptInstall()) return 'prompt';
-  return isIos() ? 'ios' : 'hidden';
-}
-
-/** Fires the captured prompt and logs how it went; the outcome is for callers that react to it. */
-export async function runInstallPrompt(): Promise<InstallPromptOutcome> {
-  const outcome = await promptInstall();
-  log.info(UI_NS, 'install prompt outcome', { outcome });
-  return outcome;
-}
-
-export interface InstallStepsProps {
-  onClose: () => void;
-}
-
-/** The iOS "Add to Home Screen" recipe, shown inline under the install row. */
-export function InstallSteps({ onClose }: InstallStepsProps) {
-  const { t } = useTranslation();
-  return (
-    <Card variant="float" aria-label={t('install_sheet.title')}>
-      <span className="font-extrabold text-[15px]">{t('install_sheet.title')}</span>
-      <ol className="flex flex-col gap-1.5 font-semibold text-caption text-text-muted">
-        <li>1 · {t('install_sheet.step1')}</li>
-        <li>2 · {t('install_sheet.step2')}</li>
-      </ol>
-      <Button variant="ghost" onClick={onClose}>
-        {t('common.close')}
-      </Button>
-    </Card>
-  );
-}
-
-/** Back chevron for screen headers (settings.html `.ib`). */
-export function BackGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M15 5l-7 7 7 7" />
-    </svg>
   );
 }

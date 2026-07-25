@@ -14,14 +14,15 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const BASE = 'inline-flex items-center justify-center font-sans';
 
-// 17px default label has no type token (buttons.md: "--text-label +2"); tall
-// uses --text-body-lg (18). 1.5px borders / glyph sizing have no token either.
+// Label sizes are tokens: --text-cta (17, buttons.md's "--text-label +2") for
+// the default height, --text-body-lg (18) for tall. The secondary outline is
+// the shared --stroke-hairline.
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
     'gap-2.5 rounded-button px-7 bg-accent text-on-accent font-extrabold ' +
     'active:bg-accent-pressed disabled:bg-disabled-bg disabled:text-disabled-text',
   secondary:
-    'gap-2.5 rounded-button px-7 border-[1.5px] border-border bg-surface-raised text-text font-extrabold ' +
+    'gap-2.5 rounded-button px-7 border-(length:--stroke-hairline) border-border bg-surface-raised text-text font-extrabold ' +
     'active:bg-surface-sunken disabled:border-transparent disabled:bg-disabled-bg disabled:text-disabled-text',
   ghost:
     'min-h-touch gap-2 px-4 text-label font-extrabold text-accent ' +
@@ -36,7 +37,7 @@ const VARIANT: Record<ButtonVariant, string> = {
    viewport, where a fixed height + default flex-shrink lets the column squash
    the button flat before the scroll region takes over. */
 const SIZE: Record<ButtonSize, string> = {
-  default: 'min-h-(--size-cta) shrink-0 text-[1.0625rem]',
+  default: 'min-h-(--size-cta) shrink-0 text-cta',
   tall: 'min-h-(--size-cta-tall) shrink-0 text-body-lg',
 };
 

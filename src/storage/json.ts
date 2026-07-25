@@ -5,8 +5,15 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function writeJSON(key: string, value: unknown): void {
-  writeRawString(key, JSON.stringify(value));
+/**
+ * Persist a slot. Returns false when the write was refused (quota exhausted,
+ * storage unavailable) and reports it to the observer, so a caller that cares
+ * can tell "saved" from "kept in memory only".
+ */
+export function writeJSON(key: string, value: unknown): boolean {
+  const written = writeRawString(key, JSON.stringify(value));
+  if (!written) reportObserver({ key, kind: 'writeFailed' });
+  return written;
 }
 
 export function readGuarded<T>(key: string, guard: (value: unknown) => value is T): T | null {

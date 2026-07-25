@@ -5,13 +5,13 @@
  * allowed to do: storage cannot reach the logger, the session layer cannot
  * import services, and neither may touch i18n. The app layer owns those seams.
  */
-import { init as initI18n } from '@/i18n';
+import { detectLanguage, init as initI18n } from '@/i18n';
 import { installGlobalErrorCapture, log } from '@/services/log';
 import { setEnabled as setSoundsEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
 import { ensureVoiceResolved } from '@/services/tts';
 import { setSessionLogger } from '@/session';
-import { getSettings, initStorage, setStorageObserver } from '@/storage';
+import { getSettings, initStorage, setStorageObserver, updateSettings } from '@/storage';
 
 const NS = 'app';
 
@@ -38,7 +38,20 @@ export function bootstrap(): void {
   });
 
   const settings = getSettings();
-  initI18n({ initialLang: settings.uiLang });
+
+  // Before onboarding, `settings.uiLang` is only the storage default — nobody
+  // has chosen anything yet, so a first-time visitor is greeted in their own
+  // browser language (this is the consumer that keeps `detectLanguage`
+  // exported). It is persisted straight away so the install step, the language
+  // step, `document.lang` and the settings screen all agree from the first
+  // paint. Once onboarded, the stored choice always wins.
+  const initialLang = settings.onboarded ? settings.uiLang : detectLanguage();
+  initI18n({ initialLang });
+  if (initialLang !== settings.uiLang) {
+    updateSettings({ uiLang: initialLang });
+    log.info(NS, 'first-run language detected', { uiLang: initialLang });
+  }
+
   applyTheme(settings.theme);
   setSoundsEnabled(settings.soundsEnabled);
 

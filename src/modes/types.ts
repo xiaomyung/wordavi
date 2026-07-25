@@ -72,7 +72,7 @@ export function labelOf(labels: ModeLabels, key: string): string {
 export interface PromptProps {
   question: Question;
   services: DrillServices;
-  /** Sticky-per-round 0.75x speech rate (the drill owns the state). */
+  /** Sticky-per-round 0.5x speech rate (the drill owns the state). */
   slower: boolean;
   onToggleSlower: () => void;
   labels: ModeLabels;
@@ -88,6 +88,20 @@ export interface AnswerZoneProps {
   onSubmit: (given: string) => void;
   micDenied: boolean;
   onMicDenied: () => void;
+  /**
+   * The browser has the recognition API but no working recogniser behind it (a
+   * 'network' failure while online). Set by the drill for the rest of the round:
+   * the zone drops the microphone and answers by keyboard, exactly like
+   * {@link AnswerZoneProps.micDenied} but with its own copy.
+   */
+  recognitionUnavailable?: boolean;
+  /**
+   * Report a recognition failure the drill may want to escalate. Only the drill
+   * can tell "offline" from "this browser's recogniser is dead" - the modes layer
+   * may not look at the environment - so the zone forwards the raw kind and keeps
+   * showing its own inline hint.
+   */
+  onRecognitionError?: (kind: RecognitionErrorKind) => void;
   labels: ModeLabels;
   /** Optional "how do I enable the microphone?" escape hatch (drill-owned sheet). */
   onMicHelp?: () => void;

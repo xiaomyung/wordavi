@@ -1,7 +1,7 @@
 /**
  * Tiny framework-free toast store: a single visible toast plus a FIFO queue.
- * React screens subscribe via useSyncExternalStore (subscribe + getToast)
- * once they land; this module has no react/dom dependency of its own.
+ * React screens subscribe via useSyncExternalStore (subscribe + getToast);
+ * this module has no react/dom dependency of its own.
  */
 import { log } from '@/services/log';
 
@@ -86,13 +86,23 @@ export function dismissToast(): void {
   advance();
 }
 
-/** Invokes the visible toast's action, then dismisses it. */
+/**
+ * Invokes the visible toast's action, then dismisses it. A throwing action is
+ * logged and rethrown, but the toast is dismissed either way — leaving it stuck
+ * on screen would also block every toast queued behind it.
+ */
 export function pressToastAction(): void {
   const toast = current;
   if (!toast?.action) return;
   log.info(NS, 'toast action pressed', { id: toast.id });
-  toast.action.onPress();
-  advance();
+  try {
+    toast.action.onPress();
+  } catch (err) {
+    log.error(NS, 'toast action threw', { id: toast.id, error: String(err) });
+    throw err;
+  } finally {
+    advance();
+  }
 }
 
 export function getToast(): ToastState | null {

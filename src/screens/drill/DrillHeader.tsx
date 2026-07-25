@@ -1,22 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Button, Chip, ProgressRule } from '@/components';
+import { Button, Chip, CloseGlyph, ProgressRule } from '@/components';
 import type { RoundSize, Score } from '@/session';
-
-function CloseIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
 
 export interface DrillHeaderProps {
   /** 1-based number of the question on stage. */
@@ -28,7 +12,7 @@ export interface DrillHeaderProps {
 
 /**
  * The shared drill header: leave button, progress, counter, then the score row.
- * Identical in all six modes — only the stage and answer zone below it swap
+ * Identical in every mode — only the stage and answer zone below it swap
  * (design README). Endless rounds drop the rule and count against ∞ instead.
  */
 export function DrillHeader({ step, size, score, onLeave }: DrillHeaderProps) {
@@ -46,7 +30,7 @@ export function DrillHeader({ step, size, score, onLeave }: DrillHeaderProps) {
           onClick={onLeave}
           aria-label={endless ? t('drill.end_round') : t('common.close')}
         >
-          <CloseIcon />
+          <CloseGlyph />
         </Button>
         {!endless && (
           <ProgressRule

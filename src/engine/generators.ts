@@ -1,4 +1,4 @@
-import type { Quantity } from './quantities';
+import { GRAMS_PER_KILO, type Quantity } from './quantities';
 import type { Rng } from './rng';
 
 /** Inclusive [min, max] bound for number generation. */
@@ -139,7 +139,7 @@ export function generateQuantity(rng: Rng): Quantity {
       grams = 1500;
       break;
     case 'wholeKg':
-      grams = rng.int(1, 5) * 1000;
+      grams = rng.int(1, 5) * GRAMS_PER_KILO;
       break;
     case 'grams':
       grams = rng.pick(GRAM_VALUES);

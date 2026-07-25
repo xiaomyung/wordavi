@@ -31,12 +31,11 @@ import {
   seedApp,
   srsSeed,
   startMode,
+  WORDS_MODE,
 } from './helpers';
 
 /** A Tuesday morning: "Доброе утро!" plus a stable date line. */
 const FROZEN = new Date('2026-03-24T08:30:00.000Z');
-
-const WORDS_MODE = /Число → словами/;
 
 test.use({ timezoneId: 'Europe/Madrid', locale: 'ru-RU' });
 
@@ -120,7 +119,8 @@ test('stats · light', async ({ page }) => {
 test('onboarding step one · light', async ({ page }) => {
   await seedApp(page, { onboarded: false });
   await gotoApp(page);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Привет!');
+  // Step one is the install step (manual affordance renders under Playwright).
+  await expect(page.getByRole('button', { name: 'Продолжить в браузере' })).toBeVisible();
   await expect(page).toHaveScreenshot('onboarding-step1-light.png');
 });
 

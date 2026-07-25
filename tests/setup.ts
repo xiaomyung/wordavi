@@ -22,7 +22,7 @@ if (typeof globalThis.localStorage === 'undefined') {
     }
 
     getItem(key: string): string | null {
-      return this.store.has(key) ? (this.store.get(key) as string) : null;
+      return this.store.get(key) ?? null;
     }
 
     key(index: number): string | null {

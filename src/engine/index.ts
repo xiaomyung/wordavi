@@ -8,7 +8,7 @@
  */
 
 export { buildAccepted, decimalToWords, fracDigitsToWords } from './decimals';
-export { buildDistractors, confusablesOf } from './distractors';
+export { buildDistractors, confusablesOf, shuffle } from './distractors';
 export {
   type DigitAnswer,
   type FormattedWeight,
@@ -16,6 +16,7 @@ export {
   formatPrice,
   formatWeight,
   parseDigitAnswer,
+  THIN_SPACE,
 } from './format';
 export {
   type GeneratedPrice,

@@ -111,7 +111,7 @@ describe('engine integration — prices, quantities, decimals', () => {
     const q: Question = {
       id: 'd314',
       bucket: 'decimals',
-      prompt: { kind: 'decimal', intPart: 3, fracDigits: 14 },
+      prompt: { kind: 'decimal', intPart: 3, fracDigits: '14' },
       accepted: decimalToWords(3, '14'),
     };
     expect(grade(q, 'tres coma catorce')).toEqual({ verdict: 'correct' });

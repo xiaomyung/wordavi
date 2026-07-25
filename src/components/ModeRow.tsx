@@ -1,5 +1,6 @@
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { cx } from './cx';
+import { RowChevron } from './glyphs';
 
 /**
  * ModeRow — home-screen mode list row. See
@@ -17,27 +18,6 @@ export interface ModeRowProps extends Omit<ComponentPropsWithRef<'button'>, 'onC
   trailing?: ReactNode;
   paused?: boolean;
   onPress?: () => void;
-}
-
-const CHEVRON_PATH = 'M9 5l7 7-7 7';
-
-function RowChevron() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0 text-text-faint"
-    >
-      <path d={CHEVRON_PATH} />
-    </svg>
-  );
 }
 
 export function ModeRow({

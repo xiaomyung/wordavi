@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { AccentKeys, AnswerInput, type AnswerInputHandle, Button } from '@/components';
 import {
   decimalToWords,
@@ -8,11 +8,10 @@ import {
   numberToWords,
   priceToWords,
   quantityToWords,
+  THIN_SPACE,
 } from '@/engine';
 import type { PromptPayload, Verdict } from '@/session';
-
-/** U+2009 THIN SPACE — the separator the engine uses before a unit. */
-const THIN_SPACE = ' ';
+import type { DrillServices } from './types';
 
 /* ------------------------------------------------------------------ *
  * Payload readers
@@ -50,7 +49,7 @@ export function promptSpanish(payload: PromptPayload): string {
     case 'quantity':
       return quantityToWords({ kind: 'weight', grams: payload.grams }).canonical;
     case 'decimal':
-      return decimalToWords(payload.intPart, String(payload.fracDigits)).canonical;
+      return decimalToWords(payload.intPart, payload.fracDigits).canonical;
   }
 }
 
@@ -59,20 +58,34 @@ export function promptSpanish(payload: PromptPayload): string {
  * ------------------------------------------------------------------ */
 
 /**
- * Numeral prompt size (drill-text.html): --text-prompt-xl (92px) up to four
- * digits, then two steps down so "999 999 999" still fits one line at 360px.
- * Grouping thin spaces do not count — only digits do.
+ * Numeral prompt sizes in px. The prompt is sized in the style attribute rather
+ * than by class because it is chosen per value, so the two type tokens are
+ * restated here: `xl` is --text-prompt-xl (the big numeral) and `lg` is
+ * --text-prompt-lg (the price-tag-sized prompt). `wide`/`widest` are the two
+ * step-downs drill-text.html applies past four digits — the scale has no token
+ * for them.
+ */
+const PROMPT_PX = { xl: 92, wide: 64, widest: 48, lg: 56 } as const;
+
+/** Digits past which the numeral steps down a size, so it still fits one line at 360px. */
+const WIDE_DIGITS = 4;
+const WIDEST_DIGITS = 6;
+
+/**
+ * Numeral prompt size (drill-text.html): full size up to four digits, then two
+ * steps down so "999 999 999" still fits one line at 360px. Grouping thin
+ * spaces do not count — only digits do.
  */
 export function numeralFontSizePx(value: number): number {
   const digits = String(Math.abs(Math.trunc(value))).length;
-  if (digits <= 4) return 92;
-  if (digits <= 6) return 64;
-  return 48;
+  if (digits <= WIDE_DIGITS) return PROMPT_PX.xl;
+  if (digits <= WIDEST_DIGITS) return PROMPT_PX.wide;
+  return PROMPT_PX.widest;
 }
 
 export function NumeralPrompt({ payload }: { payload: PromptPayload }) {
   const text = promptDisplay(payload);
-  const size = payload.kind === 'number' ? numeralFontSizePx(payload.value) : 56;
+  const size = payload.kind === 'number' ? numeralFontSizePx(payload.value) : PROMPT_PX.lg;
   return (
     <div
       data-testid="numeral-prompt"
@@ -90,38 +103,41 @@ export function SpanishPhrase({ text }: { text: string }) {
     <p
       lang="es"
       data-testid="spanish-phrase"
-      className="max-w-[19.375rem] font-display font-medium text-spanish italic leading-[1.2]"
+      className="max-w-(--measure-prose) font-display font-medium text-spanish italic leading-[1.2]"
     >
       {text}
     </p>
   );
 }
 
-/** 13px speaker glyph for the "прослушать" pill. */
-export function SpeakerGlyph() {
-  return (
-    <svg
-      width="13"
-      height="13"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z" fill="currentColor" />
-      <path
-        d="M15.5 8.5a5 5 0 010 7M17.8 6.2a8.2 8.2 0 010 11.6"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 /** Centred stage column shared by every prompt zone. */
 export function PromptStage({ children }: { children: ReactNode }) {
   return <div className="flex flex-col items-center gap-3.5 text-center">{children}</div>;
+}
+
+/**
+ * "Speak this phrase when asked" — the play-on-demand state every audio prompt
+ * needs: `speaking` is true for as long as the utterance runs (the pill disables
+ * itself so a second tap cannot stack a second voice), and a rejected `speak`
+ * is swallowed because a prompt that cannot be heard is not an error the learner
+ * can act on — the drill still works with the phrase on screen.
+ */
+export function useSpeakOnDemand(
+  services: DrillServices,
+  text: string,
+  slower: boolean,
+): { speaking: boolean; speak: () => void } {
+  const [speaking, setSpeaking] = useState(false);
+
+  const speak = useCallback(() => {
+    setSpeaking(true);
+    services
+      .speak(text, { slower })
+      .catch(() => undefined)
+      .finally(() => setSpeaking(false));
+  }, [services, text, slower]);
+
+  return { speaking, speak };
 }
 
 /* ------------------------------------------------------------------ *

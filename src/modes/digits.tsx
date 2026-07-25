@@ -1,9 +1,8 @@
-import { useCallback, useState } from 'react';
-import { PillButton } from '@/components';
+import { PillButton, SpeakerGlyph } from '@/components';
 import { numberSource } from './buckets';
+import { PromptStage, promptSpanish, SpanishPhrase, TypedAnswer, useSpeakOnDemand } from './prompt';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
-import { PromptStage, promptSpanish, SpanishPhrase, SpeakerGlyph, TypedAnswer } from './ui';
 
 /**
  * digits — es-ES words → number (drill-digits.html, "words→digits" frame).
@@ -17,15 +16,7 @@ const LABEL_KEYS = ['common.check', 'drill.digits_placeholder', 'drill.listen'] 
 
 function DigitsPrompt({ question, services, slower, labels }: PromptProps) {
   const phrase = promptSpanish(question.prompt);
-  const [speaking, setSpeaking] = useState(false);
-
-  const speak = useCallback(() => {
-    setSpeaking(true);
-    services
-      .speak(phrase, { slower })
-      .catch(() => undefined)
-      .finally(() => setSpeaking(false));
-  }, [services, phrase, slower]);
+  const { speaking, speak } = useSpeakOnDemand(services, phrase, slower);
 
   return (
     <PromptStage>

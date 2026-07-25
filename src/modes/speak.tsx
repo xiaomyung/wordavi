@@ -10,6 +10,7 @@ import {
 } from '@/engine';
 import type { Question } from '@/session';
 import { numberSource } from './buckets';
+import { NumeralPrompt, PromptStage, TypedAnswer } from './prompt';
 import type {
   AnswerZoneProps,
   LearningMode,
@@ -18,7 +19,6 @@ import type {
   RecognitionSession,
 } from './types';
 import { labelOf } from './types';
-import { NumeralPrompt, PromptStage, TypedAnswer } from './ui';
 
 /**
  * speak — numeral on screen, answer with the voice (drill-mic.html).
@@ -57,7 +57,7 @@ function readInterim(): InterimState {
 }
 
 /** Publish (or clear) the live transcript for one question. */
-export function setInterim(questionId: string, text: string): void {
+function setInterim(questionId: string, text: string): void {
   if (interim.questionId === questionId && interim.text === text) return;
   interim = { questionId, text };
   for (const listener of interimListeners) listener();
@@ -109,15 +109,41 @@ const LABEL_KEYS = [
   'drill.mic_denied',
   'drill.mic_denied_sub',
   'drill.mic_help_link',
+  'drill.recognition_unavailable',
   'toasts.no_speech',
   'toasts.offline',
 ] as const;
 
-/** Which errors the learner can act on in place; the rest stay silent. */
+/**
+ * Which errors the learner can act on in place; the rest stay silent.
+ *
+ * `network` reads as "offline" here on purpose: it is the only meaning the mode
+ * can be sure of, because the modes layer never looks at the environment. When
+ * the failure is instead a browser whose recogniser is unreachable *while
+ * online*, the drill answers the {@link AnswerZoneProps.onRecognitionError}
+ * report by setting `recognitionUnavailable`, and that frame replaces this hint.
+ */
 const ERROR_LABEL: Partial<Record<RecognitionErrorKind, string>> = {
   'no-speech': 'toasts.no_speech',
   network: 'toasts.offline',
 };
+
+/** The muted line above the typed fallback, when the microphone is out of play. */
+function micNotice(
+  labels: AnswerZoneProps['labels'],
+  micDenied: boolean,
+  recognitionUnavailable: boolean,
+): { title: string; sub?: string } | null {
+  // Denial wins: it is the one the learner can actually fix.
+  if (micDenied) {
+    return {
+      title: labelOf(labels, 'drill.mic_denied'),
+      sub: labelOf(labels, 'drill.mic_denied_sub'),
+    };
+  }
+  if (recognitionUnavailable) return { title: labelOf(labels, 'drill.recognition_unavailable') };
+  return null;
+}
 
 function SpeakPrompt({ question }: PromptProps) {
   const live = useSyncExternalStore(subscribeInterim, readInterim, readInterim);
@@ -140,6 +166,8 @@ function SpeakAnswer({
   onSubmit,
   micDenied,
   onMicDenied,
+  recognitionUnavailable = false,
+  onRecognitionError,
   onMicHelp,
   labels,
 }: AnswerZoneProps) {
@@ -157,6 +185,8 @@ function SpeakAnswer({
   }
 
   const answered = verdict !== null;
+  /** No microphone to hold: permission refused, or no recogniser behind the API. */
+  const noMic = micDenied || recognitionUnavailable;
 
   const stop = useCallback(() => {
     sessionRef.current?.stop();
@@ -165,7 +195,7 @@ function SpeakAnswer({
   }, []);
 
   const start = useCallback(() => {
-    if (micDenied || answered) return;
+    if (noMic || answered) return;
     setHintKey(null);
     setInterim(question.id, '');
     setMic('holding');
@@ -183,22 +213,26 @@ function SpeakAnswer({
           onMicDenied();
           return;
         }
+        // The drill may escalate this (a dead recogniser retires the mic for the
+        // round); until it does, the inline hint is the mode's own answer.
+        onRecognitionError?.(kind);
         setHintKey(ERROR_LABEL[kind] ?? null);
       },
     });
-  }, [micDenied, answered, services, question, onSubmit, onMicDenied, stop]);
+  }, [noMic, answered, services, question, onSubmit, onMicDenied, onRecognitionError, stop]);
 
   // Never leave a recogniser running when the zone unmounts mid-hold.
   useEffect(() => stop, [stop]);
 
-  if (micDenied || typing) {
+  if (noMic || typing) {
+    const notice = micNotice(labels, micDenied, recognitionUnavailable);
     return (
       <div className="flex flex-col gap-3">
-        {micDenied && (
+        {notice !== null && (
           <VerdictBlock
             variant="muted"
-            title={labelOf(labels, 'drill.mic_denied')}
-            sub={labelOf(labels, 'drill.mic_denied_sub')}
+            title={notice.title}
+            {...(notice.sub ? { sub: notice.sub } : {})}
           />
         )}
         <TypedAnswer

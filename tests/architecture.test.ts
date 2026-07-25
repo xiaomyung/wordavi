@@ -47,6 +47,9 @@ const BANNED: Record<string, string[]> = {
   services: ['react', 'react-dom', '@/engine', '@/modes', '@/components', '@/screens', '@/app'],
   components: ['@/engine', '@/session', '@/modes', '@/services', '@/storage', '@/screens', '@/app'],
   modes: ['@/screens', '@/services', '@/storage', '@/app'],
+  // Screens are composed BY the app, never the other way round: everything a
+  // screen needs from the app layer arrives as a prop.
+  screens: ['@/app'],
   i18n: [
     '@/engine',
     '@/session',

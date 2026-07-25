@@ -75,7 +75,8 @@ export type PromptPayload =
   | { kind: 'number'; value: number }
   | { kind: 'price'; euros: number; cents: number }
   | { kind: 'quantity'; grams: number }
-  | { kind: 'decimal'; intPart: number; fracDigits: number };
+  /** `fracDigits` is a digit *string* — "05" and "5" are different readings. */
+  | { kind: 'decimal'; intPart: number; fracDigits: string };
 
 /**
  * Target for digit-typed answers ("type what you hear" modes). Mirrors the shape
@@ -89,6 +90,14 @@ export interface AcceptedDigits {
 
 /** Either a spoken/written answer set (graded by the engine matcher) or digits. */
 export type Accepted = AcceptedAnswer | AcceptedDigits;
+
+/**
+ * The {@link Accepted} discriminator. `intVal` is the only member unique to
+ * {@link AcceptedDigits}, so it is what tells a digit target from a spoken one.
+ */
+export function isDigitTarget(accepted: Accepted): accepted is AcceptedDigits {
+  return typeof (accepted as AcceptedDigits).intVal === 'number';
+}
 
 export interface Question {
   id: string;

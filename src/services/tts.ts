@@ -17,7 +17,7 @@ const RATE_MAP: Record<SpeechRate, number> = {
   fast: 1.25,
 };
 
-const SLOWER_MULTIPLIER = 0.75;
+const SLOWER_MULTIPLIER = 0.5;
 const VOICES_CHANGED_TIMEOUT_MS = 1000;
 
 export type VoiceStatus = 'es-ES' | 'es-other' | 'none';
@@ -182,10 +182,10 @@ export function isSpeaking(): boolean {
 /** Unlocks speech synthesis on iOS/Safari; call from the first user gesture. */
 export function warmup(): void {
   if (!synthAvailable()) {
-    log.warn(NS, 'warmup skipped: speechSynthesis unavailable', {});
+    log.warn(NS, 'warmup skipped: speechSynthesis unavailable');
     return;
   }
-  log.info(NS, 'tts warmup requested', {});
+  log.info(NS, 'tts warmup requested');
   const utterance = new SpeechSynthesisUtterance('');
   utterance.volume = 0;
   speechSynthesis.speak(utterance);
@@ -230,7 +230,14 @@ export async function speak(text: string, options: SpeakOptions = {}): Promise<v
       settle();
     };
     utterance.onerror = (event) => {
-      log.error(NS, 'speech synthesis error', { error: event.error, text });
+      // cancel() (a newer speak(), or leaving the screen) reports itself as an
+      // error on the utterance it stopped. That is this module doing its job,
+      // not a failure worth surfacing in a problem report.
+      if (event.error === 'canceled' || event.error === 'interrupted') {
+        log.debug(NS, 'speak canceled', { error: event.error, text });
+      } else {
+        log.error(NS, 'speech synthesis error', { error: event.error, text });
+      }
       settle();
     };
     speechSynthesis.speak(utterance);

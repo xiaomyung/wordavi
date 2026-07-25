@@ -17,10 +17,9 @@ import {
   promptNumber,
   seedApp,
   startMode,
+  WORDS_MODE,
   WRONG_WORD,
 } from './helpers';
-
-const WORDS_MODE = /Число → словами/;
 
 test('a missed round reveals its answers and replays them on demand', async ({ page }) => {
   await seedApp(page);

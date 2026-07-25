@@ -10,6 +10,7 @@
 import type { Capability, LearningMode, ModeId } from '@/modes';
 import { allModes } from '@/modes';
 import type { HomeModeStatus } from '@/screens/HomeScreen';
+import { isOnline } from '@/services/online';
 import { isRecognitionSupported } from '@/services/speech';
 import type { VoiceStatus } from '@/services/tts';
 import { getVoiceStatus } from '@/services/tts';
@@ -51,6 +52,5 @@ export function availableModeIds(
  * home rows, which stay subscribed): a round picks its mix when it starts.
  */
 export function currentAvailableModeIds(): ModeId[] {
-  const online = typeof navigator === 'undefined' || navigator.onLine !== false;
-  return availableModeIds(online, getVoiceStatus(), isRecognitionSupported());
+  return availableModeIds(isOnline(), getVoiceStatus(), isRecognitionSupported());
 }

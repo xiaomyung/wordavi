@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setNavProp } from '../helpers/nav';
 
 interface FakeRecognitionInstance {
   lang: string;
@@ -59,7 +60,7 @@ function installFakeCtor(): { instances: FakeRecognitionInstance[] } {
 }
 
 function setOnline(value: boolean): void {
-  Object.defineProperty(navigator, 'onLine', { value, configurable: true });
+  setNavProp('onLine', value);
 }
 
 async function freshSpeech(): Promise<{
@@ -187,6 +188,39 @@ describe('speech', () => {
     instances[0]?.onerror?.(makeErrorEvent('network'));
 
     expect(errorSpy).toHaveBeenCalledWith('speech', 'recognition error', expect.anything());
+  });
+
+  it('warns that the recognition backend is unreachable on a network error while online', async () => {
+    const { instances } = installFakeCtor();
+    const { speech, log } = await freshSpeech();
+    const warnSpy = vi.spyOn(log, 'warn');
+
+    const onError = vi.fn();
+    speech.startRecognition({ onFinal: vi.fn(), onError });
+    instances[0]?.onerror?.(makeErrorEvent('network'));
+
+    // The mapping stays honest - the display layer tells offline from a dead
+    // recogniser - but the report needs to show which one it was.
+    expect(onError).toHaveBeenCalledWith('network');
+    expect(warnSpy).toHaveBeenCalledWith('speech', 'recognition backend unreachable', {
+      online: true,
+    });
+  });
+
+  it('does not blame the backend for a network error raised while offline', async () => {
+    const { instances } = installFakeCtor();
+    const { speech, log } = await freshSpeech();
+    speech.startRecognition({ onFinal: vi.fn(), onError: vi.fn() });
+
+    setOnline(false);
+    const warnSpy = vi.spyOn(log, 'warn');
+    instances[0]?.onerror?.(makeErrorEvent('network'));
+
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      'speech',
+      'recognition backend unreachable',
+      expect.anything(),
+    );
   });
 
   it('logs recognition start and stop at info level', async () => {

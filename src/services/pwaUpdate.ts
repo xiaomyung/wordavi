@@ -13,12 +13,19 @@ import { showToast } from '@/services/toast';
 
 const NS = 'pwa';
 
-/** The screen the update toast must never interrupt. */
-const BUSY_SCREEN = 'drill';
-
 type ApplyUpdate = (reloadPage?: boolean) => Promise<void>;
 
-let readScreenKind: () => string = () => '';
+export interface PwaUpdateHooks {
+  /**
+   * True while the learner must not be interrupted (a drill in progress). Read
+   * at offer time, so it has to answer for right now rather than for whatever
+   * was true at registration. Which screens count is the app's business, not
+   * this module's.
+   */
+  isBusy: () => boolean;
+}
+
+let isBusy: () => boolean = () => false;
 let applyUpdate: ApplyUpdate | null = null;
 /** A worker is waiting but the learner has not been asked yet. */
 let updateParked = false;
@@ -26,8 +33,8 @@ let registered = false;
 
 function offerUpdate(): void {
   if (!updateParked || applyUpdate === null) return;
-  if (readScreenKind() === BUSY_SCREEN) {
-    log.debug(NS, 'update parked until the drill ends');
+  if (isBusy()) {
+    log.debug(NS, 'update parked until the learner is free');
     return;
   }
 
@@ -46,13 +53,9 @@ function offerUpdate(): void {
   });
 }
 
-/**
- * Registers the service worker (once) and starts watching for updates.
- * `getCurrentScreenKind` is read at offer time, so it must reflect the visible
- * screen rather than the one that was visible at registration.
- */
-export function initPwaUpdate(getCurrentScreenKind: () => string): void {
-  readScreenKind = getCurrentScreenKind;
+/** Registers the service worker (once) and starts watching for updates. */
+export function initPwaUpdate(hooks: PwaUpdateHooks): void {
+  isBusy = hooks.isBusy;
   if (registered) return;
   registered = true;
 
@@ -83,7 +86,7 @@ export function initPwaUpdate(getCurrentScreenKind: () => string): void {
     });
 }
 
-/** Re-offers a parked update. The app calls this after every screen change. */
+/** Re-offers a parked update. The app calls this whenever `isBusy` may have flipped. */
 export function notifyScreenChanged(): void {
   offerUpdate();
 }

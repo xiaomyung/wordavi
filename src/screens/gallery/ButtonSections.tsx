@@ -1,25 +1,7 @@
-import { Button, ChoiceButton, Pressable } from '@/components';
+import { Button, ChoiceButton, Pressable, SettingsGlyph } from '@/components';
 import { formatNumber } from '@/engine';
 import { Case, Note, Row, Section, Stack } from './kit';
 import { galleryT } from './t';
-
-function SettingsGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
-      <circle cx="15" cy="7" r="2" />
-      <circle cx="9" cy="17" r="2" />
-    </svg>
-  );
-}
 
 export function ButtonsSection() {
   const t = galleryT();

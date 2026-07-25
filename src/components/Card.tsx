@@ -1,5 +1,6 @@
 import type { ComponentPropsWithRef, ReactNode, Ref } from 'react';
 import { cx } from './cx';
+import { RowChevron } from './glyphs';
 
 /**
  * Card — see design-handoff/wordavi-design-v1/components/cards.md.
@@ -27,7 +28,7 @@ const VARIANT_CLASS: Record<CardVariant, string> = {
   // are inline spans and run together on one line (cards.md keeps the paused
   // card the same shape, only dimmed).
   paused:
-    'bg-surface-paused border-[1.5px] border-dashed border-border-strong p-4 flex flex-col gap-3 opacity-90',
+    'bg-surface-paused border-(length:--stroke-hairline) border-dashed border-border-strong p-4 flex flex-col gap-3 opacity-90',
 };
 
 export function Card({ variant = 'raised', className, children, ref, ...rest }: CardProps) {
@@ -49,27 +50,6 @@ export interface CardRowProps {
   ref?: Ref<HTMLButtonElement | HTMLDivElement>;
 }
 
-const CHEVRON_PATH = 'M9 5l7 7-7 7';
-
-function RowChevron() {
-  return (
-    <svg
-      width="15"
-      height="15"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className="shrink-0 text-text-faint"
-    >
-      <path d={CHEVRON_PATH} />
-    </svg>
-  );
-}
-
 /**
  * One row of a `grouped` Card. Rows are separated by the parent's `divide-y`
  * hairline rule (surface-sunken). Passing `onPress` turns the row into a real
@@ -79,7 +59,7 @@ export function CardRow({ label, sub, trailing, onPress, className, id, ref }: C
   const content = (
     <>
       <span className="flex flex-1 flex-col gap-0.5 text-left">
-        <span className="text-[15px] font-extrabold">{label}</span>
+        <span className="text-sub-strong font-extrabold">{label}</span>
         {sub ? <span className="text-caption font-semibold text-text-muted">{sub}</span> : null}
       </span>
       {trailing}

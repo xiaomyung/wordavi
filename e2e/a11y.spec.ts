@@ -26,6 +26,7 @@ import {
   seedApp,
   srsSeed,
   startMode,
+  WORDS_MODE,
 } from './helpers';
 
 /**
@@ -61,8 +62,6 @@ async function scan(page: Page): Promise<void> {
     })),
   ).toEqual([]);
 }
-
-const WORDS_MODE = /Число → словами/;
 
 interface ScreenCase {
   name: string;

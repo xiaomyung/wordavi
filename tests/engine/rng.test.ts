@@ -52,8 +52,8 @@ describe('rng.pick', () => {
     const arr = ['a', 'b', 'c'] as const;
     for (let i = 0; i < 100; i++) expect(arr).toContain(rng.pick(arr));
   });
-  it('throws on an empty array', () => {
-    expect(() => createRng('e').pick([])).toThrow();
+  it('throws a RangeError on an empty array', () => {
+    expect(() => createRng('e').pick([])).toThrow(RangeError);
   });
 });
 
@@ -72,5 +72,14 @@ describe('rng.weighted', () => {
     expect(counts.c).toBe(0);
     // a (weight 3) should clearly outnumber b (weight 1).
     expect(counts.a).toBeGreaterThan(counts.b * 2);
+  });
+
+  it('throws a RangeError when no weight is positive', () => {
+    expect(() =>
+      createRng('zero').weighted([
+        ['a', 0],
+        ['b', 0],
+      ]),
+    ).toThrow(RangeError);
   });
 });

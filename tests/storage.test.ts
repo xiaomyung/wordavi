@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   clearAllData,
   clearErrors,
@@ -79,6 +79,21 @@ describe('storage', () => {
       const settings = getSettings();
       expect(settings.dailyGoal).toBe(45);
       expect(settings.uiLang).toBe('ru');
+    });
+
+    it('reports writeFailed when the slot cannot be persisted (quota)', () => {
+      const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      try {
+        // The caller still gets its record back — only persistence failed.
+        const written = setSettings({ ...getSettings(), dailyGoal: 30 });
+        expect(written.dailyGoal).toBe(30);
+        expect(events).toContainEqual({ key: STORAGE_KEYS.settings, kind: 'writeFailed' });
+      } finally {
+        setItem.mockRestore();
+      }
     });
   });
 

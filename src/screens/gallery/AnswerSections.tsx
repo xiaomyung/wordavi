@@ -138,7 +138,14 @@ export function VerdictSection() {
             sub={t('verdict.almost_sub')}
           />
         </Case>
-        <Case label="wrong">
+        <Case label="wrong — as the drill words it (verdict-copy.ts)">
+          <VerdictBlock
+            verdict="wrong"
+            title={t('verdict.wrong', { answer: 'novecientos catorce' })}
+            sub={t('verdict.wrong_sub_plain')}
+          />
+        </Case>
+        <Case label="wrong — with a confusable hint (string exists, no mode emits it yet)">
           <VerdictBlock
             verdict="wrong"
             title={t('verdict.wrong', { answer: 'novecientos catorce' })}

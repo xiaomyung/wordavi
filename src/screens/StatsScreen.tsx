@@ -9,12 +9,20 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { StreakStampDay } from '@/components';
-import { Button, Card, Chip, SkillBar, StreakStamps } from '@/components';
+import { BackGlyph, Button, Card, Chip, SkillBar, StreakStamps } from '@/components';
 import { formatNumber } from '@/engine';
 import type { DisplayGroup, SessionStats } from '@/session';
-import { computeStats, DISPLAY_GROUP_ORDER, deserializeSrs, isGoalMet } from '@/session';
+import {
+  computeStats,
+  DISPLAY_GROUP_ORDER,
+  deserializeSrs,
+  effectiveDailyGoal,
+  isGoalMet,
+  localDayKey,
+  localMonthKey,
+} from '@/session';
 import { getDays, getProgress, getSettings, getSrs } from '@/storage';
-import { buildStreakWindow, localDayKey, localMonthKey } from './streak-window';
+import { buildStreakWindow } from './streak-window';
 
 /* ------------------------------------------------------------------ *
  * Props
@@ -64,7 +72,7 @@ function readStatsData(now: Date): StatsData {
   const progress = getProgress();
   const srs = deserializeSrs(getSrs()?.state);
   const today = localDayKey(now);
-  const dailyGoal = Math.max(1, settings.dailyGoal);
+  const dailyGoal = effectiveDailyGoal(settings.dailyGoal);
   const stats = computeStats(srs, days, localMonthKey(now));
   const todayRow = days.find((day) => day.date === today);
 
@@ -87,22 +95,6 @@ function readStatsData(now: Date): StatsData {
 /* ------------------------------------------------------------------ *
  * Glyphs
  * ------------------------------------------------------------------ */
-
-function BackGlyph() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M15 5l-7 7 7 7" />
-    </svg>
-  );
-}
 
 /** The day-zero placeholder: an unstamped, slightly tilted stamp outline. */
 function EmptyStampGlyph() {

@@ -4,14 +4,14 @@ import { PillButton } from '@/components/PillButton';
 
 describe('PillButton', () => {
   it('reflects the active toggle state', () => {
-    const off = render(<PillButton active={false}>медленнее ×0,75</PillButton>);
-    const offButton = screen.getByRole('button', { name: 'медленнее ×0,75' });
+    const off = render(<PillButton active={false}>медленнее ×0,5</PillButton>);
+    const offButton = screen.getByRole('button', { name: 'медленнее ×0,5' });
     expect(offButton).not.toHaveAttribute('data-active');
     expect(offButton).toHaveAttribute('aria-pressed', 'false');
     off.unmount();
 
-    render(<PillButton active>медленнее ×0,75</PillButton>);
-    const onButton = screen.getByRole('button', { name: 'медленнее ×0,75' });
+    render(<PillButton active>медленнее ×0,5</PillButton>);
+    const onButton = screen.getByRole('button', { name: 'медленнее ×0,5' });
     expect(onButton).toHaveAttribute('data-active', 'true');
     expect(onButton).toHaveAttribute('aria-pressed', 'true');
   });

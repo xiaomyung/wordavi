@@ -17,26 +17,28 @@
  */
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Chip, Dots, goalRingArc, PriceTag } from '@/components';
+import { BackGlyph, Button, Card, Chip, Dots, goalRingArc, PriceTag } from '@/components';
 import { formatPrice } from '@/engine';
 import { log } from '@/services/log';
 import type { Settings, UiLang } from '@/storage';
 import {
-  AccentsSetting,
-  BackGlyph,
-  GoalSetting,
   type InstallAffordance,
   InstallSteps,
-  installAffordance,
+  installRecipeFor,
+  runInstallPrompt,
+  useInstallOffer,
+} from './install-offer';
+import { UI_NS } from './log-ns';
+import {
+  AccentsSetting,
+  GoalSetting,
   RangeSetting,
   RoundSetting,
-  runInstallPrompt,
   type SettingsUpdater,
   SpeechRateSetting,
   ThemeSetting,
-  UI_NS,
   useSettingsState,
-} from './settingsParts';
+} from './settings/rows';
 import './onboarding-step.css';
 
 export interface OnboardingScreenProps {
@@ -172,8 +174,9 @@ function InstallStep({ affordance, installed, onInstall, onNext }: InstallStepPr
   const [stepsOpen, setStepsOpen] = useState(false);
 
   function handleInstall(): void {
-    // No programmatic prompt on iOS Safari — the recipe is the affordance.
-    if (affordance === 'ios') {
+    // Only a captured prompt can install for the learner; the rest is a recipe
+    // they follow by hand (Safari's share sheet, or the browser menu).
+    if (affordance !== 'prompt') {
       setStepsOpen(true);
       return;
     }
@@ -202,7 +205,9 @@ function InstallStep({ affordance, installed, onInstall, onNext }: InstallStepPr
             {t('onboarding.install_cta')}
           </Button>
         )}
-        {stepsOpen ? <InstallSteps onClose={() => setStepsOpen(false)} /> : null}
+        {stepsOpen ? (
+          <InstallSteps recipe={installRecipeFor(affordance)} onClose={() => setStepsOpen(false)} />
+        ) : null}
         <Button variant="ghost" onClick={onNext}>
           {t('onboarding.continue_browser')}
         </Button>
@@ -257,7 +262,22 @@ function MicCard({ state, onAsk }: MicCardProps) {
   );
 }
 
-function LanguageStep({ onChoose }: { onChoose: (lang: UiLang) => void }) {
+interface LanguageStepProps {
+  /** The language in force right now — detected on a first run, or stored. */
+  current: UiLang;
+  onChoose: (lang: UiLang) => void;
+}
+
+type LanguageLabelKey = 'settings.language_ru' | 'settings.language_en' | 'settings.language_es';
+
+/** Mockup layout: one primary key and two secondary — primary is the active language. */
+const LANGUAGE_CHOICES: readonly { value: UiLang; labelKey: LanguageLabelKey }[] = [
+  { value: 'ru', labelKey: 'settings.language_ru' },
+  { value: 'en', labelKey: 'settings.language_en' },
+  { value: 'es', labelKey: 'settings.language_es' },
+];
+
+function LanguageStep({ current, onChoose }: LanguageStepProps) {
   const { t } = useTranslation();
   return (
     <>
@@ -274,16 +294,21 @@ function LanguageStep({ onChoose }: { onChoose: (lang: UiLang) => void }) {
         <h2 className="text-center font-extrabold text-overline text-text-muted tracking-wide">
           {t('onboarding.step1_section')}
         </h2>
-        <Button variant="primary" size="tall" onClick={() => onChoose('ru')}>
-          {t('settings.language_ru')}
-        </Button>
-        <Button variant="secondary" size="tall" lang="en" onClick={() => onChoose('en')}>
-          {t('settings.language_en')}
-        </Button>
-        <Button variant="secondary" size="tall" lang="es" onClick={() => onChoose('es')}>
-          {t('settings.language_es')}
-          <Chip variant="offline">{t('onboarding.step1_spanish_badge')}</Chip>
-        </Button>
+        {LANGUAGE_CHOICES.map((choice) => (
+          <Button
+            key={choice.value}
+            variant={choice.value === current ? 'primary' : 'secondary'}
+            size="tall"
+            lang={choice.value}
+            aria-current={choice.value === current ? 'true' : undefined}
+            onClick={() => onChoose(choice.value)}
+          >
+            {t(choice.labelKey)}
+            {choice.value === 'es' ? (
+              <Chip variant="offline">{t('onboarding.step1_spanish_badge')}</Chip>
+            ) : null}
+          </Button>
+        ))}
       </div>
     </>
   );
@@ -374,17 +399,17 @@ function ReadyStep({ goal, onFinish, mic }: ReadyStepProps) {
 export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const { t } = useTranslation();
   const { settings, update } = useSettingsState();
-  /**
-   * The flow is fixed at mount: the install affordance decides whether the
-   * install step exists, and step indices (Dots, back navigation) must not
-   * renumber themselves underneath the user halfway through.
-   */
-  const [flow] = useState(() => {
-    const affordance = installAffordance();
-    const steps: readonly StepKind[] =
+  // The affordance stays live (a browser that captures a prompt mid-flow
+  // upgrades the manual recipe to a real one), but the step LIST is frozen: the
+  // Dots and back navigation must not renumber themselves under the user.
+  const { affordance, markInstalled } = useInstallOffer();
+  const [steps] = useState<readonly StepKind[]>(() => {
+    // First-render affordance: the async "installed elsewhere" answer cannot
+    // have landed yet, and the effect below drops the step if it ever does.
+    const built: readonly StepKind[] =
       affordance === 'hidden' ? BASE_STEPS : (['install', ...BASE_STEPS] as const);
-    log.info(UI_NS, 'onboarding flow built', { affordance, steps: steps.length });
-    return { affordance, steps };
+    log.info(UI_NS, 'onboarding flow built', { affordance, steps: built.length });
+    return built;
   });
   const [step, setStep] = useState(0);
   /** The step being faded out, or null when nothing is leaving. */
@@ -409,12 +434,12 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   const goToStep = useCallback(
     (next: number): void => {
       const current = stepRef.current;
-      if (next === current || next < 0 || next >= flow.steps.length) return;
+      if (next === current || next < 0 || next >= steps.length) return;
       stepRef.current = next;
       setLeaving(current);
       setStep(next);
     },
-    [flow.steps.length],
+    [steps.length],
   );
 
   const goNext = useCallback((): void => {
@@ -432,19 +457,33 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
     return () => window.removeEventListener('appinstalled', onInstalled);
   }, []);
 
+  // The device can report "already installed" a tick after mount (async, and
+  // Chrome-only). If that lands while the install step is on screen it has
+  // nothing left to offer, so move on instead of showing a dead offer. An
+  // install that just happened here is excluded: its success line owns the
+  // timing below.
+  useEffect(() => {
+    if (installed || affordance !== 'hidden') return;
+    if (steps[stepRef.current] !== 'install') return;
+    log.info(UI_NS, 'install step skipped: already installed', {});
+    goNext();
+  }, [affordance, installed, steps, goNext]);
+
   // Installed: show where the icon went, then keep moving. The web cannot open
   // the installed app for the user, so the flow simply continues here.
   useEffect(() => {
     if (!installed) return;
     const timer = window.setTimeout(() => {
-      if (flow.steps[stepRef.current] === 'install') goNext();
+      if (steps[stepRef.current] === 'install') goNext();
     }, INSTALL_ADVANCE_MS);
     return () => window.clearTimeout(timer);
-  }, [installed, flow.steps, goNext]);
+  }, [installed, steps, goNext]);
 
   async function handleInstall(): Promise<void> {
     const outcome = await runInstallPrompt();
-    if (outcome === 'accepted') setInstalled(true);
+    if (outcome !== 'accepted') return;
+    setInstalled(true);
+    markInstalled();
   }
 
   async function askMicrophone(): Promise<void> {
@@ -478,11 +517,11 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
   }
 
   function renderStep(index: number): ReactNode {
-    switch (flow.steps[index]) {
+    switch (steps[index]) {
       case 'install':
         return (
           <InstallStep
-            affordance={flow.affordance}
+            affordance={affordance}
             installed={installed}
             onInstall={() => {
               void handleInstall();
@@ -491,7 +530,7 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           />
         );
       case 'language':
-        return <LanguageStep onChoose={chooseLanguage} />;
+        return <LanguageStep current={settings.uiLang} onChoose={chooseLanguage} />;
       case 'practice':
         return <PracticeStep settings={settings} update={update} onNext={goNext} />;
       case 'app':
@@ -527,12 +566,12 @@ export function OnboardingScreen({ onDone }: OnboardingScreenProps) {
           ) : null}
         </span>
         <Dots
-          count={flow.steps.length}
+          count={steps.length}
           activeIndex={step}
           className="flex-1"
           // "N из M" is the app's one progress phrase; reused here so the step
           // indicator carries a name rather than an anonymous progressbar role.
-          aria-label={t('drill.counter', { n: step + 1, total: flow.steps.length })}
+          aria-label={t('drill.counter', { n: step + 1, total: steps.length })}
         />
         <span aria-hidden="true" className="size-(--size-icon-button) shrink-0" />
       </header>

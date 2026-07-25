@@ -44,7 +44,7 @@
   "drill": {
     "listen": "escuchar",
     "listen_again": "Toca para escuchar otra vez",
-    "slower": "más lento ×0,75",
+    "slower": "más lento ×0,5",
     "hold_to_talk": "Mantén y habla",
     "release_hint": "suelta para comprobar · no guardamos nada",
     "type_instead": "Escribir la respuesta",
@@ -56,6 +56,7 @@
     "mic_denied": "Micrófono no disponible",
     "mic_denied_sub": "Permite el acceso en el navegador — o escribe la respuesta.",
     "mic_help_link": "¿Cómo activo el micrófono?",
+    "recognition_unavailable": "El reconocimiento de voz no funciona en este navegador. Prueba con Chrome — o escribe la respuesta.",
     "counter": "{{n}} de {{total}}",
     "counter_endless": "{{n}} · ∞",
     "points": "puntos",
@@ -87,6 +88,7 @@
     "streak_n_one": "{{count}} día",
     "streak_n_other": "{{count}} días",
     "continue_cta": "Continuar · {{done}} de {{total}}",
+    "row_continue": "continuar · {{done}} de {{total}}",
     "start_cta": "Empezar la primera ronda",
     "start_round": "Empezar una ronda",
     "offline_chip": "sin red",
@@ -95,7 +97,9 @@
     "mode_paused_voice": "falta una voz en español",
     "mode_paused_mic": "falta acceso al micrófono",
     "voice_chip": "voz",
-    "mic_chip": "micrófono"
+    "mic_chip": "micrófono",
+    "install_invite": "Puedes instalarla como app — funciona sin conexión y se abre desde la pantalla de inicio",
+    "install_cta": "Instalar"
   },
   "summary": {
     "title": "Ronda completada",
@@ -116,10 +120,10 @@
     "range_tick_0": "0",
     "range_tick_10": "10",
     "range_tick_100": "100",
-    "range_tick_1k": "1 mil",
-    "range_tick_10k": "10 mil",
-    "range_tick_100k": "100 mil",
-    "range_tick_1m": "1 mill",
+    "range_tick_1k": "1k",
+    "range_tick_10k": "10k",
+    "range_tick_100k": "100k",
+    "range_tick_1m": "1M",
     "accents_label": "Aceptar respuestas sin tildes",
     "accents_sub": "veintiseis = veintiséis · lo marcamos como «casi»",
     "questions_per_round_label": "Preguntas por ronda",
@@ -222,7 +226,10 @@
   "install_sheet": {
     "title": "Instalar en iPhone",
     "step1": "Toca Compartir",
-    "step2": "Elige Añadir a pantalla de inicio"
+    "step2": "Elige Añadir a pantalla de inicio",
+    "manual_title": "Instalar desde el menú del navegador",
+    "manual_step1": "Abre el menú del navegador (⋮ o ≡)",
+    "manual_step2": "Elige «Instalar aplicación» o «Añadir a pantalla de inicio»"
   },
   "voice_sheet": {
     "title": "Añadir una voz en español",

@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { currentAvailableModeIds } from '@/app/availability';
 import { Button, VerdictBlock } from '@/components';
-import type { DrillServices, LearningMode, ModeLabels } from '@/modes';
+import type {
+  DrillServices,
+  LearningMode,
+  ModeId,
+  ModeLabels,
+  RecognitionErrorKind,
+} from '@/modes';
 import { findMode, MIXED_MODE_ID, setMixedAvailability } from '@/modes';
 import { log } from '@/services/log';
+import { isOnline } from '@/services/online';
 import { startRecognition } from '@/services/speech';
 import { showToast } from '@/services/toast';
 import { isSpeaking, speak } from '@/services/tts';
@@ -12,16 +18,22 @@ import type { RoundSummary } from '@/session';
 import type { SavedRound, SpeechRate } from '@/storage';
 import { DrillHeader } from './drill/DrillHeader';
 import './drill/drill.css';
-import { expectedDisplayOf } from './drill/expected';
 import { useDrillRound } from './drill/useDrillRound';
 import { useKeyboardInset } from './drill/useKeyboardInset';
-import { verdictCopyOf } from './drill/verdictCopy';
+import { verdictCopyOf } from './drill/verdict-copy';
+import { expectedDisplayOf } from './expected';
 
 const NS = 'drill';
 const RECOGNITION_LANG = 'es-ES';
 
 export interface DrillScreenProps {
   modeId: string;
+  /**
+   * The modes a mixed round may draw from. Only the app layer may ask the
+   * services which capabilities are really there, so the answer arrives as a
+   * prop; omitting it leaves the mix unrestricted (every mode is fair game).
+   */
+  availableModeIds?: readonly ModeId[];
   /** Unfinished round from storage; resumed when it belongs to `modeId`. */
   resume?: SavedRound;
   /** "Retry the missed": replay this summary's misses instead of a fresh round. */
@@ -73,11 +85,11 @@ export function DrillScreen(props: DrillScreenProps) {
     return null;
   }
   if (mode.id === MIXED_MODE_ID) {
-    // The mix may only draw from modes this browser can serve. Sampled here
+    // The mix may only draw from modes this browser can serve. Pushed in here
     // rather than at the button that started the round, so a resumed or retried
     // mixed round is filtered by the capabilities of *this* moment. Idempotent:
     // re-running it on a re-render writes the same list.
-    setMixedAvailability(currentAvailableModeIds());
+    setMixedAvailability(props.availableModeIds ?? null);
   }
   return <DrillRunner {...props} mode={mode} />;
 }
@@ -92,6 +104,9 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
   /* Sticky for the whole round: turning playback down once should stay down. */
   const [slower, setSlower] = useState(false);
   const [micDenied, setMicDenied] = useState(false);
+  /* Sticky for the whole round: a recogniser that failed once while online is
+     not going to answer the next question either. */
+  const [recognitionUnavailable, setRecognitionUnavailable] = useState(false);
   const keyboardInset = useKeyboardInset();
   const services = useDrillServices(round.settings.speechRate);
 
@@ -114,6 +129,24 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
     log.warn(NS, 'microphone denied', { modeId });
   }, [t, modeId]);
 
+  /**
+   * The screens layer is the only one allowed to ask *why* a recognition attempt
+   * failed with `network`. Offline is already answered elsewhere (the offline
+   * toast below, plus the mode's own inline "no internet" hint). Online means the
+   * browser exposes SpeechRecognition without a reachable recogniser behind it -
+   * Brave, and Chromium forks in general - so holding the mic again would only
+   * repeat the failure: it retires for the rest of the round and the zone settles
+   * into typing, exactly as it does for a denied microphone.
+   */
+  const onRecognitionError = useCallback(
+    (kind: RecognitionErrorKind) => {
+      if (kind !== 'network' || !isOnline()) return;
+      setRecognitionUnavailable(true);
+      log.warn(NS, 'recognition unavailable: falling back to typing for the round', { modeId });
+    },
+    [modeId],
+  );
+
   /* Voice modes need the network. Offer to end the round rather than stranding
      the learner on a question they cannot answer. */
   useEffect(() => {
@@ -124,7 +157,7 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
         action: { label: t('drill.end_round'), onPress: finish },
       });
     };
-    if (typeof navigator !== 'undefined' && navigator.onLine === false) offer();
+    if (!isOnline()) offer();
     window.addEventListener('offline', offer);
     return () => window.removeEventListener('offline', offer);
   }, [mode.requires, t, finish]);
@@ -190,6 +223,8 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
               onSubmit={round.submit}
               micDenied={micDenied}
               onMicDenied={onMicDenied}
+              recognitionUnavailable={recognitionUnavailable}
+              onRecognitionError={onRecognitionError}
               labels={labels}
             />
             {/* A wrong answer is corrected, never punished: no shake, no red

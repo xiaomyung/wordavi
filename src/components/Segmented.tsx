@@ -98,7 +98,7 @@ export function Segmented<T extends string>({
                 'flex min-h-[2.375rem] w-full items-center justify-center break-words rounded-pill px-2 py-1 text-center text-label leading-tight',
                 'transition duration-(--duration-text) ease-(--ease-out-soft) group-focus-visible:shadow-(--shadow-focus)',
                 selected
-                  ? 'bg-surface-raised font-extrabold text-text shadow-[0_1.5px_0_var(--color-border-strong)]'
+                  ? 'bg-surface-raised font-extrabold text-text shadow-[0_var(--stroke-hairline)_0_var(--color-border-strong)]'
                   : 'font-bold text-text-muted',
               )}
             >

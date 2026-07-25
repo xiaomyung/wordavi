@@ -53,13 +53,13 @@ export function createRng(seed: string | number): Rng {
       return lo + Math.floor(next() * (hi - lo + 1));
     },
     pick(arr) {
-      if (arr.length === 0) throw new Error('rng.pick: empty array');
+      if (arr.length === 0) throw new RangeError('rng.pick: empty array');
       return arr[Math.floor(next() * arr.length)] as (typeof arr)[number];
     },
     weighted(items) {
       let total = 0;
       for (const [, weight] of items) if (weight > 0) total += weight;
-      if (total <= 0) throw new Error('rng.weighted: no positive weights');
+      if (total <= 0) throw new RangeError('rng.weighted: no positive weights');
       let roll = next() * total;
       for (const [value, weight] of items) {
         if (weight <= 0) continue;
@@ -71,7 +71,7 @@ export function createRng(seed: string | number): Rng {
         const item = items[i];
         if (item && item[1] > 0) return item[0];
       }
-      throw new Error('rng.weighted: no positive weights');
+      throw new RangeError('rng.weighted: no positive weights');
     },
   };
   return rng;

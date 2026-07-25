@@ -30,8 +30,8 @@ test('the app registers a service worker and links an installable manifest', asy
     start_url: string;
     icons: { src: string; purpose?: string }[];
   };
-  expect(manifest.name).toBe('wordavi — испанские числа');
-  expect(manifest.short_name).toBe('wordavi');
+  expect(manifest.name).toBe('WordAvi — испанские числа');
+  expect(manifest.short_name).toBe('WordAvi');
   expect(manifest.display).toBe('standalone');
   expect(manifest.orientation).toBe('portrait');
   expect(manifest.icons.filter((icon) => icon.purpose === 'maskable')).toHaveLength(2);

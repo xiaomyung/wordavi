@@ -159,7 +159,7 @@ describe('sounds', () => {
       sounds.playVerdict('correct');
 
       expect(instances).toHaveLength(1);
-      expect(warnSpy).toHaveBeenCalledWith('sounds', 'falling back to webkitAudioContext', {});
+      expect(warnSpy).toHaveBeenCalledWith('sounds', 'falling back to webkitAudioContext');
     } finally {
       window.webkitAudioContext = undefined;
     }

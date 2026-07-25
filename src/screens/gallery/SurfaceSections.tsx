@@ -167,9 +167,9 @@ export function ToastSection() {
 }
 
 /**
- * The real toast surface, subscribed to the framework-free store the way a
- * screen will: one visible toast at a time, its action delegating back to the
- * store so the queue advances.
+ * The real toast surface, subscribed to the framework-free store the way
+ * app/ToastHost does: one visible toast at a time, its action delegating back
+ * to the store so the queue advances.
  */
 export function GalleryToaster() {
   const toast = useSyncExternalStore(subscribe, getToast, getToast);

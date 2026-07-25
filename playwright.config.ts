@@ -11,6 +11,9 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
+    // A precache answering navigations would make every other spec depend on
+    // the previous run's build. pwa.spec.ts opts back in with test.use().
+    serviceWorkers: 'block',
   },
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
@@ -20,6 +23,8 @@ export default defineConfig({
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],
   webServer: {
+    // Serves dist as-is: run `pnpm build` first (CI does, and so does `pnpm
+    // verify`) or the suite tests the previous build.
     command: `pnpm preview --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,

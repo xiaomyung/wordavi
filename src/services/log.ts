@@ -86,18 +86,35 @@ function mirrorToConsole(entry: LogEntry): void {
   }
 }
 
+/**
+ * Newest entries that fit under the byte cap, serialized once.
+ *
+ * Measures each entry a single time and sums from the tail rather than
+ * dropping one entry at a time and re-stringifying the whole ring: a drill
+ * that logs fat `data` payloads can otherwise push hundreds of KB of string
+ * work through the debounce tick. The oldest entry always survives if it is
+ * alone over the cap — an empty log slot is worse than an oversized one.
+ */
+function serializeForPersist(entries: readonly LogEntry[]): string {
+  if (entries.length === 0) return '[]';
+  let total = 2; // the enclosing brackets
+  let first = entries.length;
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const kept = first < entries.length;
+    const additional = JSON.stringify(entries[i]).length + (kept ? 1 : 0); // + comma
+    if (kept && total + additional > MAX_SERIALIZED_BYTES) break;
+    total += additional;
+    first = i;
+  }
+  return JSON.stringify(entries.slice(first));
+}
+
 export function persistLogNow(): void {
   if (persistTimer !== null) {
     clearTimeout(persistTimer);
     persistTimer = null;
   }
-  let toWrite = buffer;
-  let json = JSON.stringify(toWrite);
-  while (json.length > MAX_SERIALIZED_BYTES && toWrite.length > 1) {
-    toWrite = toWrite.slice(1);
-    json = JSON.stringify(toWrite);
-  }
-  writeRawString(STORAGE_KEYS.log, json);
+  writeRawString(STORAGE_KEYS.log, serializeForPersist(buffer));
 }
 
 function schedulePersist(): void {

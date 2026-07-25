@@ -28,7 +28,13 @@ import {
 } from '@/components';
 import { formatNumber } from '@/engine';
 import { setLanguage } from '@/i18n';
-import { canPromptInstall, isIos, isStandalone, promptInstall } from '@/services/install';
+import {
+  canPromptInstall,
+  type InstallPromptOutcome,
+  isIos,
+  isStandalone,
+  promptInstall,
+} from '@/services/install';
 import { log } from '@/services/log';
 import { setEnabled as setSoundsEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
@@ -133,6 +139,13 @@ export interface RangeSettingProps extends SettingRowProps {
 export function RangeSetting({ settings, update, hint }: RangeSettingProps) {
   const { t } = useTranslation();
   const label = t('settings.range_label');
+  /**
+   * The value being dragged, or null when the slider is at rest. A full drag
+   * crosses ~100 stops; storage only hears the one the user let go of, so the
+   * readout stays live while the writing (and its log line) happens once.
+   */
+  const [draft, setDraft] = useState<[number, number] | null>(null);
+  const value: [number, number] = draft ?? [settings.rangeMin, settings.rangeMax];
 
   const tickLabels = [
     t('settings.range_tick_0'),
@@ -144,7 +157,7 @@ export function RangeSetting({ settings, update, hint }: RangeSettingProps) {
     t('settings.range_tick_1m'),
   ];
 
-  const readout = `${formatNumber(settings.rangeMin)} — ${formatNumber(settings.rangeMax)}`;
+  const readout = `${formatNumber(value[0])} — ${formatNumber(value[1])}`;
 
   return (
     <StackedRow
@@ -153,8 +166,12 @@ export function RangeSetting({ settings, update, hint }: RangeSettingProps) {
       {...(hint !== undefined ? { hint } : {})}
     >
       <RangeSlider
-        value={[settings.rangeMin, settings.rangeMax]}
-        onChange={([min, max]) => update({ rangeMin: min, rangeMax: max }, 'range')}
+        value={value}
+        onChange={(next) => setDraft(next)}
+        onChangeCommitted={([min, max]) => {
+          setDraft(null);
+          update({ rangeMin: min, rangeMax: max }, 'range');
+        }}
         tickLabels={tickLabels}
         formatValue={formatNumber}
         minThumbLabel={`${label} — min`}
@@ -254,7 +271,9 @@ export function SpeechRateSetting({ settings, update }: SettingRowProps) {
   const label = t('settings.speech_speed_label');
   const stops = [t('settings.speed_slow'), t('settings.speed_normal'), t('settings.speed_fast')];
   const found = SPEECH_RATES.indexOf(settings.speechRate);
-  const index = found < 0 ? DEFAULT_SPEECH_INDEX : found;
+  /** Same rule as the range: the thumb moves live, storage hears it once. */
+  const [draft, setDraft] = useState<number | null>(null);
+  const index = draft ?? (found < 0 ? DEFAULT_SPEECH_INDEX : found);
 
   return (
     <StackedRow
@@ -264,7 +283,9 @@ export function SpeechRateSetting({ settings, update }: SettingRowProps) {
       <StopSlider
         stops={stops}
         index={index}
-        onChange={(next) => {
+        onChange={(next) => setDraft(next)}
+        onChangeCommitted={(next) => {
+          setDraft(null);
           const rate = SPEECH_RATES[next];
           if (rate) update({ speechRate: rate }, 'speechRate');
         }}
@@ -341,9 +362,11 @@ export function installAffordance(): InstallAffordance {
   return isIos() ? 'ios' : 'hidden';
 }
 
-export async function runInstallPrompt(): Promise<void> {
+/** Fires the captured prompt and logs how it went; the outcome is for callers that react to it. */
+export async function runInstallPrompt(): Promise<InstallPromptOutcome> {
   const outcome = await promptInstall();
   log.info(UI_NS, 'install prompt outcome', { outcome });
+  return outcome;
 }
 
 export interface InstallStepsProps {

@@ -64,6 +64,40 @@ describe('StopSlider rendering & aria', () => {
   });
 });
 
+describe('StopSlider geometry & focus ring', () => {
+  it('pins the stop labels to the same ratios the thumb travels', () => {
+    const { container } = render(<Controlled start={1} />);
+    const row = [...container.querySelectorAll<HTMLElement>('[data-tick]')];
+    expect(row.map((tick) => tick.textContent)).toEqual([...STOPS]);
+    expect(row.map((tick) => tick.style.left)).toEqual(['0%', '50%', '100%']);
+    expect(row.map((tick) => tick.style.transform)).toEqual([
+      'none',
+      'translateX(-50%)',
+      'translateX(-100%)',
+    ]);
+    expect(thumb().style.left).toBe('50%');
+  });
+
+  it('leaves the square hit target inert and rings the round thumb on focus', () => {
+    render(<Controlled start={0} />);
+    const el = thumb();
+    expect(el.style.boxShadow).toBe('none');
+    expect(el.style.outline).toMatch(/^none/);
+    expect(el.style.borderRadius).toBe('50%');
+    const circle = el.firstElementChild;
+    if (!(circle instanceof HTMLElement)) throw new Error('no thumb circle');
+    expect(circle.style.boxShadow).not.toContain('--shadow-focus');
+    el.focus();
+    fireEvent.focusIn(el);
+    expect(circle.style.borderRadius).toBe('50%');
+    expect(circle.style.boxShadow).toContain('var(--shadow-focus)');
+    expect(el.style.boxShadow).toBe('none');
+    el.blur();
+    fireEvent.focusOut(el);
+    expect(circle.style.boxShadow).not.toContain('--shadow-focus');
+  });
+});
+
 describe('StopSlider keyboard', () => {
   it('arrow keys step one stop and clamp at the ends', () => {
     const spy = vi.fn();
@@ -113,6 +147,56 @@ describe('StopSlider pointer (rect mocked)', () => {
     fireEvent.pointerMove(rail, { pointerId: 1, clientX: 0 }); // ratio 0 => index 0
     expect(spy).toHaveBeenLastCalledWith(0);
     fireEvent.pointerUp(rail, { pointerId: 1 });
+  });
+});
+
+describe('StopSlider onChangeCommitted', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(RECT);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fires once at the end of a drag, with the settled index', () => {
+    const changes = vi.fn();
+    const committed = vi.fn();
+    render(<Controlled start={0} onChangeSpy={changes} onChangeCommitted={committed} />);
+    const rail = thumb().parentElement;
+    if (!rail) throw new Error('no rail');
+    fireEvent.pointerDown(rail, { pointerId: 1, clientX: 600 }); // index 2
+    fireEvent.pointerMove(rail, { pointerId: 1, clientX: 300 }); // index 1
+    expect(changes).toHaveBeenCalledTimes(2);
+    expect(committed).not.toHaveBeenCalled();
+    fireEvent.pointerUp(rail, { pointerId: 1 });
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith(1);
+  });
+
+  it('fires once on key release and stays silent when nothing moved', () => {
+    const committed = vi.fn();
+    render(<Controlled start={0} onChangeCommitted={committed} />);
+    const el = thumb();
+    fireEvent.keyDown(el, { key: 'ArrowRight' });
+    expect(committed).not.toHaveBeenCalled();
+    fireEvent.keyUp(el, { key: 'ArrowRight' });
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith(1);
+    fireEvent.keyDown(el, { key: 'Home' });
+    fireEvent.keyDown(el, { key: 'Home' }); // already at the first stop
+    fireEvent.keyUp(el, { key: 'Home' });
+    expect(committed).toHaveBeenCalledTimes(2);
+    expect(committed).toHaveBeenLastCalledWith(0);
+  });
+
+  it('flushes a pending change on blur', () => {
+    const committed = vi.fn();
+    render(<Controlled start={0} onChangeCommitted={committed} />);
+    const el = thumb();
+    fireEvent.keyDown(el, { key: 'End' });
+    fireEvent.focusOut(el);
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith(2);
   });
 });
 

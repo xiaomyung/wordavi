@@ -5,7 +5,7 @@ import { summaryDayState } from '@/app/day-state';
 import { ErrorBoundary } from '@/app/ErrorBoundary';
 import { init as initI18n } from '@/i18n';
 import type { AnswerRecord, Question, RoundSerialized, RoundSummary } from '@/session';
-import { getSettings, setDay, setRound, updateProgress, updateSettings } from '@/storage';
+import { getRound, getSettings, setDay, setRound, updateProgress, updateSettings } from '@/storage';
 
 /**
  * Capability probes the home rows depend on. They are stubbed rather than
@@ -183,6 +183,20 @@ describe('App home', () => {
     expect(screen.getByText('1 of 10')).toBeInTheDocument();
   });
 
+  it('plays a mixed round from the big button, without claiming it as a mode choice', () => {
+    updateSettings({ lastMode: 'digits' });
+    render(<App />);
+
+    press(/Start/);
+    expect(screen.getByText('1 of 10')).toBeInTheDocument();
+    // The button is a round, not a mode: the row choice below it still stands.
+    expect(getSettings().lastMode).toBe('digits');
+
+    // Leaving parks the round under the mode that is actually running.
+    press('Close');
+    expect(getRound()?.modeId).toBe('mixed');
+  });
+
   it('resumes into the mode the parked round belongs to, not the last one started', () => {
     updateSettings({ lastMode: 'digits' });
     setRound('words', parkedRound());
@@ -255,7 +269,8 @@ describe('App onboarding gate', () => {
     press('Next');
     press('Start the first round');
 
-    expect(getSettings().lastMode).toBe('words');
+    // The first round is the mixed one, and it is no mode choice either.
+    expect(getSettings().lastMode).toBeNull();
     expect(screen.getByText('1 of 10')).toBeInTheDocument();
   });
 });

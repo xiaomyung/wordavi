@@ -57,6 +57,7 @@ const MODE_TITLE_KEYS = {
   choice: 'modes.choice.title',
   speak: 'modes.speak.title',
   grocery: 'modes.grocery.title',
+  mixed: 'modes.mixed.title',
 } as const;
 
 /* ------------------------------------------------------------------ *

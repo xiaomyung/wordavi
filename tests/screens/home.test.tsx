@@ -36,6 +36,7 @@ function renderHome(overrides: Partial<HomeScreenProps> = {}): HomeScreenProps {
   const props: HomeScreenProps = {
     modes: MODES,
     onStartMode: vi.fn(),
+    onStartMixed: vi.fn(),
     onResume: vi.fn(),
     onOpenSettings: vi.fn(),
     onOpenStats: vi.fn(),
@@ -175,6 +176,7 @@ describe('HomeScreen round CTA', () => {
     fireEvent.click(cta);
     expect(props.onResume).toHaveBeenCalledTimes(1);
     expect(props.onStartMode).not.toHaveBeenCalled();
+    expect(props.onStartMixed).not.toHaveBeenCalled();
   });
 
   it('shows the endless marker instead of a question count', () => {
@@ -183,13 +185,14 @@ describe('HomeScreen round CTA', () => {
     expect(screen.getByRole('button', { name: 'Продолжить · 7 из ∞' })).toBeInTheDocument();
   });
 
-  it('starts the first round for a learner with no history', () => {
+  it('starts a mixed first round for a learner with no history', () => {
     const props = renderHome();
     fireEvent.click(screen.getByRole('button', { name: 'Начать первый раунд' }));
-    expect(props.onStartMode).toHaveBeenCalledWith('words');
+    expect(props.onStartMixed).toHaveBeenCalledTimes(1);
+    expect(props.onStartMode).not.toHaveBeenCalled();
   });
 
-  it('starts the last played mode once there is history', () => {
+  it('starts a mixed round once there is history, whatever was played last', () => {
     setSettings({ ...getSettings(), lastMode: 'grocery' });
     updateProgress({
       streakCurrent: 1,
@@ -202,7 +205,8 @@ describe('HomeScreen round CTA', () => {
     const props = renderHome();
 
     fireEvent.click(screen.getByRole('button', { name: 'Начать раунд' }));
-    expect(props.onStartMode).toHaveBeenCalledWith('grocery');
+    expect(props.onStartMixed).toHaveBeenCalledTimes(1);
+    expect(props.onStartMode).not.toHaveBeenCalled();
   });
 
   it('never resumes a finished round', () => {

@@ -1,7 +1,7 @@
 /**
  * Screen state machine for the app shell.
  *
- * There is no router in v1 (see CLAUDE.md): the current screen is a tagged union
+ * There is no router in v1 (see docs/architecture/layers): the current screen is a tagged union
  * held in a small stack, so "back" is a pop rather than a URL parse. The stack is
  * mirrored into `history` with a pushState shim so the hardware/browser Back
  * button walks the same path — and never falls out of the SPA at the root.
@@ -22,8 +22,13 @@ import type { RoundSummary } from '@/session';
 
 export type Screen =
   | { kind: 'home' }
-  /** `retryOf` replays that summary's misses instead of a fresh round. */
-  | { kind: 'drill'; retryOf?: RoundSummary }
+  /**
+   * `modeId` is the mode to play — carried by the navigation rather than read
+   * back from settings, because the big start button plays the mixed mode
+   * without making it the learner's "last mode". `retryOf` replays that
+   * summary's misses instead of a fresh round.
+   */
+  | { kind: 'drill'; modeId?: string; retryOf?: RoundSummary }
   /**
    * The day state is sampled when the round ends, not when the screen renders:
    * "was the stamp already earned?" is unanswerable once the round is folded in.

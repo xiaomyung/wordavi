@@ -166,6 +166,13 @@ export interface QuestionContext {
   suggestedBucket: SkillBucket;
   config: RoundConfig;
   /**
+   * Ids of the questions served most recently (oldest first, a handful at
+   * most). Derived from `served`, so it costs the serialized round nothing and
+   * a resumed round rebuilds it exactly. A composite source reads it to avoid
+   * repeating itself; every single-mode source ignores it.
+   */
+  recentQuestionIds: readonly string[];
+  /**
    * The wrongQueue item due this step, when one is. The round replays queue items
    * verbatim and does not call `generate` for them, so this is set only by callers
    * that ask a source to re-derive a stored item (e.g. re-rendering a prompt for a

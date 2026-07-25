@@ -39,6 +39,13 @@ export interface RangeSliderProps {
   value: readonly [number, number];
   /** Emitted with the snapped `[lo, hi]` whenever either thumb moves. */
   onChange: (value: [number, number]) => void;
+  /**
+   * Emitted once per interaction with the settled `[lo, hi]`: at the end of a
+   * drag, when an arrow/Page/Home/End key is released, or on blur if either
+   * ended without its own event. Never fires when nothing moved. Use this for
+   * expensive work (persistence, network) and `onChange` for live visuals.
+   */
+  onChangeCommitted?: (value: [number, number]) => void;
   /** Seven tick labels rendered under the rail (i18n resolved by the caller). */
   tickLabels: readonly string[];
   /** Formats a value for `aria-valuetext`. Defaults to `String`. */
@@ -68,20 +75,35 @@ const TRACK_STYLE: CSSProperties = {
   borderRadius: 'var(--radius-track)',
 };
 
+/**
+ * The 44px hit target is invisible scaffolding: no box, no ring, no native
+ * chrome. `outline`/`boxShadow` are pinned here because the global
+ * `:focus-visible` rule would otherwise paint a rectangular ring around this
+ * square — the ring belongs to the round thumb below.
+ */
 const THUMB_HIT_STYLE: CSSProperties = {
   position: 'absolute',
   top: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
   width: 'var(--spacing-touch)',
   height: 'var(--spacing-touch)',
   transform: 'translate(-50%, -50%)',
   touchAction: 'none',
   cursor: 'grab',
+  appearance: 'none',
   background: 'transparent',
   border: 0,
+  borderRadius: '50%',
   padding: 0,
+  outline: 'none',
+  boxShadow: 'none',
+  WebkitTapHighlightColor: 'transparent',
 };
 
 const THUMB_CIRCLE_STYLE: CSSProperties = {
+  flex: '0 0 auto',
   width: 'var(--size-thumb)',
   height: 'var(--size-thumb)',
   borderRadius: '50%',
@@ -91,6 +113,28 @@ const THUMB_CIRCLE_STYLE: CSSProperties = {
 
 const THUMB_SHADOW = '0 2px 0 var(--color-border-strong)';
 const THUMB_SHADOW_FOCUS = 'var(--shadow-focus), 0 2px 0 var(--color-border-strong)';
+
+/** Tick labels are absolute, so the row carries its own line-box height. */
+const TICKS_STYLE: CSSProperties = { position: 'relative', height: '1.4em', lineHeight: 1.4 };
+
+/** Rail position as a percentage string, trimmed of float dust. */
+function percent(ratio: number): string {
+  return `${Math.round(ratio * 1e4) / 1e2}%`;
+}
+
+/**
+ * Tick labels share the thumbs' coordinate system: the row spans exactly the
+ * rail and every label is pinned to its detent ratio (detents sit at equal
+ * visual spacing, so label `i` of `n` sits at `i / (n - 1)`). The two end
+ * labels hang inward instead of centring, so neither overflows the rail.
+ */
+function tickStyle(index: number, count: number): CSSProperties {
+  const ratio = count > 1 ? index / (count - 1) : 0;
+  let transform = 'translateX(-50%)';
+  if (index === 0) transform = 'none';
+  else if (index === count - 1) transform = 'translateX(-100%)';
+  return { position: 'absolute', left: percent(ratio), transform, whiteSpace: 'nowrap' };
+}
 
 /** Pointer capture is best-effort — absent in some test DOMs. */
 function capturePointer(el: Element, pointerId: number): void {
@@ -111,6 +155,7 @@ export function RangeSlider({
   max = RANGE_MAX,
   value,
   onChange,
+  onChangeCommitted,
   tickLabels,
   formatValue = String,
   minThumbLabel,
@@ -120,6 +165,8 @@ export function RangeSlider({
 }: RangeSliderProps): ReactElement {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  // Set by every emitted onChange, cleared by the once-per-interaction commit.
+  const pendingRef = useRef(false);
   const [focusVisibleThumb, setFocusVisibleThumb] = useState<Thumb | null>(null);
 
   const bound = (v: number): number => Math.min(Math.max(clampValue(v), min), max);
@@ -144,7 +191,19 @@ export function RangeSlider({
   function commit(nextLo: number, nextHi: number): void {
     const cLo = Math.min(Math.max(nextLo, min), prevStop(nextHi));
     const cHi = Math.max(Math.min(nextHi, max), nextStop(nextLo));
-    if (cLo !== lo || cHi !== hi) onChange([cLo, cHi]);
+    if (cLo === lo && cHi === hi) return;
+    pendingRef.current = true;
+    onChange([cLo, cHi]);
+  }
+
+  /**
+   * Settles the interaction: one `onChangeCommitted` with the values this
+   * render was given, so callers can persist once instead of per stop.
+   */
+  function endInteraction(): void {
+    if (!pendingRef.current) return;
+    pendingRef.current = false;
+    onChangeCommitted?.([lo, hi]);
   }
 
   function moveLo(next: number): void {
@@ -190,6 +249,7 @@ export function RangeSlider({
       /* capture may already be gone */
     }
     dragRef.current = null;
+    endInteraction();
   }
 
   function startThumbDrag(which: Thumb, event: PointerEvent<HTMLButtonElement>): void {
@@ -267,6 +327,8 @@ export function RangeSlider({
 
   function onThumbBlur(which: Thumb): void {
     setFocusVisibleThumb((prev) => (prev === which ? null : prev));
+    // Safety net: a drag or key press that never got its end event.
+    endInteraction();
   }
 
   function renderThumb(which: Thumb): ReactElement {
@@ -287,12 +349,13 @@ export function RangeSlider({
         tabIndex={disabled ? -1 : 0}
         data-thumb={which}
         disabled={disabled}
-        style={{ ...THUMB_HIT_STYLE, left: `${ratio * 100}%`, zIndex: focused ? 2 : 1 }}
+        style={{ ...THUMB_HIT_STYLE, left: percent(ratio), zIndex: focused ? 2 : 1 }}
         onPointerDown={(event) => startThumbDrag(which, event)}
         onPointerMove={(event) => handlePointerMove(event.clientX)}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         onKeyDown={(event) => onThumbKeyDown(which, event)}
+        onKeyUp={endInteraction}
         onFocus={(event) => onThumbFocus(which, event)}
         onBlur={() => onThumbBlur(which)}
       >
@@ -323,8 +386,8 @@ export function RangeSlider({
           data-slider-fill=""
           style={{
             ...TRACK_STYLE,
-            left: `${loRatio * 100}%`,
-            right: `${(1 - hiRatio) * 100}%`,
+            left: percent(loRatio),
+            right: percent(1 - hiRatio),
             background: 'var(--color-accent)',
             cursor: disabled ? 'default' : 'grab',
           }}
@@ -338,10 +401,13 @@ export function RangeSlider({
       </div>
       <div
         aria-hidden="true"
-        className="numerals mt-1 flex justify-between font-mono text-tick font-semibold text-text-muted"
+        className="numerals mt-1 font-mono text-tick font-semibold text-text-muted"
+        style={TICKS_STYLE}
       >
-        {tickLabels.map((label) => (
-          <span key={label}>{label}</span>
+        {tickLabels.map((label, index) => (
+          <span key={label} data-tick={index} style={tickStyle(index, tickLabels.length)}>
+            {label}
+          </span>
         ))}
       </div>
     </div>

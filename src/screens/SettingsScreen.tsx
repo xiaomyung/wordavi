@@ -12,10 +12,10 @@
  */
 import { type ChangeEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, CardRow } from '@/components';
+import { Button, Card, CardRow, Pressable } from '@/components';
 import { log } from '@/services/log';
 import { showToast } from '@/services/toast';
-import { exportData, importData } from '@/storage';
+import { clearAllData, exportData, importData } from '@/storage';
 import {
   AccentsSetting,
   BackGlyph,
@@ -59,10 +59,22 @@ function downloadJson(json: string, filename: string): boolean {
   }
 }
 
+/**
+ * Danger-filled confirm key. The design system has no destructive button
+ * variant, so this composes the same way Button itself does — shelf physics
+ * from Pressable, fill/size/type from tokens — rather than fighting Button's
+ * own background utility (which wins or loses by stylesheet order, not by
+ * class order).
+ */
+const RESET_CONFIRM_CLASS =
+  'inline-flex h-(--size-cta) w-full items-center justify-center rounded-button ' +
+  'bg-danger px-7 font-extrabold font-sans text-[1.0625rem] text-on-accent';
+
 export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
   const { t } = useTranslation();
   const { settings, update, reload } = useSettingsState();
   const [installStepsOpen, setInstallStepsOpen] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const affordance = installAffordance();
@@ -107,6 +119,15 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
     reload();
     log.info(UI_NS, 'data imported', {});
     showToast({ text: t('toasts.import_ok') });
+  }
+
+  function handleReset(): void {
+    log.info(UI_NS, 'data reset', {});
+    clearAllData();
+    // Reload rather than re-render: in-memory caches (log ring, app state, the
+    // settings this screen already read) only come back empty on a fresh boot,
+    // which lands the user back in onboarding.
+    location.reload();
   }
 
   return (
@@ -160,6 +181,32 @@ export function SettingsScreen({ onBack, onReport }: SettingsScreenProps) {
 
         <Card variant="grouped">
           <CardRow label={t('settings.report_problem')} onPress={onReport} />
+        </Card>
+
+        {/* Destructive, so it lives last and confirms in place — a browser
+            confirm() would be the one dialog in the app that isn't ours. */}
+        <Card variant="grouped">
+          {confirmingReset ? (
+            <div className="flex flex-col gap-3 px-4 py-3.5">
+              <span className="font-extrabold text-[15px] text-danger">
+                {t('settings.reset_label')}
+              </span>
+              <p className="font-semibold text-caption text-text-muted leading-normal">
+                {t('settings.reset_warning')}
+              </p>
+              <Pressable depth="raised" onClick={handleReset} className={RESET_CONFIRM_CLASS}>
+                {t('settings.reset_confirm')}
+              </Pressable>
+              <Button variant="ghost" onClick={() => setConfirmingReset(false)}>
+                {t('settings.reset_cancel')}
+              </Button>
+            </div>
+          ) : (
+            <CardRow
+              label={<span className="text-danger">{t('settings.reset_label')}</span>}
+              onPress={() => setConfirmingReset(true)}
+            />
+          )}
         </Card>
 
         <p className="text-center font-semibold text-caption text-text-faint">

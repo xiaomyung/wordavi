@@ -7,6 +7,7 @@ export { migrations, runMigrations, schemaVersion } from './migrations';
 export { setStorageObserver } from './observer';
 export { getProgress, setProgress, updateProgress } from './progress';
 export { readRawString, removeRawKey, writeRawString } from './raw';
+export { clearAllData } from './reset';
 export { clearRound, getRound, setRound } from './round';
 export { getSettings, setSettings, updateSettings } from './settings';
 export { getSrs, setSrs } from './srs';

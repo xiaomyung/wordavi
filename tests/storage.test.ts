@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  clearAllData,
   clearErrors,
   clearRound,
   exportData,
@@ -46,7 +47,7 @@ describe('storage', () => {
         roundSize: 20,
         speechRate: 'normal',
         dailyGoal: 20,
-        soundsEnabled: false,
+        soundsEnabled: true,
         lastMode: null,
         onboarded: false,
       });
@@ -209,6 +210,37 @@ describe('storage', () => {
 
     it('throws when a step is missing so the caller can fall back to a reset', () => {
       expect(() => runMigrations({}, 1, 3, { 1: (raw) => raw })).toThrow();
+    });
+  });
+
+  describe('reset', () => {
+    it('removes every wordavi key', () => {
+      setSettings({ ...getSettings(), dailyGoal: 33 });
+      setProgress({ ...getProgress(), streakCurrent: 4 });
+      setDay({ date: '2026-07-25', answered: 3, correct: 3, byGroup: {} });
+      setSrs({ buckets: { units: 1 } });
+      setRound('drill', { index: 2 });
+      pushError({ t: 1, message: 'boom' });
+      expect(localStorage.getItem(STORAGE_KEYS.settings)).not.toBeNull();
+
+      clearAllData();
+
+      const leftovers: string[] = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('wordavi:')) leftovers.push(key);
+      }
+      expect(leftovers).toEqual([]);
+      for (const key of Object.values(STORAGE_KEYS)) {
+        expect(localStorage.getItem(key)).toBeNull();
+      }
+    });
+
+    it('leaves defaults behind for the next read', () => {
+      setSettings({ ...getSettings(), dailyGoal: 33 });
+      clearAllData();
+      expect(getSettings().dailyGoal).toBe(20);
+      expect(getProgress().streakCurrent).toBe(0);
     });
   });
 

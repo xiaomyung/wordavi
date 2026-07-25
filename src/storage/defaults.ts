@@ -11,7 +11,7 @@ export function defaultSettings(): Settings {
     roundSize: 20,
     speechRate: 'normal',
     dailyGoal: 20,
-    soundsEnabled: false,
+    soundsEnabled: true,
     lastMode: null,
     onboarded: false,
     updatedAt: nowIso(),

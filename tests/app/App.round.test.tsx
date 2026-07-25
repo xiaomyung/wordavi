@@ -58,8 +58,12 @@ vi.mock('@/modes', async () => {
   };
 
   return {
-    findMode: (id: string) => (id === 'words' ? stubMode : undefined),
+    // The home button plays the composite mode; one stub answers for both so
+    // this suite stays about routing rather than about question generation.
+    findMode: (id: string) => (id === 'words' || id === 'mixed' ? stubMode : undefined),
     allModes: () => [stubMode],
+    MIXED_MODE_ID: 'mixed',
+    setMixedAvailability: () => {},
   };
 });
 
@@ -162,7 +166,8 @@ describe('App round lifecycle', () => {
     press('Close');
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/good/i);
-    expect(getRound()?.modeId).toBe('words');
+    // The big button starts the mixed round, so that is what stays parked.
+    expect(getRound()?.modeId).toBe('mixed');
     expect(screen.getByRole('button', { name: 'Continue · 1 of 10' })).toBeInTheDocument();
   });
 });

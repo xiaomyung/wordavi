@@ -35,6 +35,10 @@
     "grocery": {
       "title": "Precios y pesos",
       "example": "2,35 € · 250 g · dos kilos y medio"
+    },
+    "mixed": {
+      "title": "Ronda mixta",
+      "sub": "preguntas de todos los modos"
     }
   },
   "drill": {
@@ -44,7 +48,7 @@
     "hold_to_talk": "Mantén y habla",
     "release_hint": "suelta para comprobar · no guardamos nada",
     "type_instead": "Escribir la respuesta",
-    "type_placeholder": "escribe la respuesta con letras",
+    "type_placeholder": "escríbelo en letras",
     "digits_placeholder": "en cifras, p. ej. 250",
     "grocery_placeholder": "por ejemplo: dos con veinte",
     "choice_hint": "Elige el número",
@@ -143,7 +147,11 @@
     "import_label": "Restaurar desde un archivo",
     "import_sub": "Cargar el progreso desde un archivo descargado antes",
     "install_label": "Instalar la aplicación",
-    "install_sub": "Funciona sin conexión, se abre desde la pantalla de inicio"
+    "install_sub": "Funciona sin conexión, se abre desde la pantalla de inicio",
+    "reset_label": "Restablecer todos los datos",
+    "reset_warning": "Borrará todo tu progreso y tus ajustes. Esta acción no se puede deshacer.",
+    "reset_confirm": "Borrar todo",
+    "reset_cancel": "Cancelar"
   },
   "onboarding": {
     "step1_greeting": "¡Hola!",
@@ -158,10 +166,19 @@
     "step3_goal_sub": "respuestas al día · puede ser menos",
     "step4_title": "Cinco minutos al día y los números se harán tuyos",
     "step4_subtitle": "Equivocarse es normal: los números difíciles volverán a aparecer hasta que se te queden.",
-    "step4_goal_pill": "Meta — 20 respuestas al día · puede ser menos",
+    "step4_goal_pill": "Meta — {{n}} respuestas al día · o menos",
     "step4_cta": "Empezar la primera ronda",
     "step4_ghost": "Ver los modos primero",
-    "install_cta": "Instalar la aplicación"
+    "install_cta": "Instalar la aplicación",
+    "install_title": "Instálala en tu teléfono",
+    "install_sub": "Funciona sin conexión y se abre desde la pantalla de inicio — como cualquier app.",
+    "install_success": "¡Instalada! Busca wordaví en la pantalla de inicio — o sigue aquí.",
+    "continue_browser": "Seguir en el navegador",
+    "mic_title": "Micrófono — para el modo «Dilo en voz alta»",
+    "mic_sub": "Solo se usa mientras hablas. No grabamos nada ni guardamos nada.",
+    "mic_allow": "Permitir el micrófono",
+    "mic_done": "listo",
+    "mic_later": "puede ser más tarde — en los ajustes del navegador"
   },
   "stats": {
     "title": "Estadísticas",

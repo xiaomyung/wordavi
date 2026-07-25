@@ -19,7 +19,9 @@ test('a first visit walks onboarding through to home', async ({ page }) => {
   await page.goto('/');
 
   // A learner who has never opened the app lands in onboarding, not on home.
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Hello!');
+  // The app opens in RU (the default), so the greeting is asserted through the
+  // Spanish half it always carries — the English copy arrives one click later.
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('¡Hola!');
 
   await completeOnboarding(page);
 

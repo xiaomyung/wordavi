@@ -42,12 +42,16 @@ export function ProgressSection() {
     >
       <Stack>
         <Case label="ProgressRule — 0 / 40 / 100%">
-          <ProgressRule value={0} />
-          <ProgressRule value={40} />
-          <ProgressRule value={100} />
+          <ProgressRule value={0} aria-label="round progress — 0%" />
+          <ProgressRule value={40} aria-label="round progress — 40%" />
+          <ProgressRule value={100} aria-label="round progress — 100%" />
         </Case>
         <Case label={`ProgressRule — live, ${answered} / ${ROUND_LENGTH}`}>
-          <ProgressRule value={answered} max={ROUND_LENGTH} />
+          <ProgressRule
+            value={answered}
+            max={ROUND_LENGTH}
+            aria-label={`round progress — ${answered} of ${ROUND_LENGTH}`}
+          />
           <Row>
             <DemoButton
               onPress={() => setAnswered((n) => Math.min(ROUND_LENGTH, n + 1))}
@@ -150,7 +154,7 @@ export function PriceSection() {
           <PriceTag>{LONG_PROMPT}</PriceTag>
         </Case>
         <Case label={`Dots — step ${step + 1} of 4`}>
-          <Dots count={4} activeIndex={step} />
+          <Dots count={4} activeIndex={step} aria-label={`step ${step + 1} of 4`} />
           <Row>
             <DemoButton onPress={() => setStep((n) => (n + 1) % 4)}>{t('common.next')}</DemoButton>
             <DemoButton onPress={() => setStep(0)}>{t('common.back')}</DemoButton>

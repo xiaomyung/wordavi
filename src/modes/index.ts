@@ -11,6 +11,7 @@ import { choiceMode } from './choice';
 import { digitsMode } from './digits';
 import { groceryMode } from './grocery';
 import { listenMode } from './listen';
+import { mixedMode } from './mixed';
 import { registerMode } from './registry';
 import { speakMode } from './speak';
 import { wordsMode } from './words';
@@ -22,12 +23,16 @@ registerMode(listenMode);
 registerMode(choiceMode);
 registerMode(speakMode);
 registerMode(groceryMode);
+/* The composite mode is registered like the rest, but has no home-screen row:
+   it is what the big start button plays (see mixed.tsx). */
+registerMode(mixedMode);
 
 export { drawForBucket, NUMBER_BUCKETS, type NumberBucket, planFor, roundRange } from './buckets';
 export { answerValueOf, choiceMode, choiceOptions } from './choice';
 export { digitsMode } from './digits';
 export { groceryMode, grocerySource } from './grocery';
 export { listenMode } from './listen';
+export { mixedMode, modeOfQuestion, setMixedAvailability } from './mixed';
 export { allModes, findMode, getMode, modeRequires, registerMode } from './registry';
 export { pickGiven, speakMode } from './speak';
 export type {
@@ -41,7 +46,8 @@ export type {
   RecognitionErrorKind,
   RecognitionHandlers,
   RecognitionSession,
+  SingleModeId,
 } from './types';
-export { labelOf, MODE_ORDER } from './types';
+export { labelOf, MIXED_MODE_ID, MODE_ORDER } from './types';
 export { numeralFontSizePx, promptDisplay, promptSpanish } from './ui';
 export { wordsMode } from './words';

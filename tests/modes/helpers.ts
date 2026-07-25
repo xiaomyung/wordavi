@@ -48,6 +48,11 @@ export function generateFor(
   bucket: SkillBucket,
   seed: number,
   config: RoundConfig = roundConfig(),
+  recentQuestionIds: readonly string[] = [],
 ): Question {
-  return mode.source.generate(createRng(seed), { suggestedBucket: bucket, config });
+  return mode.source.generate(createRng(seed), {
+    suggestedBucket: bucket,
+    config,
+    recentQuestionIds,
+  });
 }

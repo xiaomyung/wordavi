@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { allModes } from '@/modes';
+import { allModes, MIXED_MODE_ID } from '@/modes';
 import { CrashScreen } from '@/screens/CrashScreen';
 import { DrillScreen } from '@/screens/DrillScreen';
 import { GalleryScreen } from '@/screens/GalleryScreen';
@@ -19,6 +19,7 @@ import type { Screen } from './state';
 import { AppStateProvider, useAppState } from './state';
 import { ToastHost } from './ToastHost';
 import { useHomeModes } from './useHomeModes';
+import { usePwaUpdate } from './usePwaUpdate';
 
 const NS = 'ui';
 
@@ -74,15 +75,25 @@ function ScreenRouter() {
     reset({ kind: 'home' });
   }, [reset]);
 
-  /** Remember the choice before leaving: the drill reads it back as its mode. */
+  /** Play one mode. The choice is remembered as the learner's last mode. */
   const startMode = useCallback(
     (modeId: string) => {
       updateSettings({ lastMode: modeId });
       log.info(NS, 'navigate', { to: 'drill', modeId });
-      navigate({ kind: 'drill' });
+      navigate({ kind: 'drill', modeId });
     },
     [navigate],
   );
+
+  /**
+   * The big start button: a round drawn from every available mode. It is not a
+   * mode choice, so it deliberately leaves `lastMode` alone — that stays the
+   * last row the learner picked.
+   */
+  const startMixed = useCallback(() => {
+    log.info(NS, 'navigate', { to: 'drill', modeId: MIXED_MODE_ID });
+    navigate({ kind: 'drill', modeId: MIXED_MODE_ID });
+  }, [navigate]);
 
   switch (screen.kind) {
     case 'gallery':
@@ -95,7 +106,9 @@ function ScreenRouter() {
             // Home is the root either way — a learner who backs out of that
             // first round should land there, not back in onboarding.
             goHome();
-            if (startFirstRound) startMode(activeModeId());
+            // A first round that samples every mode is the friendliest
+            // introduction — the same round the home button plays.
+            if (startFirstRound) startMixed();
           }}
         />
       );
@@ -104,6 +117,7 @@ function ScreenRouter() {
       return (
         <HomeRoute
           onStartMode={startMode}
+          onStartMixed={startMixed}
           // The parked round may belong to a mode other than the last one
           // started; resuming means going back to *its* mode.
           onResume={() => startMode(getRound()?.modeId ?? activeModeId())}
@@ -114,7 +128,9 @@ function ScreenRouter() {
 
     case 'drill': {
       const retryOf = screen.retryOf;
-      const modeId = retryOf?.modeId ?? activeModeId();
+      // A retry keeps its round's mode; otherwise the navigation carries it,
+      // and only a stale entry falls back to the last mode played.
+      const modeId = retryOf?.modeId ?? screen.modeId ?? activeModeId();
       // A retry replaces the round rather than continuing one, so the parked
       // slot is not even consulted.
       const saved = retryOf === undefined ? getRound() : null;
@@ -145,7 +161,7 @@ function ScreenRouter() {
       return <SettingsScreen onBack={goBack} onReport={() => go({ kind: 'report' })} />;
 
     case 'stats':
-      return <StatsScreen onBack={goBack} onStartFirstRound={() => startMode(activeModeId())} />;
+      return <StatsScreen onBack={goBack} onStartFirstRound={startMixed} />;
 
     case 'report':
       return <ReportScreen onClose={goBack} />;
@@ -164,6 +180,7 @@ function ScreenRouter() {
 
 function AppRoot() {
   const { screen } = useAppState();
+  usePwaUpdate(screen.kind);
   return (
     <ScreenTransition screenKey={screen.kind}>
       <ScreenRouter />

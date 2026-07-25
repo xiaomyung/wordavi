@@ -49,7 +49,7 @@ function ensureContext(): AudioContext | null {
   return audioCtx;
 }
 
-/** Gate sounds on/off; driven by settings, default off. */
+/** Gate sounds on/off; stays off until boot applies the stored setting (default on). */
 export function setEnabled(value: boolean): void {
   enabled = value;
   log.info(NS, 'sounds setEnabled', { enabled: value });

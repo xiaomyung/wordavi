@@ -84,6 +84,87 @@ describe('RangeSlider rendering & aria', () => {
   });
 });
 
+describe('RangeSlider geometry', () => {
+  function ticks(container: HTMLElement): HTMLElement[] {
+    return [...container.querySelectorAll<HTMLElement>('[data-tick]')];
+  }
+
+  it('pins every tick label to its detent ratio of the rail', () => {
+    const { container } = render(<Controlled start={[0, 1000]} />);
+    const row = ticks(container);
+    expect(row.map((tick) => tick.textContent)).toEqual([...TICKS]);
+    expect(row.map((tick) => tick.style.left)).toEqual([
+      '0%',
+      '16.67%',
+      '33.33%',
+      '50%',
+      '66.67%',
+      '83.33%',
+      '100%',
+    ]);
+    // The end labels hang inward; the rest centre on their detent.
+    expect(row.map((tick) => tick.style.transform)).toEqual([
+      'none',
+      'translateX(-50%)',
+      'translateX(-50%)',
+      'translateX(-50%)',
+      'translateX(-50%)',
+      'translateX(-50%)',
+      'translateX(-100%)',
+    ]);
+  });
+
+  it('places 500 between the 100 and 1 000 ticks, not on top of either', () => {
+    const { container } = render(<Controlled start={[0, 500]} />);
+    const [lo, hi] = thumbs();
+    expect(lo.style.left).toBe('0%');
+    // segment 2 of 6, 400/900 of the way through it => (2 + 4/9) / 6
+    expect(hi.style.left).toBe('40.74%');
+    const row = ticks(container);
+    const tickAt = (index: number): number => Number.parseFloat(row[index]?.style.left ?? '');
+    expect(tickAt(2)).toBeLessThan(40.74);
+    expect(tickAt(3)).toBeGreaterThan(40.74);
+  });
+
+  it('spans the fill between the two thumbs in the same coordinates', () => {
+    const { container } = render(<Controlled start={[100, 1000]} />);
+    const fill = container.querySelector<HTMLElement>('[data-slider-fill]');
+    expect(fill?.style.left).toBe('33.33%');
+    expect(fill?.style.right).toBe('50%');
+  });
+});
+
+describe('RangeSlider focus ring', () => {
+  function circleOf(thumb: HTMLElement): HTMLElement {
+    const circle = thumb.firstElementChild;
+    if (!(circle instanceof HTMLElement)) throw new Error('no thumb circle');
+    return circle;
+  }
+
+  it('leaves the square hit target visually inert', () => {
+    render(<Controlled start={[0, 500]} />);
+    const [, hi] = thumbs();
+    expect(hi.style.boxShadow).toBe('none');
+    expect(hi.style.outline).toMatch(/^none/);
+    expect(hi.style.borderRadius).toBe('50%');
+  });
+
+  it('rings the round thumb — never the hit target — while focused', () => {
+    render(<Controlled start={[0, 500]} />);
+    const [, hi] = thumbs();
+    const circle = circleOf(hi);
+    expect(circle.style.boxShadow).not.toContain('--shadow-focus');
+    hi.focus();
+    fireEvent.focusIn(hi);
+    expect(circle.style.borderRadius).toBe('50%');
+    expect(circle.style.boxShadow).toContain('var(--shadow-focus)');
+    expect(hi.style.boxShadow).toBe('none');
+    hi.blur();
+    fireEvent.focusOut(hi);
+    expect(circle.style.boxShadow).not.toContain('--shadow-focus');
+  });
+});
+
 describe('RangeSlider keyboard', () => {
   it('arrow keys move by one fine step per thumb', () => {
     const spy = vi.fn();
@@ -181,6 +262,61 @@ describe('RangeSlider pointer (rect mocked)', () => {
     expect(last[0]).toBeGreaterThan(10);
     expect(last[1]).toBeGreaterThan(100);
     fireEvent.pointerUp(fill, { pointerId: 3 });
+  });
+});
+
+describe('RangeSlider onChangeCommitted', () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(RECT);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fires once at the end of a drag, with the settled value', () => {
+    const changes = vi.fn();
+    const committed = vi.fn();
+    render(<Controlled start={[0, 100]} onChangeSpy={changes} onChangeCommitted={committed} />);
+    const [, hi] = thumbs();
+    fireEvent.pointerDown(hi, { pointerId: 1, clientX: 0 });
+    fireEvent.pointerMove(hi, { pointerId: 1, clientX: 250 }); // ratio .4166 => 550
+    fireEvent.pointerMove(hi, { pointerId: 1, clientX: 300 }); // ratio .5    => 1000
+    expect(changes.mock.calls.length).toBeGreaterThan(1);
+    expect(committed).not.toHaveBeenCalled();
+    fireEvent.pointerUp(hi, { pointerId: 1 });
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith([0, 1000]);
+  });
+
+  it('fires once on key release, however many steps the press produced', () => {
+    const committed = vi.fn();
+    render(<Controlled start={[0, 100]} onChangeCommitted={committed} />);
+    const [, hi] = thumbs();
+    fireEvent.keyDown(hi, { key: 'ArrowLeft' });
+    fireEvent.keyDown(hi, { key: 'ArrowLeft' });
+    expect(committed).not.toHaveBeenCalled();
+    fireEvent.keyUp(hi, { key: 'ArrowLeft' });
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith([0, 90]);
+  });
+
+  it('stays silent when the interaction moved nothing', () => {
+    const committed = vi.fn();
+    render(<Controlled start={[0, 100]} onChangeCommitted={committed} />);
+    const [lo] = thumbs();
+    fireEvent.keyDown(lo, { key: 'ArrowLeft' }); // already at the floor
+    fireEvent.keyUp(lo, { key: 'ArrowLeft' });
+    expect(committed).not.toHaveBeenCalled();
+  });
+
+  it('flushes a pending change on blur', () => {
+    const committed = vi.fn();
+    render(<Controlled start={[0, 100]} onChangeCommitted={committed} />);
+    const [, hi] = thumbs();
+    fireEvent.keyDown(hi, { key: 'ArrowLeft' });
+    fireEvent.focusOut(hi);
+    expect(committed).toHaveBeenCalledTimes(1);
+    expect(committed).toHaveBeenLastCalledWith([0, 95]);
   });
 });
 

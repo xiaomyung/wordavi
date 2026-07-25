@@ -85,6 +85,15 @@
 
   /* --- implementation extensions (not from design contract) --- */
 
+  /* brand mark: the app icon's own two colours, mirroring the dark-theme
+     accent / on-accent pair. Theme-STABLE on purpose — the installed icon,
+     the favicon and the onboarding tile are one drawing, and a mark that
+     repainted itself with the theme would stop being the same mark. They are
+     deliberately absent from the .dark block, and the only place they may be
+     used outside services/theme.ts and index.html is that mark. */
+  --color-brand-tile: #e08344;
+  --color-brand-glyph: #2a1005;
+
   /* price tag: the design's raised-card shelf plus the ambient float drop, so
      the tag lifts off whatever surface it sits on (price-tag.md). Composed from
      the two shadow tokens above rather than restated, so both stay single-source

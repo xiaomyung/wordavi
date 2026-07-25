@@ -48,7 +48,16 @@ export function DrillHeader({ step, size, score, onLeave }: DrillHeaderProps) {
         >
           <CloseIcon />
         </Button>
-        {!endless && <ProgressRule value={shown} max={total} className="flex-1" />}
+        {!endless && (
+          <ProgressRule
+            value={shown}
+            max={total}
+            className="flex-1"
+            // The rule is the visual twin of the counter beside it; naming it
+            // the same way keeps the bar from reaching a screen reader unnamed.
+            aria-label={t('drill.counter', { n: shown, total })}
+          />
+        )}
         <span
           className={`numerals font-bold text-caption text-text-muted ${endless ? 'flex-1 text-right' : ''}`}
         >

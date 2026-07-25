@@ -24,6 +24,13 @@ import type {
   Verdict,
 } from './types';
 
+/**
+ * How much history {@link QuestionContext.recentQuestionIds} carries. Two are
+ * enough for the mixed mode's anti-streak rule; a slightly longer window leaves
+ * room for a source that wants more without touching this layer again.
+ */
+const RECENT_QUESTION_IDS = 5;
+
 /** No-op source for retry/resumed rounds that never call generate(). */
 const NOOP_SOURCE: QuestionSource = {
   eligibleBuckets: () => [],
@@ -142,7 +149,11 @@ export function nextQuestion(state: RoundState): RoundState {
     } else {
       const eligible = state.source.eligibleBuckets(state.config);
       const suggestedBucket = pickBucket(state.rng.rng, state.srs, eligible);
-      const ctx: QuestionContext = { suggestedBucket, config: state.config };
+      const ctx: QuestionContext = {
+        suggestedBucket,
+        config: state.config,
+        recentQuestionIds: state.served.slice(-RECENT_QUESTION_IDS).map((q) => q.id),
+      };
       const generated = state.source.generate(state.rng.rng, ctx);
       question = { ...generated, bucket: classifyBucket(generated.prompt) };
     }

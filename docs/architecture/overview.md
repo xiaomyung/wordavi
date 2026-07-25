@@ -44,7 +44,7 @@ Each note marks what exists today versus what is planned. At a glance:
 | Session / light SRS / scoring | **Planned** |
 | Learning modes and the mode registry | **Planned** — see [[mode-registry]] |
 | Storage schema, migrations, error buffer | **Planned** — spec'd in [[storage-schema]] |
-| Offline precache, i18n (RU/EN) | **Planned** |
+| Offline precache, i18n (RU/EN) | **Exists** — full precache, prompt-to-reload updates |
 
 Writing these specs before the code is deliberate: the engine and storage
 shapes are the load-bearing decisions, and they are locked here so the later

@@ -36,7 +36,10 @@ export interface HomeModeItem {
 
 export interface HomeScreenProps {
   modes: readonly HomeModeItem[];
+  /** A row was tapped: play that one mode. */
   onStartMode: (modeId: string) => void;
+  /** The big button: play a round mixed from every available mode. */
+  onStartMixed: () => void;
   onResume: () => void;
   onOpenSettings: () => void;
   onOpenStats: () => void;
@@ -49,9 +52,6 @@ export interface HomeScreenProps {
 const MORNING_HOUR = 5;
 const DAY_HOUR = 12;
 const EVENING_HOUR = 18;
-
-/** Mode the start CTA falls back to when nothing has been played yet. */
-const DEFAULT_MODE_ID = 'words';
 
 /** Below this share of the goal the sub-line stays factual, above it cheers. */
 const ALMOST_FRACTION = 0.5;
@@ -93,7 +93,6 @@ interface HomeData {
   streakDays: number;
   stampDays: StreakStampDay[];
   resume: SavedRoundProgress | null;
-  lastMode: string | null;
   hasHistory: boolean;
 }
 
@@ -110,7 +109,6 @@ function readHomeData(now: Date): HomeData {
     streakDays: progress.streakCurrent,
     stampDays: buildStreakWindow(days, dailyGoal, today),
     resume: savedRoundProgress(getRound()),
-    lastMode: settings.lastMode,
     hasHistory: progress.totalAnswered > 0 || days.length > 0,
   };
 }
@@ -278,6 +276,7 @@ function iconFor(mode: HomeModeItem): ReactNode {
 export function HomeScreen({
   modes,
   onStartMode,
+  onStartMixed,
   onResume,
   onOpenSettings,
   onOpenStats,
@@ -313,10 +312,6 @@ export function HomeScreen({
       : typeof data.resume.total === 'number'
         ? String(data.resume.total)
         : t('common.endless');
-
-  function startRound(): void {
-    onStartMode(data.lastMode ?? DEFAULT_MODE_ID);
-  }
 
   function pressMode(mode: HomeModeItem, notice: PausedNotice | null): void {
     if (notice === null) {
@@ -370,8 +365,10 @@ export function HomeScreen({
           </div>
         </Card>
 
+        {/* The big button is a *round*, not a mode: it mixes every available
+            mode. Picking one mode is what the rows below are for. */}
         {data.resume === null ? (
-          <Button className="w-full" onClick={startRound}>
+          <Button className="w-full" onClick={onStartMixed}>
             {data.hasHistory ? t('home.start_round') : t('home.start_cta')}
           </Button>
         ) : (

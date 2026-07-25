@@ -112,6 +112,8 @@ export function SlidersSection() {
             onChange={noop}
             tickLabels={tickLabels}
             formatValue={formatNumber}
+            minThumbLabel={`${t('settings.range_label')} — min`}
+            maxThumbLabel={`${t('settings.range_label')} — max`}
             disabled
           />
         </Case>

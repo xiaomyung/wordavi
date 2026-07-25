@@ -6,7 +6,7 @@ import { canPromptInstall, isIos, isStandalone, promptInstall } from '@/services
 import { setEnabled } from '@/services/sounds';
 import { applyTheme } from '@/services/theme';
 import { showToast } from '@/services/toast';
-import { exportData, getSettings, updateSettings } from '@/storage';
+import { clearAllData, exportData, getSettings, updateSettings } from '@/storage';
 
 // Partial mocks: the real modules still initialise i18next / storage, only the
 // live side effects are swapped for spies so a test can assert them without
@@ -37,6 +37,21 @@ vi.mock('@/services/install', () => ({
   isStandalone: vi.fn(() => false),
   promptInstall: vi.fn(async () => 'accepted'),
 }));
+
+// Storage stays real (the screen's whole job is writing to it); clearAllData and
+// updateSettings are wrapped in spies that still call through, so a wipe and a
+// write count can be asserted as calls as well as by their effect.
+vi.mock('@/storage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/storage')>();
+  return {
+    ...actual,
+    clearAllData: vi.fn(actual.clearAllData),
+    updateSettings: vi.fn(actual.updateSettings),
+  };
+});
+
+/** Stand-in for the reboot the reset performs; wired in beforeEach. */
+const reload = vi.fn();
 
 function renderScreen() {
   const onBack = vi.fn();
@@ -70,6 +85,11 @@ describe('SettingsScreen', () => {
       configurable: true,
       writable: true,
       value: vi.fn(),
+    });
+    Object.defineProperty(window.location, 'reload', {
+      configurable: true,
+      writable: true,
+      value: reload,
     });
   });
 
@@ -117,16 +137,28 @@ describe('SettingsScreen', () => {
     expect(screen.getByText(`wordaví · версия ${__APP_VERSION__}`)).toBeInTheDocument();
   });
 
-  it('persists the number range as the thumbs move', () => {
+  it('shows the range live but writes it once per interaction', () => {
     renderScreen();
-    fireEvent.keyDown(screen.getByRole('slider', { name: 'Диапазон чисел — min' }), {
-      key: 'ArrowRight',
-    });
-    expect(getSettings().rangeMin).toBe(1);
+    const min = screen.getByRole('slider', { name: 'Диапазон чисел — min' });
+    vi.mocked(updateSettings).mockClear();
 
-    fireEvent.keyDown(screen.getByRole('slider', { name: 'Диапазон чисел — max' }), {
-      key: 'PageUp',
-    });
+    fireEvent.keyDown(min, { key: 'ArrowRight' });
+    fireEvent.keyDown(min, { key: 'ArrowRight' });
+    fireEvent.keyDown(min, { key: 'ArrowRight' });
+
+    // Every step is on screen; none of them reached storage yet.
+    expect(min).toHaveAttribute('aria-valuenow', '3');
+    expect(screen.getByText('3 — 100')).toBeInTheDocument();
+    expect(updateSettings).not.toHaveBeenCalled();
+
+    fireEvent.keyUp(min, { key: 'ArrowRight' });
+    expect(updateSettings).toHaveBeenCalledTimes(1);
+    expect(getSettings().rangeMin).toBe(3);
+
+    const max = screen.getByRole('slider', { name: 'Диапазон чисел — max' });
+    fireEvent.keyDown(max, { key: 'PageUp' });
+    fireEvent.keyUp(max, { key: 'PageUp' });
+    expect(updateSettings).toHaveBeenCalledTimes(2);
     expect(getSettings().rangeMax).toBe(1000);
   });
 
@@ -168,9 +200,17 @@ describe('SettingsScreen', () => {
     expect(getSettings().theme).toBe('dark');
   });
 
-  it('persists the speech rate', () => {
+  it('persists the speech rate once the thumb settles', () => {
     renderScreen();
-    fireEvent.keyDown(screen.getByRole('slider', { name: 'Скорость речи' }), { key: 'ArrowRight' });
+    const slider = screen.getByRole('slider', { name: 'Скорость речи' });
+    vi.mocked(updateSettings).mockClear();
+
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    expect(slider).toHaveAttribute('aria-valuetext', 'быстро');
+    expect(updateSettings).not.toHaveBeenCalled();
+
+    fireEvent.keyUp(slider, { key: 'ArrowRight' });
+    expect(updateSettings).toHaveBeenCalledTimes(1);
     expect(getSettings().speechRate).toBe('fast');
   });
 
@@ -188,6 +228,7 @@ describe('SettingsScreen', () => {
   });
 
   it('enables answer sounds live and persists them', () => {
+    updateSettings({ soundsEnabled: false });
     renderScreen();
     const toggle = screen.getByRole('switch', { name: 'Звуки ответов' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
@@ -279,5 +320,52 @@ describe('SettingsScreen', () => {
     expect(onBack).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Сообщить о проблеме' }));
     expect(onReport).toHaveBeenCalled();
+  });
+
+  describe('reset all data', () => {
+    function openConfirm(): void {
+      fireEvent.click(screen.getByRole('button', { name: 'Сбросить все данные' }));
+    }
+
+    it('confirms in place instead of opening a browser dialog', () => {
+      renderScreen();
+      openConfirm();
+
+      expect(
+        screen.getByText('Удалит весь прогресс и настройки. Это действие необратимо.'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Удалить всё' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Отмена' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Сбросить все данные' })).toBeNull();
+    });
+
+    it('restores the row on cancel, touching nothing', () => {
+      updateSettings({ dailyGoal: 35 });
+      renderScreen();
+      openConfirm();
+      fireEvent.click(screen.getByRole('button', { name: 'Отмена' }));
+
+      expect(screen.getByRole('button', { name: 'Сбросить все данные' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Удалить всё' })).toBeNull();
+      expect(clearAllData).not.toHaveBeenCalled();
+      expect(reload).not.toHaveBeenCalled();
+      expect(getSettings().dailyGoal).toBe(35);
+    });
+
+    it('wipes every wordavi key and reboots on confirm', () => {
+      updateSettings({ dailyGoal: 35 });
+      renderScreen();
+      openConfirm();
+      fireEvent.click(screen.getByRole('button', { name: 'Удалить всё' }));
+
+      expect(clearAllData).toHaveBeenCalled();
+      const leftovers: string[] = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('wordavi:')) leftovers.push(key);
+      }
+      expect(leftovers).toEqual([]);
+      expect(reload).toHaveBeenCalled();
+    });
   });
 });

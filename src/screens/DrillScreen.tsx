@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { currentAvailableModeIds } from '@/app/availability';
 import { Button, VerdictBlock } from '@/components';
 import type { DrillServices, LearningMode, ModeLabels } from '@/modes';
-import { findMode } from '@/modes';
+import { findMode, MIXED_MODE_ID, setMixedAvailability } from '@/modes';
 import { log } from '@/services/log';
 import { startRecognition } from '@/services/speech';
 import { showToast } from '@/services/toast';
@@ -71,6 +72,13 @@ export function DrillScreen(props: DrillScreenProps) {
     log.error(NS, 'unknown mode', { modeId: props.modeId });
     return null;
   }
+  if (mode.id === MIXED_MODE_ID) {
+    // The mix may only draw from modes this browser can serve. Sampled here
+    // rather than at the button that started the round, so a resumed or retried
+    // mixed round is filtered by the capabilities of *this* moment. Idempotent:
+    // re-running it on a re-render writes the same list.
+    setMixedAvailability(currentAvailableModeIds());
+  }
   return <DrillRunner {...props} mode={mode} />;
 }
 
@@ -130,6 +138,9 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
 
   const Prompt = mode.Prompt;
   const AnswerZone = mode.AnswerZone;
+  // A composite mode names the mode each question actually came from; a single
+  // mode has one title for the whole round.
+  const titleKey = (question === null ? undefined : mode.titleKeyFor?.(question)) ?? mode.titleKey;
 
   return (
     <div className="screen safe-top safe-x" data-mode={mode.id}>
@@ -148,8 +159,11 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
             key={swapKey}
             className={`flex flex-col items-center gap-3.5 text-center ${swapClass}`}
           >
-            <p className="font-extrabold text-overline text-text-muted lowercase tracking-wide">
-              <ModeOverline title={t(mode.titleKey, { defaultValue: mode.titleKey })} />
+            <p
+              data-testid="mode-overline"
+              className="font-extrabold text-overline text-text-muted lowercase tracking-wide"
+            >
+              <ModeOverline title={t(titleKey, { defaultValue: titleKey })} />
             </p>
             <Prompt
               question={question}

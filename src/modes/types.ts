@@ -19,7 +19,17 @@ import type { Question, QuestionSource, Verdict } from '@/session';
 /** Registration + display order, matching the home-screen mode list. */
 export const MODE_ORDER = ['words', 'digits', 'listen', 'choice', 'speak', 'grocery'] as const;
 
-export type ModeId = (typeof MODE_ORDER)[number];
+/**
+ * The composite mode behind the home screen's big button: every question comes
+ * from one of the single modes. Registered like any other mode (the drill
+ * resolves it by id) but deliberately outside {@link MODE_ORDER} — it is not a
+ * row in the mode list.
+ */
+export const MIXED_MODE_ID = 'mixed';
+
+export type SingleModeId = (typeof MODE_ORDER)[number];
+
+export type ModeId = SingleModeId | typeof MIXED_MODE_ID;
 
 /** A browser capability a mode cannot work without. */
 export type Capability = 'tts' | 'speech';
@@ -98,6 +108,12 @@ export interface LearningMode {
    * `matchText` over the n-best list). Absent = submit the first alternative.
    */
   pickGiven?: (alternatives: string[], question: Question) => string;
+  /**
+   * Per-question overline title, for a composite mode whose questions come from
+   * several modes. Absent = the mode's own {@link LearningMode.titleKey}, which
+   * is what every single mode wants.
+   */
+  titleKeyFor?: (question: Question) => string;
   Prompt: ComponentType<PromptProps>;
   AnswerZone: ComponentType<AnswerZoneProps>;
 }

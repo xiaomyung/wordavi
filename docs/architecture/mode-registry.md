@@ -121,6 +121,30 @@ Filtering happens once, in one place, so no screen has to special-case a missing
 API. This mirrors the PWA rule from [[overview]]: online-or-unsupported features
 disappear cleanly rather than erroring.
 
+## The mixed round
+
+The big start button on home is not a mode row: it plays a **mixed round**, in
+which every question comes from another of the modes the browser can currently
+serve. It is built as one more `LearningMode` (`id: 'mixed'`) that delegates —
+generation asks an available mode's own generator, and the prompt and answer
+controls are that mode's own, resolved from the question id (every question id
+carries the mode that made it). It is registered like the rest but deliberately
+left out of the mode-list order, so home still shows exactly the mode rows
+above, and the round, scoring, parked-round and retry machinery needs no special
+case.
+
+Two rules keep the mix honest:
+
+- **Availability.** The screens hand the mixed mode the list of modes that pass
+  the capability filtering described above, so a listening mode never turns up
+  inside a mixed round on a device with no Spanish voice.
+- **Anti-streak.** A mode used by either of the last two questions is skipped
+  while another candidate exists, so a uniform draw cannot clump into "three by
+  ear in a row". A question the SRS brings back for another try still replays
+  its own mode: revision outranks shuffling.
+
+Tapping a mode row is unchanged — that plays only that mode, start to finish.
+
 ## Adding a mode or a whole new subject
 
 Because the registry is flat and typed, extension is additive:

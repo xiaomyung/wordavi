@@ -6,7 +6,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: without it iOS reports every env(safe-area-inset-*) as
+         0 and the .safe-top/.safe-bottom padding every screen carries does nothing. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Учим испанские числа: цены, веса, количество." />
     <meta name="color-scheme" content="light dark" />
     <!-- theme-color mirrors --color-surface in tokens.css (light default / .dark); theme.ts repaints the non-media tag -->

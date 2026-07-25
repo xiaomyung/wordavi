@@ -92,6 +92,9 @@ vi.mock('@/modes', async () => {
   return {
     findMode: (id: string) => (id === 'stub' ? stubMode : undefined),
     allModes: () => [stubMode],
+    // The drill only reaches for these when it is running the composite mode.
+    MIXED_MODE_ID: 'mixed',
+    setMixedAvailability: () => {},
   };
 });
 

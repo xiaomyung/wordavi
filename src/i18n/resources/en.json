@@ -35,6 +35,10 @@
     "grocery": {
       "title": "Prices & weights",
       "example": "2,35 € · 250 g · dos kilos y medio"
+    },
+    "mixed": {
+      "title": "Mixed round",
+      "sub": "questions from every mode"
     }
   },
   "drill": {
@@ -143,7 +147,11 @@
     "import_label": "Restore from a file",
     "import_sub": "Load progress from a file you downloaded before",
     "install_label": "Install the app",
-    "install_sub": "Works offline, opens from your home screen"
+    "install_sub": "Works offline, opens from your home screen",
+    "reset_label": "Reset all data",
+    "reset_warning": "Deletes all progress and settings. This cannot be undone.",
+    "reset_confirm": "Delete everything",
+    "reset_cancel": "Cancel"
   },
   "onboarding": {
     "step1_greeting": "Hello! · ¡Hola!",
@@ -158,10 +166,19 @@
     "step3_goal_sub": "answers per day · less is fine",
     "step4_title": "Five minutes a day and the numbers become second nature",
     "step4_subtitle": "Mistakes are normal: the tricky numbers will keep coming back until they stick.",
-    "step4_goal_pill": "Goal — 20 answers a day · less is fine",
+    "step4_goal_pill": "Goal — {{n}} answers a day · less is fine",
     "step4_cta": "Start the first round",
     "step4_ghost": "Look at the modes first",
-    "install_cta": "Install the app"
+    "install_cta": "Install the app",
+    "install_title": "Install it on your phone",
+    "install_sub": "Works offline and opens from your home screen — like any other app.",
+    "install_success": "Installed! Look for wordaví on your home screen — or just carry on here.",
+    "continue_browser": "Continue in the browser",
+    "mic_title": "Microphone — for the “Say it aloud” mode",
+    "mic_sub": "Only needed while you speak. Nothing is recorded and nothing is kept.",
+    "mic_allow": "Allow the microphone",
+    "mic_done": "done",
+    "mic_later": "later is fine — in your browser settings"
   },
   "stats": {
     "title": "Stats",

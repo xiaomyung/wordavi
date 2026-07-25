@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "lib": ["ES2023"],
+    // DOM: e2e specs run browser code inside page.evaluate().
+    "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -9,5 +10,12 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "e2e"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "e2e",
+    "tests/architecture.test.ts",
+    "tests/components/answer-controls-layers.test.ts",
+    "tests/components/scroll-area-layers.test.ts"
+  ]
 }

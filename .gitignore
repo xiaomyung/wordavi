@@ -10,7 +10,8 @@ coverage/
 !.env.example
 .idea/
 .vscode/
-.claude/
-CLAUDE.md
 .obsidian/
 *.tsbuildinfo
+design-handoff/
+*.canvas
+dev-dist/

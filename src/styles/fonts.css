@@ -1,0 +1,20 @@
+/* self-hosted webfonts (no CDN at runtime) - see fonts.md.
+   Per-weight index files carry every subset (latin, latin-ext, cyrillic, ...)
+   split by unicode-range, so the browser fetches only the scripts it renders;
+   Russian (cyrillic) and Spanish accents (latin-ext) both route correctly.
+   All ship font-display: swap. */
+
+/* Alegreya - display: numerals, Spanish content, titles, verdicts, wordmark */
+@import "@fontsource/alegreya/500.css";
+@import "@fontsource/alegreya/600.css";
+@import "@fontsource/alegreya/700.css";
+
+/* Alegreya italic - Spanish phrase prompt, verdict lines */
+@import "@fontsource/alegreya/500-italic.css";
+@import "@fontsource/alegreya/600-italic.css";
+
+/* Nunito Sans - interface: labels, body, buttons, captions */
+@import "@fontsource/nunito-sans/400.css";
+@import "@fontsource/nunito-sans/600.css";
+@import "@fontsource/nunito-sans/700.css";
+@import "@fontsource/nunito-sans/800.css";

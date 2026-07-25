@@ -1,0 +1,53 @@
+/* Onboarding step motion — the same language as the app's screen change
+   (src/app/screen-transition.css), scaled to a step inside one screen: the
+   incoming step fades and rises over --duration-swap, while the copy it
+   replaces fades out over --duration-release on top of it. The outgoing copy
+   is a detached overlay, so navigation never waits on an animation — the new
+   step is already in place and interactive. Nothing travels more than 12px and
+   nothing loops (motion.md). */
+
+@keyframes wa-step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wa-step-enter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wa-step-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.wa-step-enter {
+  animation: wa-step-enter var(--duration-swap) var(--ease-out-soft) both;
+}
+
+.wa-step-leave {
+  animation: wa-step-leave var(--duration-release) var(--ease-out-soft) forwards;
+}
+
+/* Reduced motion: opacity only, no travel (a11y.md). The global reset already
+   collapses the duration; this keeps the shape honest for anyone reading the
+   stylesheet or overriding that reset. */
+@media (prefers-reduced-motion: reduce) {
+  .wa-step-enter {
+    animation-name: wa-step-enter-fade;
+  }
+}

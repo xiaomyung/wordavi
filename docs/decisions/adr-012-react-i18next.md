@@ -1,10 +1,10 @@
 ---
-title: react-i18next for RU/EN UI
+title: react-i18next for the interface languages
 date: 2026-07-24
 ---
 
 ## Context
-The UI needs Russian and English, while the learning target language (es-ES) is fixed and never user-selectable.
+The interface needs more than one language, while the learning target language (es-ES) is fixed and never user-selectable. Russian and English shipped first; Spanish followed in 0.2.0 — see [[adr-019-es-ui-language]].
 
 ## Decision
 Use react-i18next with bundled RU and EN locale files and typed translation keys. The engine emits keys, not literal strings, so UI language stays decoupled from learning content.

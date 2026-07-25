@@ -17,8 +17,13 @@
     "moduleDetection": "force",
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "vite-plugin-pwa/client"],
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests"],
+  "exclude": [
+    "tests/architecture.test.ts",
+    "tests/components/answer-controls-layers.test.ts",
+    "tests/components/scroll-area-layers.test.ts"
+  ]
 }

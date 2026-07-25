@@ -1,0 +1,240 @@
+/* wordavi design tokens - v1
+   Source of truth for color, type, spacing, radius, shadow.
+   Tailwind v4 CSS-first configuration: light values in @theme,
+   dark values override the same custom properties under .dark
+   (class-strategy dark mode: <html class="dark">). */
+
+@theme {
+  /* fonts (self-hosted; see fonts.md) */
+  --font-display: "Alegreya", Georgia, "Times New Roman", serif;
+  --font-sans: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  /* type scale (px equivalents in comments) */
+  --text-prompt-xl: 5.75rem; /* 92 - big numeral prompt; line-height 1 */
+  --text-prompt-lg: 3.5rem; /* 56 - price-tag prompt; line-height 1.05 */
+  --text-spanish: 2.125rem; /* 34 - Spanish phrase prompt, italic; lh 1.2 */
+  --text-title-lg: 1.875rem; /* 30 - screen greeting / result title */
+  --text-title: 1.5rem; /* 24 - screen titles */
+  --text-verdict: 1.4375rem; /* 23 - verdict line, display italic */
+  --text-body-lg: 1.125rem; /* 18 - input text */
+  --text-body: 1rem; /* 16 */
+  --text-label: 0.875rem; /* 14 - buttons (weight 700-800) */
+  --text-caption: 0.78125rem; /* 12.5 - secondary captions (weight 600) */
+  --text-overline: 0.75rem; /* 12 - mode labels (weight 800) */
+
+  /* spacing: 4px base grid */
+  --spacing: 0.25rem;
+  --spacing-screen: 1.25rem; /* 20 - screen side padding */
+  --spacing-touch: 2.75rem; /* 44 - minimum touch target */
+
+  /* radii */
+  --radius-key: 0.75rem; /* 12 - accent keys, icon buttons, tiles */
+  --radius-input: 0.875rem; /* 14 - text inputs */
+  --radius-button: 1rem; /* 16 - CTAs, choice buttons, mode rows */
+  --radius-card: 1.25rem; /* 20 - cards, grouped lists */
+  --radius-pill: 999px; /* chips, toggles, segmented controls */
+
+  /* color - surfaces & text */
+  --color-surface: #faf2e1;
+  --color-surface-raised: #fffdf6;
+  --color-surface-sunken: #f2e6cb;
+  --color-surface-well: #efe3c6;
+  --color-text: #3a2a1c;
+  --color-text-muted: #7a6650;
+  --color-text-faint: #ab9878; /* placeholders only - not AA body text */
+  --color-border: #eadcbe;
+  --color-border-strong: #ddcfaf;
+
+  /* color - accent (terracotta) */
+  --color-accent: #ac4a17;
+  --color-accent-pressed: #97400f;
+  --color-accent-shelf: #8a3b10; /* 3D underside of pressables */
+  --color-accent-tint: #fff6ea; /* selected choice fill */
+  --color-on-accent: #fff8ef;
+  --color-focus-ring: rgb(172 74 23 / 0.16);
+
+  /* color - verdicts (correct / almost / wrong) */
+  --color-correct: #567527;
+  --color-correct-text: #465f1d;
+  --color-correct-tint: #f3f7e8;
+  --color-almost: #96700d;
+  --color-almost-text: #77590c;
+  --color-almost-tint: #f7edd2;
+  --color-wrong: #a83a22;
+  --color-wrong-text: #8e2f1a;
+  --color-wrong-tint: #fbefea;
+
+  /* aliases required by app conventions */
+  --color-success: #567527;
+  --color-warning: #96700d;
+  --color-danger: #a83a22;
+
+  /* color - component details */
+  --color-disabled-bg: #f2e6cb;
+  --color-disabled-text: #ab9878;
+  --color-hole-bg: #f1e7d2; /* price-tag punch hole */
+  --color-hole-ring: #c9b285;
+  --color-shelf-line: #eadcbe; /* raised-card underside */
+  --color-shelf-glint: rgb(255 255 255 / 1);
+
+  /* shadows (color parts reference vars so .dark adapts) */
+  --shadow-shelf: 0 3px 0 var(--color-accent-shelf), inset 0 1.5px 0 rgb(255 236 208 / 0.35);
+  --shadow-shelf-raised: 0 2px 0 var(--color-shelf-line), inset 0 1px 0 var(--color-shelf-glint);
+  --shadow-float: 0 1px 2px rgb(58 42 28 / 0.06), 0 10px 28px rgb(58 42 28 / 0.1);
+  --shadow-focus: 0 0 0 4px var(--color-focus-ring);
+
+  /* --- implementation extensions (not from design contract) --- */
+
+  /* brand mark: the app icon's own two colours, mirroring the dark-theme
+     accent / on-accent pair. Theme-STABLE on purpose — the installed icon,
+     the favicon and the onboarding tile are one drawing, and a mark that
+     repainted itself with the theme would stop being the same mark. They are
+     deliberately absent from the .dark block, and the mark is the only thing
+     allowed to use them: today that is the onboarding app tile, with
+     public/favicon.svg repeating the same two values as literals because a
+     standalone icon file cannot read a token. */
+  --color-brand-tile: #e08344;
+  --color-brand-glyph: #2a1005;
+
+  /* price tag: the design's raised-card shelf plus the ambient float drop, so
+     the tag lifts off whatever surface it sits on (price-tag.md). Composed from
+     the two shadow tokens above rather than restated, so both stay single-source
+     and the .dark overrides flow through. */
+  --shadow-tag: var(--shadow-shelf-raised), var(--shadow-float);
+
+  /* font weights (Nunito Sans / Alegreya usage weights) */
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* mono - slider tick labels only */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
+
+  /* orphan type sizes (small supplementary text not in the core scale) */
+  --text-cta: 1.0625rem; /* 17 - default CTA label ("--text-label +2", buttons.md) */
+  --text-choice: 1.625rem; /* 26 - choice-tile numeral (choice-buttons.md) */
+  --text-sub-strong: 0.9375rem; /* 15 */
+  --text-sub: 0.8125rem; /* 13 */
+  --text-flag: 0.6875rem; /* 11 - needs-practice badge */
+  --text-tick: 0.625rem; /* 10 - slider tick labels */
+
+  /* motion - easings (see motion.md) */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-soft: ease-out;
+
+  /* motion - durations */
+  --duration-press: 90ms; /* shelf button press */
+  --duration-release: 140ms; /* shelf button release */
+  --duration-key: 70ms; /* accent key sink */
+  --duration-flash: 300ms; /* inserted-letter flash */
+  --duration-swap: 240ms; /* question swap / progress rule */
+  --duration-verdict: 350ms; /* verdict stamp */
+  --duration-text: 200ms; /* verdict text / toast */
+  --duration-ring: 600ms; /* daily-goal ring sweep */
+  --duration-stamp: 420ms; /* day stamp pop */
+  --duration-toggle: 140ms; /* toggle knob slide */
+  --duration-tick: 160ms; /* combo chip tick */
+
+  /* component sizes (px equivalents in comments) */
+  --size-cta: 3.5rem; /* 56 - primary CTA height */
+  --size-cta-tall: 3.75rem; /* 60 - tall CTA height */
+  --size-key: 3rem; /* 48 - accent key height */
+  --size-choice: 4rem; /* 64 - choice button height */
+  --size-icon-button: 2.75rem; /* 44 - icon button */
+  --size-mic: 6.25rem; /* 100 - mic button */
+  --size-speaker: 6rem; /* 96 - speaker button */
+  --size-input: 3.25rem; /* 52 - text input height */
+  --size-thumb: 1.75rem; /* 28 - slider thumb (>=44 hit slop) */
+  --size-stamp: 1.625rem; /* 26 - verdict stamp glyph */
+  --size-toggle-w: 3.375rem; /* 54 - toggle track width */
+  --size-toggle-h: 2rem; /* 32 - toggle track height */
+  --size-knob: 1.5rem; /* 24 - toggle knob */
+  --size-streak-stamp: 1.75rem; /* 28 - loyalty-card stamp */
+  --size-hole: 0.625rem; /* 10 - price-tag punch hole */
+  /* rendered punch hole: the contract's 10px reads as a dot next to a 56px
+     numeral, so the tag punches it 1.2x (12px) — same 1.5px ring, same fill,
+     still clear of the 42px left padding. */
+  --size-hole-tag: calc(var(--size-hole) * 1.2); /* 12 */
+  --size-icon-glyph: 1.125rem; /* 18 - icon glyph inside buttons */
+  --size-scrollbar: 0.375rem; /* 6 - overlay scrollbar rail width */
+
+  /* resolved-range spacing (design gave ranges; these are the picks) */
+  --spacing-stack: 0.75rem; /* 12 - stacked-element gap */
+  --spacing-section: 1.5rem; /* 24 - section gap */
+  --spacing-streak: 0.375rem; /* 6 - streak stamp gap */
+  --stroke-ring: 6px; /* daily-goal ring stroke */
+
+  /* thin radii */
+  --radius-progress: 2px; /* progress rule cap */
+  --radius-track: 3px; /* slider track */
+
+  /* the recurring 1.5px hairline: secondary CTA, paused/dashed shells, the
+     price-tag hole ring, the toggle/segmented knob underside. One stroke, one
+     token — the design contract names the colour but never the width. */
+  --stroke-hairline: 1.5px;
+
+  /* prose measure: how wide a centred paragraph is allowed to run before it
+     wraps. 310px is the drill's own Spanish-phrase clamp (drill-digits.html),
+     the widest of the app's prose clamps, so the token adopts that value; the
+     onboarding/crash copy keeps its slightly narrower 19rem until someone
+     converges the two deliberately. */
+  --measure-prose: 19.375rem; /* 310 */
+
+  /* paused surface (design left this un-tokenized; warm cream) */
+  --color-surface-paused: #fbf5e7;
+
+  /* overlay scrollbar: the app draws its own so the platform bar (a classic
+     space-consuming control with arrow buttons on desktop Chrome) never reflows
+     the content when it appears. The rail borrows the slider's recessed track
+     and the thumb a warm tan a step stronger than --color-border-strong, which
+     is tuned for hairlines and reads as nothing at 6px wide; dragging paints
+     the thumb accent so the grip confirms the grab. */
+  --color-scrollbar-track: #efe3c6;
+  --color-scrollbar-thumb: #c9b285;
+  --color-scrollbar-thumb-active: #ac4a17;
+}
+
+/* dark theme - same design language, warm umber (never gray-black) */
+.dark {
+  --color-surface: #281c0e;
+  --color-surface-raised: #342613;
+  --color-surface-sunken: #1f1509;
+  --color-surface-well: #3f2f19;
+  --color-text: #f7ecd6;
+  --color-text-muted: #bfa98a;
+  --color-text-faint: #94805f;
+  --color-border: #4b3a22;
+  --color-border-strong: #5e4c33;
+  --color-accent: #e08344;
+  --color-accent-pressed: #d07538;
+  --color-accent-shelf: #a3541d;
+  --color-accent-tint: #493119;
+  --color-on-accent: #2a1005;
+  --color-focus-ring: rgb(224 131 68 / 0.22);
+  --color-correct: #9dbf60;
+  --color-correct-text: #c3dc96;
+  --color-correct-tint: #433b1e;
+  --color-almost: #dba943;
+  --color-almost-text: #eacb84;
+  --color-almost-tint: #4b381a;
+  --color-wrong: #e27258;
+  --color-wrong-text: #f2ac98;
+  --color-wrong-tint: #4c311d;
+  --color-success: #9dbf60;
+  --color-warning: #dba943;
+  --color-danger: #e27258;
+  --color-disabled-bg: #3b2b16;
+  --color-disabled-text: #94805f;
+  --color-hole-bg: #221809;
+  --color-hole-ring: #5e4c33;
+  --color-shelf-line: #1f1509;
+  --color-shelf-glint: rgb(255 255 255 / 0.05);
+  --shadow-float: 0 1px 2px rgb(0 0 0 / 0.25), 0 10px 28px rgb(0 0 0 / 0.4);
+
+  /* --- implementation extensions (not from design contract) --- */
+  --color-surface-paused: #2e2110;
+  --color-scrollbar-track: #3f2f19;
+  --color-scrollbar-thumb: #6f5a3b;
+  --color-scrollbar-thumb-active: #e08344;
+}

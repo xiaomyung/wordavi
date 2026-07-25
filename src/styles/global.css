@@ -80,11 +80,15 @@
     padding-left: env(safe-area-inset-left);
   }
 
-  /* scroll-region: fixed-flow header, scrolling content beneath it */
+  /* scroll-region: fixed-flow header, scrolling content beneath it.
+     Fixed height (not min-height): the screen must clamp to the viewport so
+     .screen-content becomes the scroller — with min-height the frame grows to
+     its content, the inner overflow never activates, and its
+     overscroll-behavior swallows wheel/touch without scrolling anything. */
   .screen {
     display: flex;
     flex-direction: column;
-    min-height: var(--app-min-h);
+    height: var(--app-min-h);
     overflow: hidden;
   }
 

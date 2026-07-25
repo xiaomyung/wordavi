@@ -4,6 +4,12 @@ title: Changelog
 
 For what wordavi does today from a learner's point of view, see the [[user-guide]]. Release history follows.
 
+## 0.2.3 - 2026-07-25
+
+- The documentation site stops serving one build's scripts alongside another
+  build's pages: nothing it publishes is fingerprinted, so nothing but the fonts
+  is cached by URL any more.
+
 ## 0.2.2 - 2026-07-25
 
 - The documentation's graph view no longer prints one note's title over another:

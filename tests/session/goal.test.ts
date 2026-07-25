@@ -11,6 +11,7 @@ import {
   localDayKey,
   localMonthKey,
   type StreakState,
+  settleStreak,
   shiftDayKey,
   toGoalVerdicts,
 } from '@/session';
@@ -127,6 +128,67 @@ describe('dayDiff', () => {
   });
 });
 
+describe('settleStreak', () => {
+  it('keeps a run stamped today', () => {
+    const prev: StreakState = { current: 4, best: 9, lastGoalDate: '2026-07-25' };
+    expect(settleStreak(prev, '2026-07-25')).toEqual(prev);
+  });
+
+  it('keeps a run stamped yesterday: today is still winnable', () => {
+    const prev: StreakState = { current: 4, best: 9, lastGoalDate: '2026-07-24' };
+    expect(settleStreak(prev, '2026-07-25')).toEqual(prev);
+  });
+
+  it('ends a run whose last stamped day is older than yesterday', () => {
+    const prev: StreakState = { current: 7, best: 7, lastGoalDate: '2026-07-18' };
+    expect(settleStreak(prev, '2026-07-25')).toEqual({
+      current: 0,
+      best: 7,
+      lastGoalDate: '2026-07-18',
+    });
+  });
+
+  it('measures the gap in calendar days across month and year ends', () => {
+    for (const today of ['2026-08-01', '2027-01-01', '2026-03-01']) {
+      const alive: StreakState = { current: 3, best: 3, lastGoalDate: shiftDayKey(today, -1) };
+      expect(settleStreak(alive, today).current).toBe(3);
+      const lapsed: StreakState = { current: 3, best: 3, lastGoalDate: shiftDayKey(today, -2) };
+      expect(settleStreak(lapsed, today).current).toBe(0);
+    }
+  });
+
+  it('settles on local calendar days, not elapsed hours', () => {
+    // Just short of two full days apart, but one calendar day: still running.
+    const prev: StreakState = {
+      current: 2,
+      best: 2,
+      lastGoalDate: localDayKey(new Date(2026, 6, 24, 0, 1)),
+    };
+    expect(settleStreak(prev, localDayKey(new Date(2026, 6, 25, 23, 59))).current).toBe(2);
+    // Barely over a day apart, but two calendar days: over.
+    expect(settleStreak(prev, localDayKey(new Date(2026, 6, 26, 0, 5))).current).toBe(0);
+  });
+
+  it('has nothing to keep without a stamped day', () => {
+    const fresh: StreakState = { current: 0, best: 0, lastGoalDate: null };
+    expect(settleStreak(fresh, '2026-07-25')).toEqual(fresh);
+    // A count with no day behind it cannot be verified; zero is the honest read.
+    expect(settleStreak({ current: 5, best: 5, lastGoalDate: null }, '2026-07-25').current).toBe(0);
+  });
+
+  it('leaves a stamp dated ahead of today alone', () => {
+    // The clock moved backwards (a timezone hop, a corrected device).
+    const prev: StreakState = { current: 3, best: 3, lastGoalDate: '2026-07-26' };
+    expect(settleStreak(prev, '2026-07-25')).toEqual(prev);
+  });
+
+  it('does not mutate the state it settles', () => {
+    const prev: StreakState = { current: 7, best: 7, lastGoalDate: '2026-07-18' };
+    settleStreak(prev, '2026-07-25');
+    expect(prev).toEqual({ current: 7, best: 7, lastGoalDate: '2026-07-18' });
+  });
+});
+
 describe('evaluateStreak', () => {
   const base: StreakState = { current: 0, best: 0, lastGoalDate: null };
 
@@ -166,5 +228,36 @@ describe('evaluateStreak', () => {
     const days = ['2026-07-21', '2026-07-22', '2026-07-23', '2026-07-24'];
     for (const d of days) s = evaluateStreak(s, d, true);
     expect(s).toEqual({ current: 4, best: 4, lastGoalDate: '2026-07-24' });
+  });
+
+  it('a run broken days ago is over before anything new is stamped', () => {
+    const prev: StreakState = { current: 7, best: 7, lastGoalDate: '2026-07-18' };
+    expect(evaluateStreak(prev, '2026-07-25', false)).toEqual({
+      current: 0,
+      best: 7,
+      lastGoalDate: '2026-07-18',
+    });
+  });
+
+  it('restarts at 1 without resurrecting the run it replaced', () => {
+    const lapsed = evaluateStreak(
+      { current: 7, best: 7, lastGoalDate: '2026-07-18' },
+      '2026-07-25',
+      false,
+    );
+    expect(evaluateStreak(lapsed, '2026-07-25', true)).toEqual({
+      current: 1,
+      best: 7,
+      lastGoalDate: '2026-07-25',
+    });
+  });
+
+  it('counts consecutive days over month and year ends', () => {
+    expect(
+      evaluateStreak({ current: 4, best: 4, lastGoalDate: '2026-07-31' }, '2026-08-01', true),
+    ).toEqual({ current: 5, best: 5, lastGoalDate: '2026-08-01' });
+    expect(
+      evaluateStreak({ current: 9, best: 12, lastGoalDate: '2026-12-31' }, '2027-01-01', true),
+    ).toEqual({ current: 10, best: 12, lastGoalDate: '2027-01-01' });
   });
 });

@@ -2,12 +2,13 @@ import { generateNumber, type NumberRange, type Rng } from '@/engine';
 import {
   type Accepted,
   classifyNumber,
+  type PromptPayload,
   type Question,
   type QuestionSource,
   type RoundConfig,
   type SkillBucket,
 } from '@/session';
-import { questionId } from './questionId';
+import { ownsQuestion, questionId } from './questionId';
 
 /**
  * Bucket → value-range mapping for the five number modes (words, digits,
@@ -59,6 +60,12 @@ export const NUMBER_BUCKETS = [
 ] as const satisfies readonly SkillBucket[];
 
 export type NumberBucket = (typeof NUMBER_BUCKETS)[number];
+
+/**
+ * The only payload a number mode mints, and the only one its zones can read: a
+ * numeral to show, a phrase to say, a value to tile.
+ */
+const NUMBER_PAYLOADS = ['number'] as const satisfies readonly PromptPayload['kind'][];
 
 /** Coarse span of each number bucket, before the round's range is applied. */
 const SPAN: Record<NumberBucket, NumberRange> = {
@@ -166,6 +173,12 @@ export function numberSource(
         prompt: { kind: 'number', value },
         accepted: accepted(value),
       };
+    },
+    // `accepted` differs per mode over the very same value, so an id minted
+    // elsewhere is a question this mode's zone cannot grade — and a payload that
+    // is not a plain number is one it cannot even draw.
+    canReplay(question) {
+      return ownsQuestion(question, modeId, NUMBER_PAYLOADS);
     },
   };
 }

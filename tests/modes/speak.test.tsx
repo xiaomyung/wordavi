@@ -43,7 +43,6 @@ function renderZone(over: Partial<AnswerZoneProps> = {}) {
     question: spokenQuestion(26),
     services: stubServices(),
     verdict: null,
-    expectedDisplay: '26',
     onSubmit: vi.fn(),
     micDenied: false,
     onMicDenied: vi.fn(),
@@ -114,7 +113,6 @@ describe('speak zones', () => {
           question={question}
           services={spy.services}
           verdict={null}
-          expectedDisplay="715"
           onSubmit={vi.fn()}
           micDenied={false}
           onMicDenied={vi.fn()}

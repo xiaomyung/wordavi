@@ -34,7 +34,9 @@ test('the voice modes pause with an explanation while the written ones stay live
     'aria-disabled',
     'true',
   );
-  await expect(page.getByRole('button', { name: /Цены и веса/ })).toHaveAttribute(
+  // Prices are typed, not spoken: the row keeps working without a network, and
+  // only loses the optional replay of the price.
+  await expect(page.getByRole('button', { name: /Цены и веса/ })).not.toHaveAttribute(
     'aria-disabled',
     'true',
   );

@@ -155,6 +155,13 @@ describe('storage', () => {
       expect(getSrs()).toBeNull();
       expect(events).toContainEqual({ key: STORAGE_KEYS.srs, kind: 'corrupt' });
     });
+
+    it('rejects a payload that is not a JSON object at all', () => {
+      for (const state of ['blob', 42, ['a'], null]) {
+        localStorage.setItem(STORAGE_KEYS.srs, JSON.stringify({ state, updatedAt: 'now' }));
+        expect(getSrs(), JSON.stringify(state)).toBeNull();
+      }
+    });
   });
 
   describe('round', () => {
@@ -164,6 +171,16 @@ describe('storage', () => {
       expect(getRound()).toMatchObject({ modeId: 'drill', state: { index: 3 } });
       clearRound();
       expect(getRound()).toBeNull();
+    });
+
+    it('rejects a payload that is not a JSON object at all', () => {
+      for (const state of ['blob', 42, ['a'], null]) {
+        localStorage.setItem(
+          STORAGE_KEYS.round,
+          JSON.stringify({ modeId: 'drill', state, updatedAt: 'now' }),
+        );
+        expect(getRound(), JSON.stringify(state)).toBeNull();
+      }
     });
   });
 

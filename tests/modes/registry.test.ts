@@ -44,8 +44,10 @@ describe('mode registry', () => {
     expect(modeRequires('words')).toEqual([]);
     expect(modeRequires('digits')).toEqual([]);
     expect(modeRequires('choice')).toEqual([]);
+    // Grocery replays audio on demand but poses its question on a price tag, so
+    // it belongs with the modes a voiceless browser can still run.
+    expect(modeRequires('grocery')).toEqual([]);
     expect(modeRequires('listen')).toEqual(['tts']);
-    expect(modeRequires('grocery')).toEqual(['tts']);
     expect(modeRequires('speak')).toEqual(['speech']);
   });
 

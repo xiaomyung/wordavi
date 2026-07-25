@@ -90,7 +90,9 @@ export function startRecognition(options: StartRecognitionOptions): RecognitionH
     if (!result) return;
     if (result.isFinal) {
       const alternatives = collectAlternatives(result);
-      log.debug(NS, 'recognition alternatives received', { alternatives });
+      // The count, never the transcripts: the log ring is persisted and travels
+      // inside a problem report, and a microphone hears more than the answer.
+      log.debug(NS, 'recognition alternatives received', { count: alternatives.length });
       options.onFinal(alternatives);
     } else {
       const alt = result[0];

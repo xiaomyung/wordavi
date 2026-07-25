@@ -15,10 +15,10 @@ The whole app is a **pure static site**:
 - **No backend.** No API, no database, no server-side rendering, no accounts.
   Every feature runs in the browser.
 - **All state lives on the device**, in `localStorage`. See [[storage-schema]].
-- **Offline-first PWA.** The shell and assets are precached by a service
-  worker, so the app opens and works with no network. The few online-only
-  features (voice recognition, speech synthesis voices) degrade with a friendly
-  toast instead of failing silently.
+- **Offline-first PWA.** Everything is precached by a service worker, so the app
+  opens and works with no network. The one online-only feature - spoken answers,
+  which the browser transcribes on its vendor's servers - pauses with an
+  explanation instead of failing silently.
 - **Served as static files** by nginx inside a small container. Nothing is
   computed per request.
 
@@ -27,7 +27,7 @@ the client: a pure number-grammar engine, a session/SRS layer, a pluggable set
 of learning modes, and the screens that present them. That structure is
 described in [[layers]] and [[mode-registry]].
 
-## Current status vs the committed plan
+## What ships today
 
 **v0.2.0 ships the learning app**: six practice modes plus a mixed round, the
 number-grammar engine, light spaced repetition, a daily goal with streaks,

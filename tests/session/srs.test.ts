@@ -6,6 +6,7 @@ import {
   dueDelay,
   errorRateOf,
   initSrs,
+  isQuestion,
   masteryFloorOf,
   pickBucket,
   pickDueWrongItem,
@@ -212,6 +213,41 @@ describe('wrongQueue ≤1-per-3 pacing (pickDueWrongItem)', () => {
   });
 });
 
+describe('wrongQueue mode filtering (pickDueWrongItem accepts)', () => {
+  function queued(ids: readonly string[], dueAts: readonly number[]): SrsState {
+    const srs = initSrs();
+    srs.answeredCount = 50;
+    ids.forEach((id, i) => {
+      srs.wrongQueue.push({
+        question: q(id),
+        reappearances: 0,
+        consecutiveCorrect: 0,
+        dueAt: dueAts[i] ?? 0,
+      });
+    });
+    return srs;
+  }
+
+  const isWords = (question: Question): boolean => question.id.startsWith('words:');
+
+  it('skips items the round cannot grade and takes the most-overdue one it can', () => {
+    const srs = queued(['digits:n475', 'words:n700', 'words:n12'], [1, 40, 20]);
+    expect(pickDueWrongItem(srs, 10, -3, isWords)?.question.id).toBe('words:n12');
+    // Without the filter the un-gradeable item wins on due order alone.
+    expect(pickDueWrongItem(srs, 10, -3)?.question.id).toBe('digits:n475');
+  });
+
+  it('returns null rather than starving a round whose queue is all foreign', () => {
+    const srs = queued(['digits:n1', 'grocery:p2.35', 'listen:n9'], [0, 0, 0]);
+    expect(pickDueWrongItem(srs, 10, -3, isWords)).toBeNull();
+  });
+
+  it('defaults to accepting everything', () => {
+    const srs = queued(['digits:n1'], [0]);
+    expect(pickDueWrongItem(srs, 10, -3)?.question.id).toBe('digits:n1');
+  });
+});
+
 describe('SRS serialization', () => {
   it('round-trips through JSON', () => {
     let srs = updateSrsOnAnswer(initSrs(), q('a'), 'wrong');
@@ -226,5 +262,87 @@ describe('SRS serialization', () => {
     expect(deserializeSrs('garbage')).toEqual(initSrs());
     expect(deserializeSrs({ version: 2 })).toEqual(initSrs());
     expect(deserializeSrs({ version: 1, answeredCount: 'x' })).toEqual(initSrs());
+  });
+
+  it('drops wrongQueue entries whose question is not a question, keeping the rest', () => {
+    const good = q('words:n5');
+    const entry = (question: unknown): unknown => ({
+      question,
+      reappearances: 0,
+      consecutiveCorrect: 0,
+      dueAt: 3,
+    });
+    const restored = deserializeSrs({
+      version: 1,
+      answeredCount: 4,
+      buckets: {},
+      wrongQueue: [
+        entry({}), // no prompt, no accepted — reading either one throws
+        entry({ ...good, prompt: undefined }),
+        entry({ ...good, accepted: undefined }),
+        entry({ ...good, accepted: { canonical: 'cinco' } }), // no variants to match against
+        entry({ ...good, bucket: 'not_a_bucket' }),
+        entry({ ...good, prompt: { kind: 'number' } }),
+        entry(good),
+      ],
+    });
+
+    expect(restored.wrongQueue).toHaveLength(1);
+    expect(restored.wrongQueue[0]?.question).toEqual(good);
+    expect(restored.answeredCount).toBe(4);
+  });
+});
+
+describe('isQuestion', () => {
+  const words = q('words:n5');
+  const digits: Question = {
+    id: 'digits:n1500',
+    bucket: 'thousands',
+    prompt: { kind: 'number', value: 1500 },
+    accepted: { intVal: 1500 },
+  };
+
+  it('accepts every payload and target shape a mode mints', () => {
+    expect(isQuestion(words)).toBe(true);
+    expect(isQuestion(digits)).toBe(true);
+    expect(isQuestion({ ...digits, accepted: { intVal: 2, fracDigits: '50' } })).toBe(true);
+    expect(isQuestion({ ...words, fromWrongQueue: true })).toBe(true);
+    expect(
+      isQuestion({
+        id: 'grocery:p2.35',
+        bucket: 'price_cents',
+        prompt: { kind: 'price', euros: 2, cents: 35 },
+        accepted: {
+          canonical: 'dos con treinta y cinco',
+          variants: [{ text: 'dos treinta y cinco', note: 'colloquial' }],
+        },
+      }),
+    ).toBe(true);
+    expect(
+      isQuestion({
+        id: 'x:d1',
+        bucket: 'decimals',
+        prompt: { kind: 'decimal', intPart: 1, fracDigits: '05' },
+        accepted: { canonical: 'uno coma cero cinco', variants: [] },
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects anything the drill would dereference and find missing', () => {
+    expect(isQuestion(null)).toBe(false);
+    expect(isQuestion('words:n5')).toBe(false);
+    expect(isQuestion([words])).toBe(false);
+    expect(isQuestion({})).toBe(false);
+    expect(isQuestion({ ...words, id: 5 })).toBe(false);
+    expect(isQuestion({ ...words, bucket: 'nope' })).toBe(false);
+    expect(isQuestion({ ...words, prompt: { kind: 'colour', value: 5 } })).toBe(false);
+    expect(isQuestion({ ...words, prompt: { kind: 'number', value: 'five' } })).toBe(false);
+    expect(isQuestion({ ...words, prompt: { kind: 'quantity' } })).toBe(false);
+    expect(isQuestion({ ...words, accepted: { canonical: 'cinco', variants: ['cinco'] } })).toBe(
+      false,
+    );
+    expect(isQuestion({ ...words, accepted: { intVal: Number.NaN } })).toBe(false);
+    expect(isQuestion({ ...words, accepted: { intVal: 5, fracDigits: 50 } })).toBe(false);
+    expect(isQuestion({ ...words, fromWrongQueue: 'yes' })).toBe(false);
   });
 });

@@ -93,18 +93,38 @@ export function isGoalMet(day: DayRowLike, dailyGoal: number): boolean {
 }
 
 /**
+ * A stored streak read against the calendar (pure). `current` is only ever
+ * written when a day earns its stamp, so between stamps it is a claim about the
+ * past that the clock can invalidate on its own: once the last stamped day is
+ * older than yesterday the run is over, and every read has to say so rather than
+ * wait for the next stamp to correct it. `best` and `lastGoalDate` are the record
+ * of what happened and are left exactly as they are.
+ */
+export function settleStreak(prev: StreakState, today: string): StreakState {
+  // Yesterday still counts: today has not been played out yet. A date in the
+  // future means the clock moved backwards (a timezone hop, a corrected
+  // device) — not something to punish a learner for.
+  const alive = prev.lastGoalDate !== null && dayDiff(prev.lastGoalDate, today) <= 1;
+  return alive ? { ...prev } : { ...prev, current: 0 };
+}
+
+/**
  * Streak transition (pure). Local dates are passed as YYYY-MM-DD; the caller owns
  * the timezone. A day earns its stamp when the goal is met; the current streak
  * increments once per qualifying day when calendar-consecutive, restarts at 1 on a
  * gap, and is idempotent for repeated same-day calls. `best` is always preserved.
  */
 export function evaluateStreak(prev: StreakState, today: string, goalMet: boolean): StreakState {
+  // Days that passed without a stamp count first — otherwise a run broken three
+  // days ago would be carried forward untouched by every call that has nothing
+  // to stamp.
+  const settled = settleStreak(prev, today);
   // Nothing to stamp yet, or today is already stamped (repeat calls are
-  // idempotent) — either way the streak is unchanged.
-  if (!goalMet || prev.lastGoalDate === today) return { ...prev };
-  const consecutive = prev.lastGoalDate !== null && dayDiff(prev.lastGoalDate, today) === 1;
-  const current = consecutive ? prev.current + 1 : 1;
-  const best = Math.max(prev.best, current);
+  // idempotent) — either way the streak stands as settled.
+  if (!goalMet || settled.lastGoalDate === today) return settled;
+  const consecutive = settled.lastGoalDate !== null && dayDiff(settled.lastGoalDate, today) === 1;
+  const current = consecutive ? settled.current + 1 : 1;
+  const best = Math.max(settled.best, current);
   slog('info', 'goal.streak', { current, best, today, consecutive });
   return { current, best, lastGoalDate: today };
 }

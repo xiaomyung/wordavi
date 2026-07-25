@@ -49,17 +49,28 @@ function setSearch(search: string): void {
   window.history.replaceState({}, '', `/${search}`);
 }
 
-function question(id: string, value: number): Question {
+/** The id the words mode mints for a value; a round is resumed by its own mode. */
+function wordsId(value: number): string {
+  return `words:n${value}`;
+}
+
+function question(value: number): Question {
   return {
-    id,
+    id: wordsId(value),
     bucket: 'd0_15',
     prompt: { kind: 'number', value },
     accepted: { canonical: `numero ${value}`, variants: [{ text: `numero ${value}` }] },
   };
 }
 
-function answered(id: string): AnswerRecord {
-  return { questionId: id, bucket: 'd0_15', given: 'x', verdict: 'correct', fromWrongQueue: false };
+function answered(value: number): AnswerRecord {
+  return {
+    questionId: wordsId(value),
+    bucket: 'd0_15',
+    given: 'x',
+    verdict: 'correct',
+    fromWrongQueue: false,
+  };
 }
 
 /** A words round parked two answers in, with its third question on stage. */
@@ -76,8 +87,8 @@ function parkedRound(): RoundSerialized {
     },
     rngDraws: 0,
     step: 3,
-    served: [question('q1', 4), question('q2', 9), question('q3', 12)],
-    records: [answered('q1'), answered('q2')],
+    served: [question(4), question(9), question(12)],
+    records: [answered(4), answered(9)],
     score: { points: 20, combo: 2, bestCombo: 2 },
     lastWrongQueueStep: -3,
     finished: false,
@@ -139,12 +150,13 @@ describe('App home', () => {
     render(<App />);
 
     expect(within(rowNamed('By ear')).getByText('needs a Spanish voice')).toBeInTheDocument();
-    expect(within(rowNamed('Prices & weights')).getByText('voice')).toBeInTheDocument();
     expect(
       within(rowNamed('Say it aloud')).getByText('needs microphone access'),
     ).toBeInTheDocument();
-    // Written modes need neither, so they stay startable.
+    // Written modes need neither, so they stay startable — including the shop
+    // counter, where audio is only a replay of a price already on screen.
     expect(rowNamed('Number → in words')).not.toHaveAttribute('aria-disabled');
+    expect(rowNamed('Prices & weights')).not.toHaveAttribute('aria-disabled');
   });
 
   it('pauses every voice mode while offline, and restores them when the network returns', () => {
@@ -213,6 +225,26 @@ describe('App home', () => {
 
     expect(getSettings().lastMode).toBe('words');
     expect(screen.getByText('3 of 10')).toBeInTheDocument();
+  });
+
+  it('resumes past a parked question the mode cannot present, instead of onto it', () => {
+    const parked = parkedRound();
+    const foreign: Question = {
+      id: 'grocery:q1500',
+      bucket: 'qty_fractions',
+      prompt: { kind: 'quantity', grams: 1500 },
+      accepted: { canonical: 'kilo y medio', variants: [{ text: 'kilo y medio' }] },
+    };
+    setRound('words', { ...parked, served: [...parked.served.slice(0, 2), foreign] });
+    render(<App />);
+
+    fireEvent.click(rowNamed('Number → in words'));
+
+    // Back on the last question this mode did serve, with the way onward that a
+    // question it cannot render would never have offered.
+    expect(screen.getByText('2 of 10')).toBeInTheDocument();
+    expect(screen.queryByText('1500')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
   });
 
   it('starts a fresh mixed round from the big button while a single-mode round is parked', () => {

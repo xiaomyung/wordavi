@@ -12,7 +12,9 @@ import {
 } from './srs';
 import {
   type AnswerRecord,
+  isAnswerRecord,
   isDigitTarget,
+  isQuestion,
   type Question,
   type QuestionContext,
   type QuestionSource,
@@ -38,6 +40,15 @@ const NOOP_SOURCE: QuestionSource = {
     throw new Error('round: question source not available (retry/resumed round)');
   },
 };
+
+/**
+ * Whether `source` claims a question it did not generate this round. A source
+ * that does not answer the question takes everything, which is what a
+ * single-mode test double and {@link NOOP_SOURCE} both want.
+ */
+function acceptsReplay(source: QuestionSource, question: Question): boolean {
+  return source.canReplay?.(question) ?? true;
+}
 
 /* ------------------------------------------------------------------ *
  * Verdict computation
@@ -137,7 +148,9 @@ export function nextQuestion(state: RoundState): RoundState {
     if (item === undefined) return state;
     question = item;
   } else {
-    const due = pickDueWrongItem(state.srs, step, state.lastWrongQueueStep);
+    const due = pickDueWrongItem(state.srs, step, state.lastWrongQueueStep, (q) =>
+      acceptsReplay(state.source, q),
+    );
     if (due !== null) {
       question = { ...due.question, fromWrongQueue: true };
       lastWrongQueueStep = step;
@@ -303,23 +316,50 @@ export function serializeRound(state: RoundState): RoundSerialized {
   };
 }
 
+function isRoundConfig(value: unknown): value is RoundConfig {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.modeId === 'string' &&
+    (v.size === 'endless' || Number.isFinite(v.size)) &&
+    Number.isFinite(v.rangeMin) &&
+    Number.isFinite(v.rangeMax) &&
+    Number.isFinite(v.seed) &&
+    (v.acceptNoAccents === undefined || typeof v.acceptNoAccents === 'boolean')
+  );
+}
+
+function isScore(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return Number.isFinite(v.points) && Number.isFinite(v.combo) && Number.isFinite(v.bestCombo);
+}
+
+/**
+ * Guard for the round slot. The questions inside are checked element by
+ * element: the drill hands a resumed one straight to the matcher and to the
+ * mode's zones, so a slot carrying even one malformed question is discarded
+ * whole — that costs the learner an unfinished round, keeping it costs them
+ * every round after it.
+ */
 export function isRoundSerialized(value: unknown): value is RoundSerialized {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
     v.version === 1 &&
-    typeof v.config === 'object' &&
-    v.config !== null &&
+    isRoundConfig(v.config) &&
     typeof v.rngDraws === 'number' &&
     typeof v.step === 'number' &&
     Array.isArray(v.served) &&
+    v.served.every(isQuestion) &&
     Array.isArray(v.records) &&
-    typeof v.score === 'object' &&
-    v.score !== null &&
+    v.records.every(isAnswerRecord) &&
+    isScore(v.score) &&
     typeof v.lastWrongQueueStep === 'number' &&
     typeof v.finished === 'boolean' &&
     typeof v.retry === 'boolean' &&
-    Array.isArray(v.retryItems)
+    Array.isArray(v.retryItems) &&
+    v.retryItems.every(isQuestion)
   );
 }
 
@@ -329,24 +369,61 @@ export function deserializeRound(
   srs: SrsState,
   source?: QuestionSource,
 ): RoundState {
+  const src = source ?? NOOP_SOURCE;
   const rng = makeCountingRng(data.config.seed, data.rngDraws);
-  const pending = data.served.length > data.records.length;
-  const current = pending ? (data.served.at(-1) ?? null) : null;
-  slog('info', 'round.resume', { step: data.step, answered: data.records.length });
+  const served = [...data.served];
+  let step = data.step;
+  let current: Question | null = null;
+
+  if (served.length > data.records.length) {
+    const pending = served.at(-1) ?? null;
+    if (pending !== null && !acceptsReplay(src, pending)) {
+      // The mode cannot present this one, and it is the only thing the resumed
+      // drill would show — so drop it, together with the `served` slot that
+      // finishRound pairs with a record by index, and carry on at the next
+      // question.
+      served.pop();
+      step = Math.max(0, step - 1);
+      slog('info', 'round.resume.drop', { id: pending.id });
+    } else {
+      current = pending;
+    }
+  }
+
+  // A retry round takes its next question from `retryItems` instead of asking
+  // the source, so an item the source refuses would be handed straight back —
+  // dropping the served slot alone would leave the learner on it. The refused
+  // items are therefore removed from the part of the list still to come; their
+  // misses stay in the wrongQueue, which is where they wait for a round that can
+  // grade them. `config.size` follows the list, the way buildRetryRound sets it,
+  // so the progress the drill shows is the number of questions it will ask.
+  const unserved = data.records.length + (current === null ? 0 : 1);
+  const retryItems = data.retry
+    ? [
+        ...data.retryItems.slice(0, unserved),
+        ...data.retryItems.slice(unserved).filter((item) => acceptsReplay(src, item)),
+      ]
+    : [...data.retryItems];
+  const config =
+    data.retry && retryItems.length !== data.retryItems.length
+      ? { ...data.config, size: retryItems.length }
+      : data.config;
+
+  slog('info', 'round.resume', { step, answered: data.records.length });
   return {
-    config: data.config,
+    config,
     rngDraws: data.rngDraws,
-    step: data.step,
+    step,
     current,
-    served: [...data.served],
+    served,
     records: [...data.records],
     score: { ...data.score },
     lastWrongQueueStep: data.lastWrongQueueStep,
     finished: data.finished,
     retry: data.retry,
-    retryItems: [...data.retryItems],
+    retryItems,
     srs,
-    source: source ?? NOOP_SOURCE,
+    source: src,
     rng,
   };
 }

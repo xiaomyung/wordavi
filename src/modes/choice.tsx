@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, ChoiceButton, type ChoiceState } from '@/components';
-import { buildDistractors, createRng, formatNumber, parseDigitAnswer, shuffle } from '@/engine';
+import { buildDistractors, createRng, formatNumber, shuffle } from '@/engine';
 import type { Question } from '@/session';
 import { numberSource } from './buckets';
 import { PromptStage, promptSpanish, SpanishPhrase } from './prompt';
@@ -29,14 +29,12 @@ const OPTION_COUNT = 4;
 const LABEL_KEYS = ['common.check', 'drill.choice_hint'] as const;
 
 /**
- * The numeric answer of a choice question: the payload value when it is a plain
- * number, otherwise parsed out of the drill's `expectedDisplay` (a wrongQueue
- * item from another mode can carry a price/quantity payload).
+ * The numeric answer of a choice question. Null for a payload that has no
+ * single number to tile — the source only ever claims `{ kind: 'number' }`
+ * questions (see its `canReplay`), so the tiles below are always four.
  */
-export function answerValueOf(question: Question, expectedDisplay = ''): number | null {
-  if (question.prompt.kind === 'number') return question.prompt.value;
-  const parsed = parseDigitAnswer(expectedDisplay);
-  return parsed === null || 'fracDigits' in parsed ? null : parsed.intVal;
+export function answerValueOf(question: Question): number | null {
+  return question.prompt.kind === 'number' ? question.prompt.value : null;
 }
 
 /** Distractor pool bound: the whole decade band of the answer, at least 0–99. */
@@ -46,8 +44,8 @@ function optionRange(answer: number): { min: number; max: number } {
 }
 
 /** The four tiles, answer included, in stable display order. */
-export function choiceOptions(question: Question, expectedDisplay = ''): number[] {
-  const answer = answerValueOf(question, expectedDisplay);
+export function choiceOptions(question: Question): number[] {
+  const answer = answerValueOf(question);
   if (answer === null) return [];
   const rng = createRng(`choice:${question.id}:${answer}`);
   const distractors = buildDistractors(answer, rng, optionRange(answer));
@@ -65,12 +63,9 @@ function ChoicePrompt({ question, labels }: PromptProps) {
   );
 }
 
-function ChoiceAnswer({ question, verdict, expectedDisplay, onSubmit, labels }: AnswerZoneProps) {
-  const options = useMemo(
-    () => choiceOptions(question, expectedDisplay),
-    [question, expectedDisplay],
-  );
-  const answer = answerValueOf(question, expectedDisplay);
+function ChoiceAnswer({ question, verdict, onSubmit, labels }: AnswerZoneProps) {
+  const options = useMemo(() => choiceOptions(question), [question]);
+  const answer = answerValueOf(question);
   const [pick, setPick] = useState<{ id: string; value: number | null }>({
     id: question.id,
     value: null,

@@ -34,7 +34,7 @@ export { groceryMode, grocerySource } from './grocery';
 export { listenMode } from './listen';
 export { mixedMode, modeOfQuestion, setMixedAvailability } from './mixed';
 export { numeralFontSizePx, promptDisplay, promptSpanish } from './prompt';
-export { modeIdOf, questionId } from './questionId';
+export { modeIdOf, ownsQuestion, questionId } from './questionId';
 export { allModes, findMode, getMode, modeRequires, registerMode } from './registry';
 export { pickGiven, speakMode } from './speak';
 export type {

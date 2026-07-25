@@ -16,9 +16,9 @@ const RING_CAP = 400;
 const MAX_SERIALIZED_BYTES = 64 * 1024;
 const PERSIST_DEBOUNCE_MS = 1000;
 /**
- * Default excerpt size for {@link serializeLog}. Mirrors `BODY_MAX_CHARS` in
- * services/report.ts — the report composer is the only caller that matters and
- * it budgets the excerpt against the same cap.
+ * Default excerpt size for {@link serializeLog}, in raw characters. The report
+ * composer — the only caller that matters — always passes a budget of its own,
+ * narrowed to what its channel can carry percent-encoded.
  */
 const DEFAULT_SERIALIZE_CHARS = 1800;
 const MAX_DATA_CHARS = 2000;

@@ -75,16 +75,25 @@ export function isDayRowArray(value: unknown): value is DayRow[] {
   return Array.isArray(value) && value.every(isDayRow);
 }
 
+/*
+ * The two payload slots below carry a `state` this layer deliberately types
+ * `unknown`: its schema belongs to the session layer, which storage may not
+ * import. What storage can still insist on is that the payload is a JSON object
+ * at all — a string, an array or a number is corruption no reader could ever
+ * make sense of, and rejecting it here means a bad slot resets instead of
+ * travelling on. The session's own deserializers own everything below that.
+ */
+
 export function isSavedRound(value: unknown): value is SavedRound {
   if (!isRecord(value)) return false;
   return (
-    typeof value.modeId === 'string' && typeof value.updatedAt === 'string' && 'state' in value
+    typeof value.modeId === 'string' && typeof value.updatedAt === 'string' && isRecord(value.state)
   );
 }
 
 export function isSrsSlot(value: unknown): value is SrsSlot {
   if (!isRecord(value)) return false;
-  return typeof value.updatedAt === 'string' && 'state' in value;
+  return typeof value.updatedAt === 'string' && isRecord(value.state);
 }
 
 function isErrorEntry(value: unknown): value is ErrorEntry {

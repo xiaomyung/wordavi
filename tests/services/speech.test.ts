@@ -147,6 +147,23 @@ describe('speech', () => {
     expect(onFinal).toHaveBeenCalledWith(['tres', 'trece', 'seis', 'diez', 'doce']);
   });
 
+  it('never writes what the microphone heard into the log', async () => {
+    const { instances } = installFakeCtor();
+    const { speech } = await freshSpeech();
+    const { clearLog, serializeLog } = await import('@/services/log');
+    clearLog();
+
+    speech.startRecognition({ onFinal: vi.fn(), onError: vi.fn() });
+    instances[0]?.onresult?.(makeResult(['tres', 'una cosa privada'], true));
+
+    // The ring buffer is persisted and travels inside a problem report, so a
+    // transcript reaching it would leave the device.
+    const written = serializeLog();
+    expect(written).not.toContain('una cosa privada');
+    expect(written).not.toContain('tres');
+    expect(written).toContain('recognition alternatives received');
+  });
+
   it('forwards interim results to the interim callback, not onFinal', async () => {
     const { instances } = installFakeCtor();
     const { speech } = await freshSpeech();

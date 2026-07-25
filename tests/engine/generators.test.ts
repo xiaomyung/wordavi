@@ -32,6 +32,65 @@ describe('generateNumber', () => {
   });
 });
 
+describe('generateNumber at the range slider detents', () => {
+  // Every detent is a power of ten, so the top digit band collapses to the
+  // single value `max`: exactly the case where a per-band draw over-samples it.
+  const DETENTS = [10, 100, 1_000, 10_000, 100_000, 1_000_000] as const;
+  const DRAWS = 50_000;
+
+  function shareOf(target: number, range: { min: number; max: number }, seed: string): number {
+    const rng = createRng(seed);
+    let hits = 0;
+    for (let i = 0; i < DRAWS; i++) {
+      if (generateNumber(rng, range) === target) hits++;
+    }
+    return hits / DRAWS;
+  }
+
+  it('returns 0 for the collapsed 0..0 range', () => {
+    expect(generateNumber(createRng('detent-zero'), { min: 0, max: 0 })).toBe(0);
+  });
+
+  it.each(DETENTS)('draws the exact max %i no oftener than a fair share', (max) => {
+    const share = shareOf(max, { min: 0, max }, `detent-${max}`);
+    // Ceiling is three times what uniform sampling of the whole range would
+    // give that one value — generous, and still far under the quarter of all
+    // draws a whole band's worth would be.
+    expect(share).toBeLessThanOrEqual(3 / (max + 1));
+  });
+
+  it('draws the exact max no oftener than a fair share when min is a detent too', () => {
+    const share = shareOf(10_000, { min: 1_000, max: 10_000 }, 'detent-span');
+    expect(share).toBeLessThanOrEqual(3 / 9001);
+  });
+
+  it('keeps digit lengths balanced when the top band holds one value', () => {
+    const rng = createRng('detent-balance');
+    const draws = 9000;
+    const byLength = new Map<number, number>();
+    for (let i = 0; i < draws; i++) {
+      const length = String(generateNumber(rng, { min: 0, max: 1000 })).length;
+      byLength.set(length, (byLength.get(length) ?? 0) + 1);
+    }
+    for (const length of [1, 2, 3]) {
+      expect((byLength.get(length) ?? 0) / draws, `${length}-digit share`).toBeGreaterThan(0.28);
+    }
+    expect((byLength.get(4) ?? 0) / draws, '"mil" share').toBeLessThan(0.01);
+  });
+
+  it('still gives a partly covered band its full digit-length share', () => {
+    // 0..250 keeps 151 of the 900 three-digit values; a learner who asked for
+    // hundreds should still meet them about a third of the time.
+    const rng = createRng('partial-band');
+    const draws = 6000;
+    let hundreds = 0;
+    for (let i = 0; i < draws; i++) {
+      if (generateNumber(rng, { min: 0, max: 250 }) >= 100) hundreds++;
+    }
+    expect(hundreds / draws).toBeCloseTo(1 / 3, 1);
+  });
+});
+
 describe('generatePrice', () => {
   const rng = createRng('gp');
   const draws = 4000;

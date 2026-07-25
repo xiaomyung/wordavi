@@ -41,17 +41,17 @@ vi.mock('@/modes', async () => {
     );
   }
 
-  function AnswerZone({
-    question,
-    verdict,
-    expectedDisplay,
-    onSubmit,
-    micDenied,
-    onMicDenied,
-    recognitionUnavailable,
-    onRecognitionError,
-    labels,
-  }: AnswerZoneProps) {
+  function AnswerZone(props: AnswerZoneProps) {
+    const {
+      question,
+      verdict,
+      onSubmit,
+      micDenied,
+      onMicDenied,
+      recognitionUnavailable,
+      onRecognitionError,
+      labels,
+    } = props;
     const [typed, setTyped] = useState('');
     const accepted = question.accepted as { canonical: string };
     return h(
@@ -63,7 +63,9 @@ vi.mock('@/modes', async () => {
         readOnly: verdict !== null,
         onChange: (event: { target: { value: string } }) => setTyped(event.target.value),
       }),
-      h('span', { 'data-testid': 'expected' }, verdict === null ? '' : expectedDisplay),
+      // Every prop name the drill actually passed, so the zone's slice of the
+      // contract is asserted rather than assumed.
+      h('span', { 'data-testid': 'zone-props' }, Object.keys(props).join(',')),
       h('span', { 'data-testid': 'mic-denied' }, String(micDenied)),
       h(
         'span',
@@ -205,12 +207,25 @@ describe('DrillScreen', () => {
 
   it('reveals the right answer on a wrong verdict without punishing the learner', () => {
     renderDrill();
+    const expected = `numero ${promptValue()}`;
+    // a11y.md: the answer is nowhere on screen until it has been checked.
+    expect(screen.queryByText(expected, { exact: false })).toBeNull();
+
     press('answer wrong');
 
-    const expected = screen.getByTestId('expected').textContent ?? '';
-    expect(expected).toMatch(/^numero \d+$/);
     expect(screen.getByText(`Правильно: ${expected}`)).toBeInTheDocument();
     expect(screen.getByText('бывает, ещё встретится')).toBeInTheDocument();
+  });
+
+  it('names the answer only in its own verdict block, never through the answer zone', () => {
+    renderDrill();
+    const passed = (screen.getByTestId('zone-props').textContent ?? '').split(',');
+
+    expect(passed).toContain('question');
+    expect(passed).toContain('verdict');
+    // The zone grades what the learner typed; the drill alone spells the answer
+    // out, so nothing that carries it is threaded into the modes layer.
+    expect(passed.filter((name) => /expected/i.test(name))).toEqual([]);
   });
 
   it('ticks the score and combo chips as answers land', () => {

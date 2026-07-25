@@ -2,11 +2,13 @@
  * Home screen — visual truth: design-handoff/wordavi-design-v1/screens/home.html
  * (RU light, RU dark, offline frames).
  *
- * Prop-driven: navigation and round-starting are callbacks the app wires up, and
- * the parked round arrives as a prop because the app has to route it too. The
- * screen reads its own dashboard facts (settings, day rows, progress) straight
- * from `@/storage`, because nothing else on the app side owns them and they are
- * pure reads.
+ * Prop-driven: navigation and round-starting are callbacks the app wires up, the
+ * parked round arrives as a prop because the app has to route it too, and so does
+ * the streak — a stored run only means something once it has been read against
+ * today's date, and the app owns that reading for every screen that prints it.
+ * The screen reads the rest of its dashboard facts (settings, day rows, lifetime
+ * totals) straight from `@/storage`, because nothing else on the app side owns
+ * them and they are pure reads.
  */
 import type { TFunction } from 'i18next';
 import type { ReactNode } from 'react';
@@ -60,6 +62,8 @@ export interface HomeScreenProps {
    * single-mode one only marks its own row.
    */
   parkedRound?: ParkedRound | null;
+  /** Days in the run as of today — the calendar can end a run on its own. */
+  streakDays: number;
   /** A row was tapped: play that one mode (resuming it when it is the parked one). */
   onStartMode: (modeId: string) => void;
   /** The big button: play a round mixed from every available mode. */
@@ -127,7 +131,6 @@ function progressArgs(parked: ParkedRound, t: TFunction): { done: number; total:
 interface HomeData {
   dailyGoal: number;
   doneToday: number;
-  streakDays: number;
   stampDays: StreakStampDay[];
   hasHistory: boolean;
 }
@@ -142,7 +145,6 @@ function readHomeData(now: Date): HomeData {
   return {
     dailyGoal,
     doneToday: days.find((day) => day.date === today)?.correct ?? 0,
-    streakDays: progress.streakCurrent,
     stampDays: buildStreakWindow(days, dailyGoal, today),
     hasHistory: progress.totalAnswered > 0 || days.length > 0,
   };
@@ -240,6 +242,7 @@ function iconFor(mode: HomeModeItem): ReactNode {
 export function HomeScreen({
   modes,
   parkedRound = null,
+  streakDays,
   onStartMode,
   onStartMixed,
   onResume,
@@ -324,7 +327,7 @@ export function HomeScreen({
           <div className="flex items-center gap-2 border-border border-t border-dashed pt-3">
             <StreakStamps days={data.stampDays} className="flex-1" />
             <span className="numerals shrink-0 whitespace-nowrap font-bold text-caption text-text-muted">
-              {t('home.streak_n', { count: data.streakDays })}
+              {t('home.streak_n', { count: streakDays })}
             </span>
           </div>
         </Card>

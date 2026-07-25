@@ -97,6 +97,47 @@ describe('install', () => {
       expect(errorSpy).toHaveBeenCalled();
     });
 
+    it('announces the spent prompt after the learner dismisses it', async () => {
+      window.dispatchEvent(makePromptEvent({ outcome: 'dismissed' }));
+      const seen: boolean[] = [];
+      const unsubscribe = install.onInstallAvailabilityChange(() => {
+        seen.push(install.canPromptInstall());
+      });
+
+      await install.promptInstall();
+      unsubscribe();
+
+      // An affordance re-reading availability here must find nothing left to offer.
+      expect(seen).toEqual([false]);
+    });
+
+    it('announces the spent prompt after an accepted prompt and after a throw', async () => {
+      const notified = vi.fn();
+      const unsubscribe = install.onInstallAvailabilityChange(notified);
+
+      window.dispatchEvent(makePromptEvent({ outcome: 'accepted' }));
+      notified.mockClear();
+      await install.promptInstall();
+      expect(notified).toHaveBeenCalledTimes(1);
+
+      window.dispatchEvent(makePromptEvent({ prompt: vi.fn().mockRejectedValue(new Error('no')) }));
+      notified.mockClear();
+      await install.promptInstall();
+      unsubscribe();
+
+      expect(notified).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays quiet when there was no prompt to spend', async () => {
+      const notified = vi.fn();
+      const unsubscribe = install.onInstallAvailabilityChange(notified);
+
+      await install.promptInstall();
+      unsubscribe();
+
+      expect(notified).not.toHaveBeenCalled();
+    });
+
     it('clears the captured prompt when appinstalled fires', () => {
       window.dispatchEvent(makePromptEvent());
       expect(install.canPromptInstall()).toBe(true);

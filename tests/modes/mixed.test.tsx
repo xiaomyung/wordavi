@@ -220,6 +220,42 @@ describe('modeOfQuestion', () => {
   });
 });
 
+describe('mixed wrongQueue replay', () => {
+  function sampleOf(id: string): Question {
+    const mode = getMode(id as ModeId);
+    const config = roundConfig({ modeId: mode.id });
+    const bucket = mode.source.eligibleBuckets(config)[0];
+    if (bucket === undefined) throw new Error(`no eligible bucket for ${mode.id}`);
+    return generateFor(mode, bucket, 4, config);
+  }
+
+  it('claims every mode’s question while the whole mix is available', () => {
+    for (const mode of allModes()) {
+      expect(mixed.source.canReplay?.(sampleOf(mode.id)), mode.id).toBe(true);
+    }
+  });
+
+  it('claims only the available modes’ questions', () => {
+    setMixedAvailability(['words', 'digits']);
+    expect(mixed.source.canReplay?.(sampleOf('words'))).toBe(true);
+    expect(mixed.source.canReplay?.(sampleOf('digits'))).toBe(true);
+    expect(mixed.source.canReplay?.(sampleOf('grocery'))).toBe(false);
+    expect(mixed.source.canReplay?.(sampleOf('speak'))).toBe(false);
+  });
+
+  it('claims an orphan id through the same fallback that renders it', () => {
+    const orphan: Question = {
+      id: 'gone:n42',
+      bucket: 'tens_y',
+      prompt: { kind: 'number', value: 42 },
+      accepted: { canonical: 'cuarenta y dos', variants: [{ text: 'cuarenta y dos' }] },
+    };
+    expect(mixed.source.canReplay?.(orphan)).toBe(true);
+    setMixedAvailability(['digits']);
+    expect(mixed.source.canReplay?.(orphan)).toBe(false);
+  });
+});
+
 describe('mixed zones', () => {
   const labels = labelsFor(mixed);
 
@@ -237,7 +273,6 @@ describe('mixed zones', () => {
           question={question}
           services={stubServices()}
           verdict={null}
-          expectedDisplay=""
           onSubmit={onSubmit}
           micDenied={false}
           onMicDenied={vi.fn()}

@@ -2,9 +2,11 @@
  * Stats screen — visual truth:
  * design-handoff/wordavi-design-v1/screens/stats.html (RU dark + day-zero light).
  *
- * Self-contained read: everything on this screen is derived from storage via
- * `computeStats`, so the app only has to hand it two callbacks. Streak stamps
- * never guilt — missed days are plain empty circles.
+ * Near self-contained read: the tiles, the skill bars and the day window are all
+ * derived from storage via `computeStats`. Only the streak numbers arrive as
+ * props, because a stored run has to be read against today's date before it can
+ * be printed and the app owns that reading for every screen that shows it. Streak
+ * stamps never guilt — missed days are plain empty circles.
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +31,10 @@ import { buildStreakWindow } from './streak-window';
  * ------------------------------------------------------------------ */
 
 export interface StatsScreenProps {
+  /** Days in the run as of today — the calendar can end a run on its own. */
+  streakCurrent: number;
+  /** The longest run ever reached; a lapse today never lowers it. */
+  streakBest: number;
   onBack: () => void;
   onStartFirstRound: () => void;
 }
@@ -58,8 +64,6 @@ const SKILL_LABEL_KEYS = {
 
 interface StatsData {
   stats: SessionStats;
-  streakCurrent: number;
-  streakBest: number;
   stampDays: StreakStampDay[];
   stampedToday: boolean;
   totalAnswers: number;
@@ -78,8 +82,6 @@ function readStatsData(now: Date): StatsData {
 
   return {
     stats,
-    streakCurrent: progress.streakCurrent,
-    streakBest: progress.streakBest,
     stampDays: buildStreakWindow(days, dailyGoal, today),
     stampedToday: todayRow !== undefined && isGoalMet(todayRow, dailyGoal),
     // The durable lifetime counter, falling back to the SRS tally when a
@@ -121,15 +123,20 @@ function EmptyStampGlyph() {
  * Screen
  * ------------------------------------------------------------------ */
 
-export function StatsScreen({ onBack, onStartFirstRound }: StatsScreenProps) {
+export function StatsScreen({
+  streakCurrent,
+  streakBest,
+  onBack,
+  onStartFirstRound,
+}: StatsScreenProps) {
   const { t } = useTranslation();
   const data = useMemo(() => readStatsData(new Date()), []);
 
   const streakSub = !data.hasData
     ? t('stats.empty_streak_sub')
     : data.stampedToday
-      ? t('home.streak_n', { count: data.streakCurrent })
-      : t('stats.streak_today_sub', { count: data.streakCurrent });
+      ? t('home.streak_n', { count: streakCurrent })
+      : t('stats.streak_today_sub', { count: streakCurrent });
 
   return (
     <div className="screen">
@@ -144,9 +151,9 @@ export function StatsScreen({ onBack, onStartFirstRound }: StatsScreenProps) {
         <Card>
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-extrabold text-sub-strong">{t('stats.streak_label')}</span>
-            {data.streakBest > 0 ? (
+            {streakBest > 0 ? (
               <span className="font-semibold text-caption text-text-muted">
-                {t('stats.streak_record', { count: data.streakBest })}
+                {t('stats.streak_record', { count: streakBest })}
               </span>
             ) : null}
           </div>

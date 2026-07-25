@@ -46,8 +46,9 @@ function notifyAvailability(): void {
 
 /**
  * Subscribe to anything that changes what an install affordance can offer: a
- * captured `beforeinstallprompt` (a manual recipe can become a real prompt) or
- * an install completing (the offer stops being true). Returns an unsubscribe.
+ * captured `beforeinstallprompt` (a manual recipe can become a real prompt), an
+ * install completing, or a shown prompt spending its captured event (the offer
+ * stops being true in both cases). Returns an unsubscribe.
  */
 export function onInstallAvailabilityChange(listener: AvailabilityListener): () => void {
   availabilityListeners.add(listener);
@@ -90,6 +91,11 @@ export async function promptInstall(): Promise<InstallPromptOutcome> {
   } catch (err) {
     log.error(NS, 'install prompt failed', { error: String(err) });
     return 'unavailable';
+  } finally {
+    // The captured event is spent whatever the learner chose, and
+    // `beforeinstallprompt` only fires once per page load: an affordance still
+    // offering a native prompt would be inert until a reload.
+    notifyAvailability();
   }
 }
 

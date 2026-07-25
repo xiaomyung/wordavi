@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearLog, log } from '@/services/log';
+import type { ReportPayload } from '@/services/report';
 import { composeReport, copyReport, sendReport } from '@/services/report';
 import { clearErrors, pushError } from '@/storage';
 import { setNavProp } from '../helpers/nav';
@@ -15,7 +16,22 @@ function mailtoBody(): string {
   return new URLSearchParams(query).get('body') ?? '';
 }
 
+/** The percent-encoded body the mail client receives — what a URL length limit applies to. */
+function mailtoEncodedBody(): string {
+  const href = window.location.href;
+  const marker = '&body=';
+  return href.slice(href.indexOf(marker) + marker.length);
+}
+
+/** A surrogate left without its partner: exactly what makes `encodeURIComponent` throw. */
+function hasLoneSurrogate(text: string): boolean {
+  return /[\uD800-\uDFFF]/.test(text.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, ''));
+}
+
 const TRUNCATION_WARNING = 'report body truncated to fit the channel cap';
+const TRUNCATION_MARKER = '…(truncated)';
+const GRINNING = '😀';
+const COMBINING_ACUTE = '\u0301';
 
 function fillLog(entries: number, paddingChars: number): void {
   const padding = 'x'.repeat(paddingChars);
@@ -236,6 +252,34 @@ describe('report', () => {
       );
     });
 
+    it('still sends when a diagnostics value cannot be serialized', async () => {
+      const payload = composeReport({ userText: 'note text', screenshots: [] });
+      const circular: Record<string, unknown> = {};
+      circular.self = circular;
+
+      const result = await sendReport({
+        ...payload,
+        settings: circular as unknown as ReportPayload['settings'],
+      });
+
+      expect(result.ok).toBe(true);
+      expect(mailtoBody()).toContain('note text');
+    });
+
+    it('returns a structured failure instead of throwing when the payload misbehaves', async () => {
+      const payload = { ...composeReport({ userText: 'bug', screenshots: [] }) };
+      Object.defineProperty(payload, 'screenshots', {
+        get(): never {
+          throw new Error('detached');
+        },
+      });
+
+      const result = await sendReport(payload);
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toContain('detached');
+    });
+
     it('embeds the diagnostics snapshot in the sent body', async () => {
       pushError({ t: 1, message: 'boom' });
       const payload = composeReport({ userText: 'note text', screenshots: [] });
@@ -297,7 +341,62 @@ describe('report', () => {
 
       expect(warnSpy).toHaveBeenCalledWith('report', TRUNCATION_WARNING, expect.anything());
       expect(mailtoBody().length).toBeLessThanOrEqual(1800);
-      expect(mailtoBody().endsWith('…(truncated)')).toBe(true);
+      expect(mailtoBody().endsWith(TRUNCATION_MARKER)).toBe(true);
+    });
+  });
+
+  describe('encoding-safe truncation', () => {
+    // One character of padding shifts the cut by one UTF-16 unit, so across the
+    // two runs the cut lands both between and inside a two-unit character.
+    const CUT_SHIFTS = ['', 'z'];
+
+    it('never cuts a surrogate pair in half', async () => {
+      for (const shift of CUT_SHIFTS) {
+        const payload = composeReport({
+          userText: `${shift}${GRINNING.repeat(1000)}`,
+          screenshots: [],
+        });
+        const result = await sendReport(payload);
+
+        expect(result.ok).toBe(true);
+        expect(hasLoneSurrogate(mailtoBody())).toBe(false);
+        expect(mailtoBody().endsWith(TRUNCATION_MARKER)).toBe(true);
+      }
+    });
+
+    it('never strands a combining mark from the letter it belongs to', async () => {
+      for (const shift of CUT_SHIFTS) {
+        const payload = composeReport({
+          userText: `${shift}${`e${COMBINING_ACUTE}`.repeat(1000)}`,
+          screenshots: [],
+        });
+        await sendReport(payload);
+
+        expect(mailtoBody().endsWith(`e${TRUNCATION_MARKER}`)).toBe(false);
+        expect(mailtoBody().endsWith(`e${COMBINING_ACUTE}${TRUNCATION_MARKER}`)).toBe(true);
+      }
+    });
+
+    it('caps a Cyrillic note by its encoded size, not its character count', async () => {
+      const payload = composeReport({ userText: 'привет мир '.repeat(400), screenshots: [] });
+      const result = await sendReport(payload);
+
+      expect(result.channel).toBe('mailto');
+      expect(mailtoEncodedBody().length).toBeLessThanOrEqual(1800);
+      expect(mailtoBody()).toContain('привет');
+    });
+
+    it('budgets the log excerpt against the encoded cap when the log is Cyrillic', async () => {
+      const warnSpy = vi.spyOn(log, 'warn').mockClear();
+      const padding = 'привет'.repeat(5);
+      for (let i = 0; i < 40; i += 1) log.info('session', `запись ${i}`, { padding });
+
+      const payload = composeReport({ userText: 'заметка', screenshots: [] });
+      await sendReport(payload);
+
+      expect(warnSpy).not.toHaveBeenCalledWith('report', TRUNCATION_WARNING, expect.anything());
+      expect(mailtoEncodedBody().length).toBeLessThanOrEqual(1800);
+      expect(mailtoBody()).toContain('запись 39');
     });
   });
 

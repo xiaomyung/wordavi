@@ -85,13 +85,18 @@ function availableModes(): readonly LearningMode[] {
  * Question → its origin mode
  * ------------------------------------------------------------------ */
 
+/** The mode whose prefix the id carries, or undefined when no mode claims it. */
+function originMode(question: Question): LearningMode | undefined {
+  const id = modeIdOf(question.id);
+  return SINGLE_MODES.find((mode) => mode.id === id);
+}
+
 /**
  * The mode a question came from. Falls back to `words` for an id no mode
  * claims — a question from an older build still has to be answerable.
  */
 export function modeOfQuestion(question: Question): LearningMode {
-  const id = modeIdOf(question.id);
-  return SINGLE_MODES.find((mode) => mode.id === id) ?? FALLBACK_MODE;
+  return originMode(question) ?? FALLBACK_MODE;
 }
 
 /* ------------------------------------------------------------------ *
@@ -152,6 +157,19 @@ export const mixedMode: LearningMode = {
       // Exactly one draw here plus whatever the delegate takes, all from the
       // round's counting rng — resume stays deterministic.
       return rng.pick(pool).source.generate(rng, ctx);
+    },
+    /**
+     * A mixed round hands every question to its origin mode, so it can replay
+     * anything that mode can: bounded by the same availability filter that
+     * bounds generation (a round running without a microphone does not re-serve
+     * a spoken miss), and by the origin's own claim, which is what keeps a
+     * payload its zones cannot draw out of the mix. An id no mode claims has no
+     * owner to ask and is drawn by the fallback mode, which reads any payload.
+     */
+    canReplay(question): boolean {
+      const origin = originMode(question);
+      if (origin === undefined) return availableModes().includes(FALLBACK_MODE);
+      return availableModes().includes(origin) && (origin.source.canReplay?.(question) ?? true);
     },
   },
   pickGiven(alternatives, question) {

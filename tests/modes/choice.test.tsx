@@ -58,16 +58,31 @@ describe('choiceOptions', () => {
     expect(choiceOptions(generated)).toContain(answerValueOf(generated));
   });
 
-  it('falls back to expectedDisplay for a foreign payload', () => {
+  it('has no tiles for a payload the mode never claims', () => {
     const foreign: Question = {
       id: 'grocery:q1500',
       bucket: 'qty_fractions',
       prompt: { kind: 'quantity', grams: 1500 },
-      accepted: { intVal: 1500 },
+      accepted: { canonical: 'kilo y medio', variants: [{ text: 'kilo y medio' }] },
     };
-    expect(answerValueOf(foreign, '1500')).toBe(1500);
-    expect(choiceOptions(foreign, '1500')).toContain(1500);
+    expect(answerValueOf(foreign)).toBeNull();
     expect(choiceOptions(foreign)).toEqual([]);
+    // …which is why the source refuses it: a round of this mode never has to
+    // render a board it cannot fill.
+    expect(choice.source.canReplay?.(foreign)).toBe(false);
+  });
+
+  it('refuses a payload wearing its own prefix, tiles or no tiles', () => {
+    // Only storage can pair the two: the prefix is this mode's, the payload is
+    // not a number, so there is nothing to tile and nothing to grade.
+    const corrupt: Question = {
+      id: 'choice:n475',
+      bucket: 'price_cents',
+      prompt: { kind: 'price', euros: 4, cents: 75 },
+      accepted: { intVal: 475 },
+    };
+    expect(choiceOptions(corrupt)).toEqual([]);
+    expect(choice.source.canReplay?.(corrupt)).toBe(false);
   });
 });
 
@@ -95,7 +110,6 @@ describe('choice zones', () => {
         question={question(702)}
         services={services}
         verdict={null}
-        expectedDisplay="702"
         onSubmit={onSubmit}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -118,7 +132,6 @@ describe('choice zones', () => {
         question={q}
         services={services}
         verdict={null}
-        expectedDisplay="702"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -131,7 +144,6 @@ describe('choice zones', () => {
         question={q}
         services={services}
         verdict="wrong"
-        expectedDisplay="702"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -152,7 +164,6 @@ describe('choice zones', () => {
         question={question(702)}
         services={services}
         verdict={null}
-        expectedDisplay="702"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -166,7 +177,6 @@ describe('choice zones', () => {
         question={question(26)}
         services={services}
         verdict={null}
-        expectedDisplay="26"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}

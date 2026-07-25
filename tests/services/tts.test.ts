@@ -375,6 +375,108 @@ describe('tts', () => {
     });
   });
 
+  describe('speak watchdog', () => {
+    const esEs = (): SpeechSynthesisVoice[] => [makeVoice({ lang: 'es-ES', localService: true })];
+
+    it('settles when the engine reports neither end nor error', async () => {
+      vi.useFakeTimers();
+      const synth = installFakeSynthesis(esEs());
+      const { tts, log } = await freshTts();
+      const warnSpy = vi.spyOn(log, 'warn');
+
+      let settled = false;
+      const promise = tts.speak('veintitres').then(() => {
+        settled = true;
+      });
+      await flushMicrotasks();
+      expect(tts.isSpeaking()).toBe(true);
+
+      // Still inside the budget for a ten-character word at normal rate.
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      await promise;
+
+      expect(settled).toBe(true);
+      expect(tts.isSpeaking()).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'tts',
+        expect.stringContaining('neither end nor error'),
+        expect.anything(),
+      );
+      // The cancel-before-speak, plus one to clear the wedged queue so the next
+      // prompt is not stuck behind an utterance that never finished.
+      expect(synth.cancel).toHaveBeenCalledTimes(2);
+    });
+
+    it('scales the budget to the utterance length and rate', async () => {
+      vi.useFakeTimers();
+      installFakeSynthesis(esEs());
+      const { tts } = await freshTts();
+
+      let settled = false;
+      const promise = tts
+        .speak('novecientos noventa y nueve mil novecientos noventa y nueve', {
+          rate: 'slow',
+          slower: true,
+        })
+        .then(() => {
+          settled = true;
+        });
+      await flushMicrotasks();
+
+      // Long past the budget a short word at normal rate would have been given.
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await promise;
+      expect(settled).toBe(true);
+    });
+
+    it('disarms once the utterance ends normally', async () => {
+      vi.useFakeTimers();
+      const synth = installFakeSynthesis(esEs());
+      const { tts, log } = await freshTts();
+      const warnSpy = vi.spyOn(log, 'warn');
+
+      const promise = tts.speak('cinco');
+      await flushMicrotasks();
+      const utterance = synth.speak.mock.calls[0]?.[0] as FakeUtterance;
+      utterance.onend?.();
+      await promise;
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(synth.cancel).toHaveBeenCalledTimes(1);
+      expect(warnSpy).not.toHaveBeenCalled();
+    });
+
+    it('leaves the newer utterance alone when a superseded one times out', async () => {
+      vi.useFakeTimers();
+      const synth = installFakeSynthesis(esEs());
+      const { tts } = await freshTts();
+
+      const first = tts.speak('uno');
+      await flushMicrotasks();
+      // Long and slow, so its own budget far outlives the first utterance's.
+      const second = tts.speak('novecientos noventa y nueve', { rate: 'slow', slower: true });
+      await flushMicrotasks();
+      expect(synth.cancel).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(4000);
+      await first;
+
+      expect(tts.isSpeaking()).toBe(true);
+      expect(synth.cancel).toHaveBeenCalledTimes(2);
+
+      const secondUtterance = synth.speak.mock.calls[1]?.[0] as FakeUtterance;
+      secondUtterance.onend?.();
+      await second;
+      expect(tts.isSpeaking()).toBe(false);
+    });
+  });
+
   describe('warmup', () => {
     it('speaks an empty, silent utterance to unlock iOS', async () => {
       const synth = installFakeSynthesis([]);

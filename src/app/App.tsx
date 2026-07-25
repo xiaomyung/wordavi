@@ -18,7 +18,9 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { ScreenTransition } from './ScreenTransition';
 import type { Screen } from './state';
 import { AppStateProvider, useAppState } from './state';
+import { settledStreak } from './streak';
 import { ToastHost } from './ToastHost';
+import { useGestureWarmup } from './useGestureWarmup';
 import { useHomeModes } from './useHomeModes';
 import { usePwaUpdate } from './usePwaUpdate';
 
@@ -136,6 +138,7 @@ function ScreenRouter() {
       return (
         <HomeRoute
           parkedRound={parkedRound()}
+          streakDays={settledStreak().current}
           // A row starts its own mode, and the drill picks the parked round up
           // when that mode matches — so a parked single-mode round continues
           // from its row.
@@ -189,8 +192,17 @@ function ScreenRouter() {
     case 'settings':
       return <SettingsScreen onBack={goBack} onReport={() => go({ kind: 'report' })} />;
 
-    case 'stats':
-      return <StatsScreen onBack={goBack} onStartFirstRound={startMixed} />;
+    case 'stats': {
+      const streak = settledStreak();
+      return (
+        <StatsScreen
+          streakCurrent={streak.current}
+          streakBest={streak.best}
+          onBack={goBack}
+          onStartFirstRound={startMixed}
+        />
+      );
+    }
 
     case 'report':
       return <ReportScreen onClose={goBack} />;
@@ -210,6 +222,7 @@ function ScreenRouter() {
 function AppRoot() {
   const { screen } = useAppState();
   usePwaUpdate(screen.kind);
+  useGestureWarmup();
   return (
     <ScreenTransition screenKey={screen.kind}>
       <ScreenRouter />

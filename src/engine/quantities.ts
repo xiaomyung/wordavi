@@ -1,5 +1,5 @@
 import { buildAccepted, fracDigitsToWords } from './decimals';
-import { numberToWords } from './numbers';
+import { numberToWords, wordsWithApocope } from './numbers';
 import type { AcceptedAnswer, AnswerVariant } from './types';
 
 /** A weight to be spoken, held in grams (the lossless internal unit). */
@@ -12,22 +12,28 @@ export type Quantity = { kind: 'weight'; grams: number };
  */
 export const GRAMS_PER_KILO = 1000;
 
-/** "un kilo" / "dos kilos" — apocope on the singular. */
+/**
+ * "un kilo" / "dos kilos" / "veintiún kilos". `kilo` is a masculine noun, so
+ * the count it follows is apocopated (as euros/céntimos are in prices.ts).
+ */
 function kilosPhrase(kg: number): string {
-  return kg === 1 ? 'un kilo' : `${numberToWords(kg)} kilos`;
+  return kg === 1 ? 'un kilo' : `${wordsWithApocope(kg)} kilos`;
 }
 
 /** "un kilogramo" / "dos kilogramos" — the full-word synonym, never noted. */
 function kilogramosPhrase(kg: number): string {
-  return kg === 1 ? 'un kilogramo' : `${numberToWords(kg)} kilogramos`;
+  return kg === 1 ? 'un kilogramo' : `${wordsWithApocope(kg)} kilogramos`;
 }
 
-/** "trescientos gramos". */
+/** "trescientos gramos" / "un gramo" / "treinta y un gramos". */
 function gramos(grams: number): string {
-  return `${numberToWords(grams)} gramos`;
+  return grams === 1 ? 'un gramo' : `${wordsWithApocope(grams)} gramos`;
 }
 
-/** Decimal-kg reading of a weight, e.g. 1200 g → "uno coma dos". */
+/**
+ * Decimal-kg reading of a weight, e.g. 1200 g → "uno coma dos". The whole part
+ * is read in full: the fraction, not the count, is what "kilos" follows.
+ */
 function decimalKgWords(grams: number): string {
   const kg = Math.floor(grams / GRAMS_PER_KILO);
   const remainder = grams % GRAMS_PER_KILO;
@@ -103,7 +109,12 @@ export function quantityToWords(q: Quantity): AcceptedAnswer {
   const remainder = g % GRAMS_PER_KILO;
   const variants: AnswerVariant[] = [
     { text: gramos(g), note: 'crossUnit' },
+    // "un kilo doscientos" drops the gramos noun. Spoken as a bare count the
+    // remainder keeps its full form, but the dropped noun is still understood,
+    // so the apocopated reading is heard too; both are accepted (identical
+    // texts collapse in buildAccepted).
     { text: `${kilosPhrase(kg)} ${numberToWords(remainder)}`, note: 'colloquial' },
+    { text: `${kilosPhrase(kg)} ${wordsWithApocope(remainder)}`, note: 'colloquial' },
   ];
   return buildAccepted(`${decimalKgWords(g)} kilos`, variants);
 }

@@ -31,16 +31,44 @@ function digitBands(min: number, max: number): Array<[number, number]> {
 }
 
 /**
+ * Digit bands paired with the weight they are drawn at.
+ *
+ * A band the range leaves intact is worth as much as every other intact band —
+ * that is the digit-length balancing. A band the range cut down holds fewer
+ * values than the band before it, and an equal weight would then make each of
+ * those values individually *more* likely than a shorter number: a range
+ * ending on a power of ten leaves a single-value top band, so `{ max: 1000 }`
+ * would spell "mil" on a quarter of all draws. Capping a band at the previous
+ * band's per-value share keeps the per-value probability non-increasing as
+ * numbers get longer, so a heavily clipped band is worth only the values it
+ * actually holds, while a band that kept most of its span still carries the
+ * full weight of its digit length.
+ */
+function weightedBands(min: number, max: number): Array<readonly [[number, number], number]> {
+  const items: Array<readonly [[number, number], number]> = [];
+  let prevWeight = 0;
+  let prevCount = 0;
+  for (const band of digitBands(min, max)) {
+    const count = band[1] - band[0] + 1;
+    const weight = prevCount === 0 ? 1 : Math.min(1, (prevWeight * count) / prevCount);
+    items.push([band, weight]);
+    prevWeight = weight;
+    prevCount = count;
+  }
+  return items;
+}
+
+/**
  * Generate a number in [min, max], balanced by digit length: pick a digit-count
- * band uniformly among those overlapping the range, then a value uniformly in
- * that band. This stops 6-digit values dominating a 0..1,000,000 range (uniform
- * sampling there would draw a 6-digit number ~90% of the time).
+ * band among those overlapping the range (see {@link weightedBands}), then a
+ * value uniformly in that band. This stops 6-digit values dominating a
+ * 0..1,000,000 range (uniform sampling there would draw a 6-digit number ~90%
+ * of the time).
  */
 export function generateNumber(rng: Rng, range: NumberRange): number {
   const { min, max } = range;
   if (min >= max) return min;
-  const bands = digitBands(min, max);
-  const band = rng.pick(bands);
+  const band = rng.weighted(weightedBands(min, max));
   return rng.int(band[0], band[1]);
 }
 

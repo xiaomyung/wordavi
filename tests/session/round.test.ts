@@ -14,6 +14,8 @@ import {
   type QuestionSource,
   type RoundConfig,
   type RoundState,
+  type RoundSummary,
+  type SrsState,
   serializeRound,
 } from '@/session';
 import { correctAnswerFor, makeSequenceSource, makeStubSource, numberQuestion } from './helpers';
@@ -277,6 +279,235 @@ describe('round — wrongQueue ≤1 per 3 injection pacing', () => {
   });
 });
 
+describe('round — wrongQueue is replayed only into a round that can grade it', () => {
+  /** A source that owns one id prefix, the way every real mode's does. */
+  function ownedSource(prefix: string): QuestionSource {
+    let n = 0;
+    return {
+      eligibleBuckets: () => ['d0_15'],
+      generate: (rng) => {
+        rng.next();
+        n += 1;
+        return numberQuestion(`${prefix}:fresh${n}`, 5);
+      },
+      canReplay: (question) => question.id.startsWith(`${prefix}:`),
+    };
+  }
+
+  function srsWithQueue(ids: readonly string[]): SrsState {
+    const srs = initSrs();
+    srs.answeredCount = 100;
+    for (const id of ids) {
+      srs.wrongQueue.push({
+        question: numberQuestion(id, 3),
+        reappearances: 0,
+        consecutiveCorrect: 0,
+        dueAt: 0,
+      });
+    }
+    return srs;
+  }
+
+  it('never serves another mode’s miss, and generates instead of stalling', () => {
+    const srs = srsWithQueue(['digits:n475', 'grocery:p2.35']);
+    let state = createRound(cfg({ size: 6, seed: 5 }), srs, ownedSource('words'));
+    for (let i = 0; i < 6; i += 1) {
+      state = nextQuestion(state);
+      const q = current(state);
+      expect(q.id.startsWith('words:')).toBe(true);
+      expect(q.fromWrongQueue).toBeUndefined();
+      state = answerQuestion(state, correctAnswerFor(q)).state;
+    }
+    expect(state.records).toHaveLength(6);
+  });
+
+  it('still serves its own misses, so a learner can retire them', () => {
+    const srs = srsWithQueue(['digits:n475', 'words:n700']);
+    let state = createRound(cfg({ size: 6, seed: 5 }), srs, ownedSource('words'));
+    const injected: string[] = [];
+    for (let i = 0; i < 6; i += 1) {
+      state = nextQuestion(state);
+      const q = current(state);
+      if (q.fromWrongQueue === true) injected.push(q.id);
+      state = answerQuestion(state, correctAnswerFor(q)).state;
+    }
+    expect(injected).toContain('words:n700');
+    expect(injected.every((id) => id.startsWith('words:'))).toBe(true);
+  });
+
+  it('retires an own-mode item after two correct answers instead of looping', () => {
+    const srs = srsWithQueue(['words:n700']);
+    let state = createRound(cfg({ size: 10, seed: 5 }), srs, ownedSource('words'));
+    for (let i = 0; i < 10; i += 1) {
+      state = nextQuestion(state);
+      state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    }
+    expect(state.srs.wrongQueue).toHaveLength(0);
+  });
+});
+
+describe('round — resuming a question the mode cannot serve', () => {
+  const foreign = numberQuestion('grocery:q1500', 1500);
+
+  function ownedSource(prefix: string): QuestionSource {
+    return {
+      eligibleBuckets: () => ['d0_15'],
+      generate: (rng) => numberQuestion(`${prefix}:n${rng.int(0, 99)}`, 5),
+      canReplay: (question) => question.id.startsWith(`${prefix}:`),
+    };
+  }
+
+  /** A parked round whose pending question was minted by another mode. */
+  function parked(records: number): ReturnType<typeof serializeRound> {
+    let state = createRound(cfg({ size: 5, seed: 11 }), initSrs(), ownedSource('choice'));
+    for (let i = 0; i < records; i += 1) {
+      state = nextQuestion(state);
+      state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    }
+    const serialized = serializeRound(state);
+    return {
+      ...serialized,
+      step: serialized.step + 1,
+      served: [...serialized.served, foreign],
+    };
+  }
+
+  it('drops it rather than resuming into a question with no way out', () => {
+    const resumed = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
+    expect(resumed.current).toBeNull();
+    expect(resumed.served.map((q) => q.id)).not.toContain(foreign.id);
+    // served and records stay aligned — finishRound pairs them by index.
+    expect(resumed.served).toHaveLength(resumed.records.length);
+    expect(resumed.step).toBe(2);
+  });
+
+  it('serves the next question straight away, and the summary stays honest', () => {
+    let state = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
+    state = nextQuestion(state);
+    const served = current(state);
+    expect(served.id.startsWith('choice:')).toBe(true);
+    state = answerQuestion(state, 'zzz').state;
+
+    const summary = finishRound(state);
+    expect(summary.total).toBe(3);
+    expect(summary.missed.map((q) => q.id)).toEqual([served.id]);
+  });
+
+  it('keeps a pending question the mode does own', () => {
+    let state = createRound(cfg({ seed: 11 }), initSrs(), ownedSource('choice'));
+    state = nextQuestion(state);
+    const pending = current(state);
+    const resumed = deserializeRound(serializeRound(state), initSrs(), ownedSource('choice'));
+    expect(resumed.current).toEqual(pending);
+    expect(resumed.step).toBe(1);
+  });
+});
+
+/**
+ * A retry round replays a fixed list instead of asking the source, so an item the
+ * source refuses cannot be answered by generating something else: the list itself
+ * has to give it up. The refused misses stay in the wrongQueue, which is where
+ * they wait for a round that can grade them.
+ */
+describe('round — resuming a retry round whose items the mode cannot serve', () => {
+  function ownedSource(prefix: string): QuestionSource {
+    return {
+      eligibleBuckets: () => ['d0_15'],
+      generate: (rng) => numberQuestion(`${prefix}:n${rng.int(0, 99)}`, 5),
+      canReplay: (question) => question.id.startsWith(`${prefix}:`),
+    };
+  }
+
+  const first = numberQuestion('choice:n5', 5);
+  const foreign = numberQuestion('grocery:q1500', 1500);
+  const last = numberQuestion('choice:n7', 7);
+
+  /** A retry round over `items`, exactly as the results screen would build one. */
+  function retryRound(items: readonly Question[]): RoundState {
+    const summary: RoundSummary = {
+      modeId: 'choice',
+      size: items.length,
+      total: items.length,
+      correctCount: 0,
+      almostCount: 0,
+      wrongCount: items.length,
+      accuracy: 0,
+      points: 0,
+      bestCombo: 0,
+      verdicts: [],
+      missed: [...items],
+    };
+    return buildRetryRound(summary, cfg({ size: items.length }), initSrs());
+  }
+
+  /** Answer the first item, then serve the second and park the round there. */
+  function parkedOnSecond(items: readonly Question[]): ReturnType<typeof serializeRound> {
+    let retry = retryRound(items);
+    retry = nextQuestion(retry);
+    retry = answerQuestion(retry, correctAnswerFor(current(retry))).state;
+    retry = nextQuestion(retry);
+    return serializeRound(retry);
+  }
+
+  it('serves the next item instead of handing back the one it refused', () => {
+    const parked = parkedOnSecond([first, foreign, last]);
+    expect(parked.served.at(-1)?.id).toBe(foreign.id);
+
+    const resumed = deserializeRound(parked, initSrs(), ownedSource('choice'));
+    expect(resumed.current).toBeNull();
+    expect(resumed.retryItems.map((q) => q.id)).toEqual([first.id, last.id]);
+    // A retry round is sized by its list, so the progress the drill shows follows it.
+    expect(resumed.config.size).toBe(2);
+
+    let state = nextQuestion(resumed);
+    expect(current(state).id).toBe(last.id);
+    state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    expect(isRoundComplete(state)).toBe(true);
+    expect(finishRound(state).total).toBe(2);
+  });
+
+  it('drops the items still to come, not only the one on stage', () => {
+    let retry = retryRound([first, foreign, last]);
+    retry = nextQuestion(retry);
+    // Parked while the first item's verdict is on screen: nothing is pending, and
+    // the next item up is one this mode cannot serve.
+    retry = answerQuestion(retry, correctAnswerFor(current(retry))).state;
+
+    const resumed = deserializeRound(serializeRound(retry), initSrs(), ownedSource('choice'));
+    expect(resumed.retryItems.map((q) => q.id)).toEqual([first.id, last.id]);
+    expect(current(nextQuestion(resumed)).id).toBe(last.id);
+  });
+
+  it('ends a retry round with nothing left it can serve', () => {
+    const resumed = deserializeRound(
+      parkedOnSecond([first, foreign]),
+      initSrs(),
+      ownedSource('choice'),
+    );
+    expect(resumed.retryItems.map((q) => q.id)).toEqual([first.id]);
+    expect(isRoundComplete(resumed)).toBe(true);
+    expect(nextQuestion(resumed).current).toBeNull();
+    expect(finishRound(resumed).total).toBe(1);
+  });
+
+  it('keeps a retry round whose every item the mode still owns', () => {
+    let retry = retryRound([first, last]);
+    retry = nextQuestion(retry);
+    const pending = current(retry);
+    const resumed = deserializeRound(serializeRound(retry), initSrs(), ownedSource('choice'));
+    expect(resumed.current).toEqual(pending);
+    expect(resumed.retryItems.map((q) => q.id)).toEqual([first.id, last.id]);
+    expect(resumed.config.size).toBe(2);
+    expect(resumed.step).toBe(1);
+  });
+
+  it('keeps every item when resumed with no source to ask', () => {
+    const resumed = deserializeRound(parkedOnSecond([first, foreign, last]), initSrs());
+    expect(resumed.current?.id).toBe(foreign.id);
+    expect(resumed.retryItems).toHaveLength(3);
+  });
+});
+
 describe('round — serialize / resume equivalence', () => {
   function runRound(serializeAfter: number | null): {
     trace: { value: number; verdict: string; fromQueue: boolean }[];
@@ -336,5 +567,21 @@ describe('round — serialize / resume equivalence', () => {
     const good = serializeRound(createRound(cfg(), initSrs(), makeStubSource()));
     expect(isRoundSerialized(good)).toBe(true);
     expect(isRoundSerialized({ ...good, served: 'nope' })).toBe(false);
+  });
+
+  it('isRoundSerialized rejects a slot carrying a malformed question or record', () => {
+    let state = createRound(cfg({ size: 3, seed: 4 }), initSrs(), makeStubSource());
+    state = nextQuestion(state);
+    state = answerQuestion(state, correctAnswerFor(current(state))).state;
+    state = nextQuestion(state);
+    const good = serializeRound(state);
+    expect(isRoundSerialized(good)).toBe(true);
+
+    expect(isRoundSerialized({ ...good, served: [...good.served, {}] })).toBe(false);
+    expect(isRoundSerialized({ ...good, retryItems: [{ id: 'x' }] })).toBe(false);
+    expect(isRoundSerialized({ ...good, records: [{ questionId: 'x' }] })).toBe(false);
+    expect(isRoundSerialized({ ...good, config: { ...good.config, size: {} } })).toBe(false);
+    expect(isRoundSerialized({ ...good, config: { ...good.config, seed: 'later' } })).toBe(false);
+    expect(isRoundSerialized({ ...good, score: { points: 0 } })).toBe(false);
   });
 });

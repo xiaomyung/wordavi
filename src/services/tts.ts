@@ -20,6 +20,18 @@ const RATE_MAP: Record<SpeechRate, number> = {
 const SLOWER_MULTIPLIER = 0.5;
 const VOICES_CHANGED_TIMEOUT_MS = 1000;
 
+/**
+ * Watchdog budget for one utterance. Chrome/Android accepts `speak()` and then
+ * fires neither `end` nor `error` often enough to matter (backgrounded tab,
+ * wedged engine, a queue stuck behind an utterance that never finished), which
+ * would leave the caller's promise pending forever and the replay control
+ * disabled for the rest of the question. The allowance is roughly three times
+ * real speaking time so a genuine utterance is never cut short.
+ */
+const SPEECH_START_ALLOWANCE_MS = 2000;
+const SPEECH_MS_PER_CHAR = 200;
+const SPEECH_TIMEOUT_CAP_MS = 30_000;
+
 export type VoiceStatus = 'es-ES' | 'es-other' | 'none';
 
 export interface SpeakOptions {
@@ -46,6 +58,12 @@ const listeners = new Set<VoicesChangedListener>();
 
 function synthAvailable(): boolean {
   return typeof speechSynthesis !== 'undefined';
+}
+
+/** How long `text` could plausibly take at `rate` before the engine counts as stuck. */
+function speechTimeoutMs(text: string, rate: number): number {
+  const budget = (SPEECH_START_ALLOWANCE_MS + text.length * SPEECH_MS_PER_CHAR) / rate;
+  return Math.min(budget, SPEECH_TIMEOUT_CAP_MS);
 }
 
 function isEsEs(lang: string): boolean {
@@ -191,7 +209,10 @@ export function warmup(): void {
   speechSynthesis.speak(utterance);
 }
 
-/** Cancels any in-flight utterance, then speaks `text`. Resolves on end or error. */
+/**
+ * Cancels any in-flight utterance, then speaks `text`. Always settles: on end,
+ * on error, or on the watchdog when the engine reports neither.
+ */
 export async function speak(text: string, options: SpeakOptions = {}): Promise<void> {
   const rate = options.rate ?? 'normal';
   const slower = options.slower ?? false;
@@ -217,14 +238,29 @@ export async function speak(text: string, options: SpeakOptions = {}): Promise<v
   utterance.rate = finalRate;
   log.debug(NS, 'rate applied', { base: baseRate, slower, final: finalRate });
 
+  const timeoutMs = speechTimeoutMs(text, finalRate);
+
   return new Promise((resolve) => {
     speaking = true;
+    let settled = false;
     // Only the newest utterance owns the flag: cancel() makes the previous one
     // fire onerror('canceled') *after* this one has already started.
     const settle = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
       if (generation === speakGeneration) speaking = false;
       resolve();
     };
+    const watchdog = setTimeout(() => {
+      if (settled) return;
+      log.warn(NS, 'utterance produced neither end nor error, releasing', { text, timeoutMs });
+      // A superseded utterance is merely late to report; the queue already
+      // belongs to a newer one, which must not be cancelled out from under it.
+      const current = generation === speakGeneration;
+      settle();
+      if (current) speechSynthesis.cancel();
+    }, timeoutMs);
     utterance.onend = () => {
       log.info(NS, 'speak finished', { text });
       settle();

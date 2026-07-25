@@ -78,13 +78,17 @@ export interface PromptProps {
   labels: ModeLabels;
 }
 
+/**
+ * What a zone needs to take one answer. Spelling the right answer out in words
+ * is the drill's job — the one verdict block under every zone — so no rendered
+ * answer string is passed down here; a zone that marks up its own choices reads
+ * the question's `accepted` and shows nothing until its `verdict` arrives.
+ */
 export interface AnswerZoneProps {
   question: Question;
   services: DrillServices;
   /** null = unanswered. Set means the zone freezes and reveals. */
   verdict: Verdict | null;
-  /** Canonical answer for reveal (numeral for digit-typed questions). */
-  expectedDisplay: string;
   onSubmit: (given: string) => void;
   micDenied: boolean;
   onMicDenied: () => void;

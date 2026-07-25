@@ -219,7 +219,6 @@ function DrillRunner({ mode, modeId, resume, retryOf, onFinish, onExit }: DrillR
               question={question}
               services={services}
               verdict={record?.verdict ?? null}
-              expectedDisplay={expectedDisplay}
               onSubmit={round.submit}
               micDenied={micDenied}
               onMicDenied={onMicDenied}

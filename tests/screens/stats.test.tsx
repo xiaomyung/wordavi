@@ -28,8 +28,6 @@ function seededSrs(): SrsState {
 }
 
 interface SeedOptions {
-  streakCurrent?: number;
-  streakBest?: number;
   totalAnswered?: number;
   todayCorrect?: number;
 }
@@ -38,8 +36,10 @@ function seedHistory(options: SeedOptions = {}): void {
   setSettings({ ...getSettings(), dailyGoal: 20 });
   setSrs(serializeSrs(seededSrs()));
   updateProgress({
-    streakCurrent: options.streakCurrent ?? 3,
-    streakBest: options.streakBest ?? 11,
+    // The streak the screen prints is the app's settled reading, handed in as a
+    // prop; what is stored only has to be history the screen can count.
+    streakCurrent: 3,
+    streakBest: 11,
     lastGoalDate: YESTERDAY,
     bestCombo: 9,
     totalAnswered: options.totalAnswered ?? 1284,
@@ -51,6 +51,8 @@ function seedHistory(options: SeedOptions = {}): void {
 
 function renderStats(overrides: Partial<StatsScreenProps> = {}): StatsScreenProps {
   const props: StatsScreenProps = {
+    streakCurrent: 0,
+    streakBest: 0,
     onBack: vi.fn(),
     onStartFirstRound: vi.fn(),
     ...overrides,
@@ -93,7 +95,9 @@ describe('StatsScreen day zero', () => {
   });
 
   it('draws the seven-day window with today still waiting', () => {
-    const { container } = render(<StatsScreen onBack={vi.fn()} onStartFirstRound={vi.fn()} />);
+    const { container } = render(
+      <StatsScreen streakCurrent={0} streakBest={0} onBack={vi.fn()} onStartFirstRound={vi.fn()} />,
+    );
     const stamps = [...container.querySelectorAll('[data-state]')];
     expect(stamps).toHaveLength(7);
     expect(stamps.map((node) => node.getAttribute('data-state'))).toEqual([
@@ -154,23 +158,38 @@ describe('StatsScreen with history', () => {
   });
 
   it('declines the record and the waiting-stamp line', () => {
-    seedHistory({ streakCurrent: 3, streakBest: 11, todayCorrect: 12 });
-    renderStats();
+    seedHistory({ todayCorrect: 12 });
+    renderStats({ streakCurrent: 3, streakBest: 11 });
 
     expect(screen.getByText('рекорд — 11 дней')).toBeInTheDocument();
     expect(screen.getByText('3 дня подряд — сегодняшний штамп ждёт')).toBeInTheDocument();
   });
 
   it('declines a one-day record', () => {
-    seedHistory({ streakCurrent: 1, streakBest: 1, todayCorrect: 5 });
-    renderStats();
+    seedHistory({ todayCorrect: 5 });
+    renderStats({ streakCurrent: 1, streakBest: 1 });
     expect(screen.getByText('рекорд — 1 день')).toBeInTheDocument();
     expect(screen.getByText('1 день подряд — сегодняшний штамп ждёт')).toBeInTheDocument();
   });
 
+  it('keeps the record when the run itself is over', () => {
+    seedHistory({ todayCorrect: 12 });
+    renderStats({ streakCurrent: 0, streakBest: 11 });
+
+    expect(screen.getByText('рекорд — 11 дней')).toBeInTheDocument();
+    expect(screen.getByText('0 дней подряд — сегодняшний штамп ждёт')).toBeInTheDocument();
+  });
+
   it('swaps the waiting line for the streak once today is stamped', () => {
-    seedHistory({ streakCurrent: 5, streakBest: 11, todayCorrect: 43 });
-    const { container } = render(<StatsScreen onBack={vi.fn()} onStartFirstRound={vi.fn()} />);
+    seedHistory({ todayCorrect: 43 });
+    const { container } = render(
+      <StatsScreen
+        streakCurrent={5}
+        streakBest={11}
+        onBack={vi.fn()}
+        onStartFirstRound={vi.fn()}
+      />,
+    );
 
     expect(screen.queryByText(/штамп ждёт/)).not.toBeInTheDocument();
     expect(screen.getByText('5 дней')).toBeInTheDocument();

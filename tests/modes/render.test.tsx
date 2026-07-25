@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { matchText, priceToWords } from '@/engine';
 import { allModes, getMode, numeralFontSizePx, promptDisplay, promptSpanish } from '@/modes';
 import type { Question } from '@/session';
 import { generateFor, labelsFor, roundConfig, stubServices } from './helpers';
@@ -78,7 +79,6 @@ describe('words zones', () => {
         question={numberQuestion('words:n475', 475)}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="475"
         onSubmit={onSubmit}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -100,7 +100,6 @@ describe('words zones', () => {
         question={numberQuestion('words:n475', 475)}
         services={stubServices()}
         verdict="correct"
-        expectedDisplay="475"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -118,7 +117,6 @@ describe('words zones', () => {
         question={numberQuestion('words:n475', 475)}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="475"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -131,7 +129,6 @@ describe('words zones', () => {
         question={numberQuestion('words:n26', 26)}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="26"
         onSubmit={vi.fn()}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -171,7 +168,6 @@ describe('digits zones', () => {
         question={numberQuestion('digits:n914', 914)}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="914"
         onSubmit={onSubmit}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -240,7 +236,6 @@ describe('listen zones', () => {
         question={numberQuestion('listen:n250', 250)}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="250"
         onSubmit={onSubmit}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -300,6 +295,50 @@ describe('grocery zones', () => {
     expect(screen.getByText('500 g')).toBeInTheDocument();
   });
 
+  it('poses and grades its question on a browser with no voice', async () => {
+    // A voiceless browser rejects every speak(): nothing is ever heard.
+    const services = stubServices({ speak: vi.fn(() => Promise.reject(new Error('no voice'))) });
+    const accepted = priceToWords(2, 35);
+    const question: Question = { ...priceQuestion, accepted };
+    const onSubmit = vi.fn();
+    render(
+      <>
+        <grocery.Prompt
+          question={question}
+          services={services}
+          slower={false}
+          onToggleSlower={vi.fn()}
+          labels={labels}
+        />
+        <grocery.AnswerZone
+          question={question}
+          services={services}
+          verdict={null}
+          onSubmit={onSubmit}
+          micDenied={false}
+          onMicDenied={vi.fn()}
+          labels={labels}
+        />
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'прослушать' }));
+    await act(async () => {});
+
+    // The tag carries the whole question, and the typed answer still grades.
+    expect(screen.getByText('2,35 €')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: accepted.canonical } });
+    fireEvent.click(screen.getByRole('button', { name: 'Проверить' }));
+    expect(onSubmit).toHaveBeenCalledWith(accepted.canonical);
+    expect(matchText(accepted, accepted.canonical, { acceptNoAccents: false }).verdict).toBe(
+      'correct',
+    );
+  });
+
+  it('needs no capability, so a voiceless browser is never denied it', () => {
+    expect(grocery.requires).toEqual([]);
+  });
+
   it('answers in words with the accent keys', () => {
     const onSubmit = vi.fn();
     render(
@@ -307,7 +346,6 @@ describe('grocery zones', () => {
         question={priceQuestion}
         services={stubServices()}
         verdict={null}
-        expectedDisplay="dos con treinta y cinco"
         onSubmit={onSubmit}
         micDenied={false}
         onMicDenied={vi.fn()}
@@ -343,7 +381,6 @@ describe('every mode renders both zones for its own questions', () => {
           question={question}
           services={services}
           verdict={null}
-          expectedDisplay="0"
           onSubmit={vi.fn()}
           micDenied={false}
           onMicDenied={vi.fn()}

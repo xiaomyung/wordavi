@@ -2,6 +2,7 @@ import type { Rng } from '@/engine';
 import { slog } from './log';
 import {
   type BucketStat,
+  isQuestion,
   type PromptPayload,
   type Question,
   SKILL_BUCKETS,
@@ -194,18 +195,24 @@ function pushWrong(srs: SrsState, q: Question): void {
 /**
  * Select the most-overdue wrongQueue item, honoring the round-local ≤1-per-3
  * pacing (a gap of at least 3 served questions since the last injection).
+ *
+ * `accepts` narrows the queue to the items the *asking* round can present and
+ * grade — the queue is global, its items are not. Items it rejects are simply
+ * skipped, so a queue full of other modes' misses yields null and the round
+ * generates instead of stalling.
  */
 export function pickDueWrongItem(
   srs: SrsState,
   step: number,
   lastWrongQueueStep: number,
+  accepts: (question: Question) => boolean = () => true,
 ): WrongQueueItem | null {
   if (step - lastWrongQueueStep < WRONG_QUEUE_MIN_GAP) return null;
   let best: WrongQueueItem | null = null;
   for (const it of srs.wrongQueue) {
-    if (srs.answeredCount >= it.dueAt && (best === null || it.dueAt < best.dueAt)) {
-      best = it;
-    }
+    if (srs.answeredCount < it.dueAt) continue;
+    if (best !== null && it.dueAt >= best.dueAt) continue;
+    if (accepts(it.question)) best = it;
   }
   return best;
 }
@@ -291,6 +298,9 @@ export function deserializeSrs(value: unknown): SrsState {
       : emptyBucket();
   }
 
+  // A malformed entry is dropped rather than thrown on: the queue is a study
+  // aid, and losing one item costs the learner nothing next to a slot that
+  // cannot be read at all.
   const wrongQueue: WrongQueueItem[] = [];
   for (const raw of v.wrongQueue) {
     if (typeof raw !== 'object' || raw === null) continue;
@@ -299,11 +309,10 @@ export function deserializeSrs(value: unknown): SrsState {
       typeof it.reappearances === 'number' &&
       typeof it.consecutiveCorrect === 'number' &&
       typeof it.dueAt === 'number' &&
-      typeof it.question === 'object' &&
-      it.question !== null
+      isQuestion(it.question)
     ) {
       wrongQueue.push({
-        question: it.question as Question,
+        question: it.question,
         reappearances: it.reappearances,
         consecutiveCorrect: it.consecutiveCorrect,
         dueAt: it.dueAt,

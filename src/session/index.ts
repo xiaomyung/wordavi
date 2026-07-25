@@ -8,6 +8,7 @@ export {
   isGoalMet,
   localDayKey,
   localMonthKey,
+  settleStreak,
   shiftDayKey,
   toGoalVerdicts,
 } from './goal';
@@ -85,6 +86,8 @@ export {
   BUCKET_TO_GROUP,
   DISPLAY_GROUP_ORDER,
   DISPLAY_GROUPS,
+  isAnswerRecord,
   isDigitTarget,
+  isQuestion,
   SKILL_BUCKETS,
 } from './types';

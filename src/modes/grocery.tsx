@@ -1,13 +1,19 @@
 import { PillButton, PriceTag, SpeakerGlyph } from '@/components';
 import { generatePrice, generateQuantity, priceToWords, quantityToWords } from '@/engine';
-import type { Question, QuestionSource, SkillBucket } from '@/session';
+import type { PromptPayload, Question, QuestionSource, SkillBucket } from '@/session';
 import { PromptStage, promptDisplay, promptSpanish, TypedAnswer, useSpeakOnDemand } from './prompt';
-import { questionId } from './questionId';
+import { ownsQuestion, questionId } from './questionId';
 import type { AnswerZoneProps, LearningMode, PromptProps } from './types';
 import { labelOf } from './types';
 
 /**
  * grocery — shelf price / scale weight → what the cashier says (drill-grocery.html).
+ *
+ * The tag is on screen and the answer is typed, so the speaker pill is a replay
+ * affordance, not the question: the mode declares no capability, and on a device
+ * with no Spanish voice the pill is simply inert while the drill still works.
+ * Gating it behind `tts` would take the shop-counter mode — the one closest to
+ * why the learner is here — away from exactly the phones that lack a voice pack.
  *
  * ## Bucket → generator
  *
@@ -32,6 +38,9 @@ const GROCERY_BUCKETS = [
   'qty_fractions',
   'qty_grams',
 ] as const satisfies readonly SkillBucket[];
+
+/** The two payloads a shelf tag can carry: a price, or a weight on the scale. */
+const GROCERY_PAYLOADS = ['price', 'quantity'] as const satisfies readonly PromptPayload['kind'][];
 
 /** Multiples of 250 g — `classifyBucket` routes these to `qty_fractions`. */
 const FRACTION_GRAMS: ReadonlyArray<readonly [number, number]> = [
@@ -114,6 +123,12 @@ export const grocerySource: QuestionSource = {
       }
     }
   },
+  // A shelf tag / scale reading is answered in words; a number mode's question
+  // is a different task with a different accepted set, so only own ids replay —
+  // and only over a payload the tag can actually show.
+  canReplay(question) {
+    return ownsQuestion(question, GROCERY_MODE_ID, GROCERY_PAYLOADS);
+  },
 };
 
 function GroceryPrompt({ question, services, slower, labels }: PromptProps) {
@@ -153,7 +168,7 @@ export const groceryMode: LearningMode = {
   id: GROCERY_MODE_ID,
   titleKey: 'modes.grocery.title',
   exampleKey: 'modes.grocery.example',
-  requires: ['tts'],
+  requires: [],
   labelKeys: LABEL_KEYS,
   source: grocerySource,
   Prompt: GroceryPrompt,

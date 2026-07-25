@@ -52,6 +52,7 @@ const MODES: readonly HomeModeItem[] = [
 function renderHome(overrides: Partial<HomeScreenProps> = {}): HomeScreenProps {
   const props: HomeScreenProps = {
     modes: MODES,
+    streakDays: 0,
     onStartMode: vi.fn(),
     onStartMixed: vi.fn(),
     onResume: vi.fn(),
@@ -196,16 +197,11 @@ describe('HomeScreen streak plurals', () => {
     [1, '1 день'],
     [3, '3 дня'],
     [5, '5 дней'],
+    // The run the app settled to nothing still has to print, and decline.
+    [0, '0 дней'],
   ])('renders the streak label with the right plural form (%i)', (streak, expected) => {
-    updateProgress({
-      streakCurrent: streak,
-      streakBest: streak,
-      lastGoalDate: null,
-      bestCombo: 0,
-      totalAnswered: 40,
-      totalCorrect: 30,
-    });
-    renderHome();
+    seedHistory();
+    renderHome({ streakDays: streak });
     expect(screen.getByText(expected)).toBeInTheDocument();
   });
 });

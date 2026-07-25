@@ -72,6 +72,9 @@ vi.mock('@/modes', async () => {
 });
 
 const ROUND_SIZE = 10;
+const DAILY_GOAL = 5;
+/** Summary ring sweep plus the stamp's own delay (SummaryScreen). */
+const STAMP_SETTLE_MS = 650 + 420;
 
 function press(name: string | RegExp): void {
   fireEvent.click(screen.getByRole('button', { name }));
@@ -100,11 +103,7 @@ function startRound(): void {
 
 /** Start the single mode from its own row, the way a learner dips into one. */
 function startWordsRow(): void {
-  const row = screen
-    .getAllByRole('button')
-    .find((el) => (el.textContent ?? '').includes('in words'));
-  if (row === undefined) throw new Error('no words row on home');
-  fireEvent.click(row);
+  press(/in words/);
 }
 
 function todayRow(): { answered: number; correct: number } {
@@ -116,7 +115,12 @@ beforeEach(() => {
   localStorage.clear();
   window.history.replaceState({}, '', '/');
   initI18n({ initialLang: 'en' });
-  updateSettings({ onboarded: true, roundSize: ROUND_SIZE, dailyGoal: 5, soundsEnabled: false });
+  updateSettings({
+    onboarded: true,
+    roundSize: ROUND_SIZE,
+    dailyGoal: DAILY_GOAL,
+    soundsEnabled: false,
+  });
   vi.useFakeTimers();
 });
 
@@ -191,16 +195,39 @@ describe('App round lifecycle', () => {
   it('counts a single-mode round the learner leaves part-played', () => {
     render(<App />);
     startWordsRow();
-    for (let index = 0; index < 6; index += 1) answer(true);
+    // One past the goal, so the day is stamped without the round being finished.
+    const answered = DAILY_GOAL + 1;
+    for (let index = 0; index < answered; index += 1) answer(true);
 
     press('Close');
 
     // The round is parked, and every answer in it already counted: a mode row is
     // made to be dipped into, and the goal has to move for that.
     expect(getRound()?.modeId).toBe('words');
-    expect(todayRow()).toEqual({ answered: 6, correct: 6 });
-    // Goal is 5, so this afternoon earned its stamp without finishing a round.
+    expect(todayRow()).toEqual({ answered, correct: answered });
     expect(getProgress().streakCurrent).toBe(1);
+  });
+
+  it('celebrates the day stamp once, and only shows it on the next round', () => {
+    render(<App />);
+    startRound();
+    playRound(ROUND_SIZE);
+    act(() => {
+      vi.advanceTimersByTime(STAMP_SETTLE_MS);
+    });
+    // This round is what met the goal, so the stamp pops.
+    expect(screen.getByText(/stamped/)).toBeInTheDocument();
+    expect(document.querySelector('.wa-stamp-pop')).not.toBeNull();
+
+    press('Back to home');
+    startRound();
+    playRound(ROUND_SIZE);
+    act(() => {
+      vi.advanceTimersByTime(STAMP_SETTLE_MS);
+    });
+    // The day was already stamped before this one: shown, not celebrated again.
+    expect(screen.getByText(/stamped/)).toBeInTheDocument();
+    expect(document.querySelector('.wa-stamp-pop')).toBeNull();
   });
 
   it('leaves the round resumable when the learner backs out mid-drill', () => {

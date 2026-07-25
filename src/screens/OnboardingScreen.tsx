@@ -87,8 +87,10 @@ const SAMPLE_PRICE_CENTS = 75;
 /** Glyph geometry of the app mark, on the favicon's 64-unit canvas. */
 const MARK_VIEWBOX = '0 0 64 64';
 /**
- * Puts the glyph at 0.625 of the canvas, optically centred — the framing the
- * maskable icon uses, so the tile and every installed icon read as one mark.
+ * Puts the glyph at 0.625 of the canvas, optically centred — the framing
+ * public/favicon.svg uses, so the tile and the installed icons read as one mark.
+ * The maskable icon draws it at 0.5 of its canvas, which is this same 0.625 of
+ * the 80% a launcher actually shows.
  */
 const MARK_TRANSFORM = 'translate(32 32) scale(0.769231) translate(-32 -26.91)';
 /** The lowercase w. */

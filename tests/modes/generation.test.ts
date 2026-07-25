@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/engine';
-import { allModes, drawForBucket, getMode, NUMBER_BUCKETS, planFor, roundRange } from '@/modes';
-import { classifyBucket, classifyNumber, type SkillBucket } from '@/session';
+import { allModes, drawForBucket, getMode, NUMBER_BUCKETS, planFor } from '@/modes';
+import { classifyBucket, classifyNumber, roundRange, type SkillBucket } from '@/session';
 import { generateFor, roundConfig } from './helpers';
 
 const NUMBER_MODES = ['words', 'digits', 'listen', 'choice', 'speak'] as const;

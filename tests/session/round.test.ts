@@ -384,10 +384,10 @@ describe('round — resuming a question the mode cannot serve', () => {
   });
 
   it('serves the next question straight away, and the summary stays honest', () => {
-    const state0 = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
-    const served = current(state0);
+    const resumed = deserializeRound(parked(2), initSrs(), ownedSource('choice'));
+    const served = current(resumed);
     expect(served.id.startsWith('choice:')).toBe(true);
-    const state = answerQuestion(state0, 'zzz').state;
+    const state = answerQuestion(resumed, 'zzz').state;
 
     const summary = finishRound(state);
     expect(summary.total).toBe(3);
@@ -436,7 +436,7 @@ describe('round — a range changed while the round was parked', () => {
     const resumed = deserializeRound(parkedOn(tooBig), initSrs(), rangedSource, NARROW);
 
     expect(resumed.served.map((q) => q.id)).not.toContain(tooBig.id);
-    expect(numberValue(current(resumed))).toBeLessThanOrEqual(100);
+    expect(numberValue(current(resumed))).toBeLessThanOrEqual(NARROW.rangeMax);
     // The learner is still on the question they left, not one step back.
     expect(resumed.step).toBe(2);
   });
@@ -452,12 +452,14 @@ describe('round — a range changed while the round was parked', () => {
       ...NARROW,
       acceptNoAccents: true,
     });
-    expect(state.config.rangeMax).toBe(100);
+    expect(state.config.rangeMax).toBe(NARROW.rangeMax);
+    // The third member of LiveRoundConfig travels too, not only the bounds.
+    expect(state.config.acceptNoAccents).toBe(true);
 
     for (let i = 0; i < 5; i += 1) {
       state = answerQuestion(state, correctAnswerFor(current(state))).state;
       state = nextQuestion(state);
-      expect(numberValue(current(state))).toBeLessThanOrEqual(100);
+      expect(numberValue(current(state))).toBeLessThanOrEqual(NARROW.rangeMax);
     }
   });
 
@@ -489,7 +491,7 @@ describe('round — a range changed while the round was parked', () => {
     // …but the same queue against a narrowed range is skipped, not clamped.
     const narrow = nextQuestion(createRound(cfg({ ...NARROW, seed: 7 }), srs, rangedSource));
     expect(current(narrow).id).not.toBe(missed.id);
-    expect(numberValue(current(narrow))).toBeLessThanOrEqual(100);
+    expect(numberValue(current(narrow))).toBeLessThanOrEqual(NARROW.rangeMax);
   });
 
   it('leaves a price or a weight alone — the slider does not govern those', () => {

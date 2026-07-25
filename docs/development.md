@@ -131,23 +131,29 @@ four images instead of whatever today's random numerals happen to be.
 
 ## The app icons
 
-The PNGs in `public/icons/` are generated from the SVG sources in
-`design/icons/`, and both are committed:
+The PNGs in `public/icons/` are generated, and committed:
 
 ```bash
-scripts/build-icons.sh          # needs rsvg-convert (librsvg)
+icons/build.sh                  # needs rsvg-convert (librsvg)
 ```
 
 Nothing in CI or in the Docker image runs it — the image build never sees
-`design/` or `scripts/` at all, since `.dockerignore` allows only what the app
-needs. Run it after editing anything in `design/icons/` (or `public/favicon.svg`,
-which the two tab favicons come from) and commit what changes.
+`icons/` at all, since `.dockerignore` allows only what the app needs. Run it
+after editing either SVG source and commit what changes.
 
-There are two variants and they are deliberately framed differently. The `any`
-icon is shown as drawn, so it carries its own rounded corners and the mark sits at
-0.625 of the canvas. The maskable one is cropped by the launcher to a shape of its
-choosing, of which only the central 80% is guaranteed, so it bleeds to every edge
-and the mark sits at 0.5 — which is that same 0.625, measured against what is
+There are only two sources, in two places for a reason. **`public/favicon.svg`**
+is shipped as it is (`index.html` links it), and the tab favicons and the `any`
+manifest icons are the same drawing, so they are rendered straight from it rather
+than from a second copy that could drift. **`icons/icon-maskable.svg`** is the
+one variant that needs artwork of its own, and it stays outside `public/` because
+`vite.config.ts` precaches `**/*.svg` — a source in there would be downloaded by
+every user.
+
+The two are deliberately framed differently. The shipped mark is shown as drawn,
+so it carries its own rounded corners and sits at 0.625 of the canvas. The
+maskable one is cropped by the launcher to a shape of its choosing, of which only
+the central 80% is guaranteed, so it bleeds to every edge and the mark sits at
+0.5 — which is that same 0.625, measured against what is
 actually shown. `tests/icons.test.ts` holds the rule, because the crop happens on
 the phone and the file looks fine either way. See
 [[adr-029-maskable-icon-safe-zone]].

@@ -29,7 +29,7 @@ modes       LearningMode registry, one module per mode  ← engine, session, com
    ↑
 screens     full-page compositions                     ← everything except app
    ↑
-app         shell, screen state, persistence, wiring
+app         shell, screen state, wiring
 ```
 
 The three at the bottom are independent of each other, not a stack — `storage`
@@ -83,9 +83,11 @@ score/combo.
 - **May import:** `engine`.
 - **May not import:** `storage`, `services`, `modes`, `i18n` or UI.
 - **Why so strict:** session is a set of pure state transitions. It does not
-  read or write `localStorage` — it returns the new state, and the app layer
-  decides to persist it. That is what makes an entire round replayable in a test
-  with no browser, and what keeps "when do we save?" answerable in one place.
+  read or write `localStorage` — it returns the new state, and the screen driving
+  it decides to persist it. That is what makes an entire round replayable in a
+  test with no browser. The drill keeps its own writes in one module
+  (`screens/drill/commit.ts`), so "when do we save?" is still answerable in one
+  place for the one flow that saves on every interaction.
 
 ### modes
 
@@ -114,7 +116,10 @@ microphone — styled entirely from Tailwind v4 `@theme` tokens.
 ### screens and app
 
 Screens are full-page compositions; `app` is the shell that holds the screen
-state machine, wires the services together, and performs persistence.
+state machine and wires the services together. Persistence belongs to whichever
+of them owns the state being written: `app` for what outlives a screen (the
+settled streak, the day the summary reports), each screen for its own (the
+drill's round slot, SRS, day row and totals).
 
 - **Screens may import:** everything except `app`.
 - **Why:** the app composes screens, never the reverse. Everything a screen needs

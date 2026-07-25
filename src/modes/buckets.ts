@@ -1,4 +1,4 @@
-import { generateNumber, type NumberRange, type Rng } from '@/engine';
+import { generateNumber, NUMBER_MAX, type NumberRange, type Rng } from '@/engine';
 import {
   type Accepted,
   classifyNumber,
@@ -6,6 +6,7 @@ import {
   type Question,
   type QuestionSource,
   type RoundConfig,
+  roundRange,
   type SkillBucket,
 } from '@/session';
 import { ownsQuestion, questionId } from './questionId';
@@ -43,8 +44,8 @@ import { ownsQuestion, questionId } from './questionId';
  * `price_cents` / `qty_grams`). See grocery.tsx for the price/quantity buckets.
  */
 
-/** Largest integer the engine can spell (engine/numbers.ts MAX). */
-const ENGINE_MAX = 999_999_999_999;
+/** Largest integer the engine can spell. */
+const ENGINE_MAX = NUMBER_MAX;
 
 /** Buckets reachable from a plain `{ kind: 'number' }` prompt, in learning order. */
 export const NUMBER_BUCKETS = [
@@ -96,13 +97,6 @@ type BucketPlan = { list: readonly number[] } | { span: NumberRange };
 
 function isNumberBucket(bucket: SkillBucket): bucket is NumberBucket {
   return (NUMBER_BUCKETS as readonly SkillBucket[]).includes(bucket);
-}
-
-/** The learner's configured range, sanitised into an engine-safe span. */
-export function roundRange(config: RoundConfig): NumberRange {
-  const lo = Math.floor(Math.min(config.rangeMin, config.rangeMax));
-  const hi = Math.floor(Math.max(config.rangeMin, config.rangeMax));
-  return { min: Math.max(0, lo), max: Math.min(Math.max(0, hi), ENGINE_MAX) };
 }
 
 /**

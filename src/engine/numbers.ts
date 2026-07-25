@@ -17,7 +17,9 @@
  * grocery units. Range: 0 … 999_999_999_999 inclusive; anything else throws.
  */
 
-const MAX = 999_999_999_999;
+/** Largest integer this module can spell. Anything above it throws. */
+export const NUMBER_MAX = 999_999_999_999;
+const MAX = NUMBER_MAX;
 const MILLION = 1_000_000;
 const THOUSAND = 1_000;
 

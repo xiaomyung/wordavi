@@ -175,8 +175,8 @@ function ScreenRouter() {
           availableModeIds={currentAvailableModeIds()}
           {...(saved !== null && saved.modeId === modeId ? { resume: saved } : {})}
           {...(retryOf !== undefined ? { retryOf } : {})}
-          onFinish={(summary) => {
-            go({ kind: 'summary', summary, dayState: summaryDayState(summary) });
+          onFinish={(summary, stampEarned) => {
+            go({ kind: 'summary', summary, dayState: summaryDayState(stampEarned) });
           }}
           onExit={goBack}
         />

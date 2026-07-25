@@ -3,6 +3,7 @@ import { tick as hapticTick, wrongReveal } from '@/services/haptics';
 import { playVerdict, setEnabled as setSoundsEnabled } from '@/services/sounds';
 import type {
   AnswerRecord,
+  LiveRoundConfig,
   Question,
   QuestionSource,
   RoundConfig,
@@ -27,7 +28,7 @@ import {
 } from '@/session';
 import type { SavedRound, Settings } from '@/storage';
 import { getSettings, getSrs, setRound as saveRound, setSrs } from '@/storage';
-import { commitAnswer, commitRound } from './commit-round';
+import { commitAnswer, commitRound } from './commit';
 
 /** Old prompt fade-out before the next question mounts (motion.md). */
 export const SWAP_OUT_MS = 120;
@@ -39,7 +40,8 @@ export interface UseDrillRoundOptions {
   resume?: SavedRound | undefined;
   /** Replay this finished round's misses instead of generating fresh questions. */
   retryOf?: RoundSummary | undefined;
-  onFinish: (summary: RoundSummary) => void;
+  /** `stampEarned` is true when one of this round's answers met today's goal. */
+  onFinish: (summary: RoundSummary, stampEarned: boolean) => void;
 }
 
 export interface DrillRoundApi {
@@ -99,11 +101,14 @@ function buildRound(options: UseDrillRoundOptions, settings: Settings): RoundSta
       // Settings the learner may have changed while the round was parked are
       // handed back in: a narrowed number range has to govern the rest of the
       // round, not only the next one they start.
-      return deserializeRound(resume.state, srs, source, {
-        rangeMin: settings.rangeMin,
-        rangeMax: settings.rangeMax,
-        acceptNoAccents: settings.acceptNoAccents,
-      });
+      const live: LiveRoundConfig = {
+        rangeMin: config.rangeMin,
+        rangeMax: config.rangeMax,
+        ...(config.acceptNoAccents === undefined
+          ? {}
+          : { acceptNoAccents: config.acceptNoAccents }),
+      };
+      return deserializeRound(resume.state, srs, source, live);
     }
   }
 
@@ -139,6 +144,9 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
 
   const [, forceRender] = useReducer((n: number) => n + 1, 0);
   const finishedRef = useRef(false);
+  /* Set by the answer that met today's goal, so the summary celebrates the stamp
+     once — and not again on a later round that merely finds the day already met. */
+  const stampEarnedRef = useRef(false);
   const swappingRef = useRef(false);
   const swapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -191,7 +199,7 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
 
     commitRound(summary, closed.srs);
 
-    optionsRef.current.onFinish(summary);
+    optionsRef.current.onFinish(summary, stampEarnedRef.current);
   }, [commit]);
 
   const submit = useCallback(
@@ -205,8 +213,8 @@ export function useDrillRound(options: UseDrillRoundOptions): DrillRoundApi {
       setSrs(serializeSrs(outcome.state.srs));
       saveRound(modeId, serializeRound(outcome.state));
       // The day, the totals and the streak move with this answer, not with the
-      // round it belongs to: a round left part-played still counted.
-      commitAnswer(outcome.record, outcome.state.score);
+      // round it belongs to, so a round left part-played still counts.
+      if (commitAnswer(outcome.record, outcome.state.score)) stampEarnedRef.current = true;
 
       playVerdict(outcome.record.verdict);
       if (outcome.record.verdict === 'wrong') {

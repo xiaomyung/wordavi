@@ -4,7 +4,7 @@ import { App } from '@/app/App';
 import { summaryDayState } from '@/app/day-state';
 import { ErrorBoundary } from '@/app/ErrorBoundary';
 import { init as initI18n } from '@/i18n';
-import type { AnswerRecord, Question, RoundSerialized, RoundSummary } from '@/session';
+import type { AnswerRecord, Question, RoundSerialized } from '@/session';
 import { getRound, getSettings, setDay, setRound, updateProgress, updateSettings } from '@/storage';
 
 /**
@@ -390,23 +390,6 @@ describe('ErrorBoundary', () => {
 
 const TODAY = '2026-07-24';
 
-function summary(overrides: Partial<RoundSummary> = {}): RoundSummary {
-  return {
-    modeId: 'words',
-    size: 10,
-    total: 10,
-    correctCount: 8,
-    almostCount: 1,
-    wrongCount: 2,
-    accuracy: 0.8,
-    points: 80,
-    bestCombo: 4,
-    verdicts: [],
-    missed: [],
-    ...overrides,
-  };
-}
-
 describe('summaryDayState', () => {
   const now = new Date(2026, 6, 24, 9, 0, 0);
 
@@ -416,7 +399,7 @@ describe('summaryDayState', () => {
 
   it('reports the goal unmet with the day’s running total', () => {
     setDay({ date: TODAY, answered: 9, correct: 8, byGroup: {} });
-    expect(summaryDayState(summary(), now)).toEqual({
+    expect(summaryDayState(false, now)).toEqual({
       goalMet: false,
       stampedToday: false,
       streakDays: 0,
@@ -436,7 +419,7 @@ describe('summaryDayState', () => {
       totalCorrect: 30,
     });
 
-    expect(summaryDayState(summary(), now)).toMatchObject({
+    expect(summaryDayState(true, now)).toMatchObject({
       goalMet: true,
       stampedToday: false,
       streakDays: 3,
@@ -448,12 +431,21 @@ describe('summaryDayState', () => {
 
   it('knows the stamp was already earned before this round', () => {
     setDay({ date: TODAY, answered: 30, correct: 25, byGroup: {} });
-    expect(summaryDayState(summary(), now)).toMatchObject({ goalMet: true, stampedToday: true });
+    expect(summaryDayState(false, now)).toMatchObject({ goalMet: true, stampedToday: true });
+  });
+
+  it('does not re-read the day to decide the stamp, so a round across midnight is safe', () => {
+    // The row holds only today's half of a round that began yesterday. Whether
+    // the stamp is this round's is carried in, never derived from these numbers.
+    setDay({ date: TODAY, answered: 4, correct: 4, byGroup: {} });
+    updateSettings({ dailyGoal: 3 });
+    expect(summaryDayState(true, now)).toMatchObject({ goalMet: true, stampedToday: false });
+    expect(summaryDayState(false, now)).toMatchObject({ goalMet: true, stampedToday: true });
   });
 
   it('treats a zero goal as one answer rather than stamping an empty day', () => {
     updateSettings({ dailyGoal: 0 });
-    expect(summaryDayState(summary({ correctCount: 0 }), now)).toMatchObject({
+    expect(summaryDayState(false, now)).toMatchObject({
       goalMet: false,
       total: 1,
       done: 0,

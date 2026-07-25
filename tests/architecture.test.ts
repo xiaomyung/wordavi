@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -86,6 +86,63 @@ function layerOf(file: string): string | undefined {
   return relative(SRC, file).split(sep)[0];
 }
 
+/**
+ * The file an import specifier names, or undefined for anything outside `src/`
+ * (a package, a stylesheet, an asset). Mirrors the `@/` alias and the extension
+ * order the bundler resolves in.
+ */
+function resolveImport(from: string, spec: string): string | undefined {
+  let base: string;
+  if (spec.startsWith('@/')) base = join(SRC, spec.slice(2));
+  else if (spec.startsWith('.')) base = resolve(join(from, '..'), spec);
+  else return undefined;
+
+  for (const candidate of [
+    `${base}.ts`,
+    `${base}.tsx`,
+    join(base, 'index.ts'),
+    join(base, 'index.tsx'),
+  ]) {
+    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+  }
+  return undefined;
+}
+
+/**
+ * The first import cycle in the graph, as the chain that closes it, or null when
+ * there is none. A cycle is what no per-file rule can see: every edge in it is
+ * legal on its own, and it is only the loop that makes the modules impossible to
+ * reason about — or to load, once one of them runs code at import time.
+ */
+function findCycle(files: readonly string[]): string[] | null {
+  const visited = new Set<string>();
+  const stack: string[] = [];
+  const onStack = new Set<string>();
+
+  function visit(file: string): string[] | null {
+    if (onStack.has(file)) return [...stack.slice(stack.indexOf(file)), file];
+    if (visited.has(file)) return null;
+    visited.add(file);
+    stack.push(file);
+    onStack.add(file);
+    for (const spec of importsOf(file)) {
+      const target = resolveImport(file, spec);
+      if (target === undefined) continue;
+      const cycle = visit(target);
+      if (cycle) return cycle;
+    }
+    stack.pop();
+    onStack.delete(file);
+    return null;
+  }
+
+  for (const file of files) {
+    const cycle = visit(file);
+    if (cycle) return cycle.map((path) => relative(SRC, path));
+  }
+  return null;
+}
+
 describe('layer architecture', () => {
   const files = walk(SRC);
 
@@ -117,5 +174,11 @@ describe('layer architecture', () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  it('has no import cycle', () => {
+    // The claim docs/architecture/layers.md makes for this test: a per-file rule
+    // cannot see a loop, so the whole graph is walked at once.
+    expect(findCycle(files)).toBeNull();
   });
 });

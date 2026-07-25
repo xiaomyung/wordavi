@@ -23,4 +23,4 @@ A retry round is exempt: it replays a named list of misses the learner explicitl
 ## Consequences
 The number range is enforced in one place in the session layer rather than by each mode, because only a plain numeral is governed by it — a shelf price or a scale weight has its own scale and is left alone, which is what [[adr-008-es-es-eur|the grocery mode]] needs.
 
-`deserializeRound` takes an optional fourth argument; a rehydration without it (a preview, a read for statistics) behaves exactly as before. See [[storage-schema]] for what a resume reads.
+`deserializeRound` takes an optional fourth argument, and omitting it rehydrates exactly as before — the drill is the only caller that has settings to hand. See [[storage-schema]] for what a resume reads.

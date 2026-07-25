@@ -7,12 +7,12 @@
  * calendar has already ended. `settleStreak` derives that from `lastGoalDate`,
  * and reading it here — once, on the way into the screens — is what keeps home
  * and stats from ever disagreeing about the same run. The round summary needs no
- * settling of its own: `commitRound` has already settled and stored the run by
+ * settling of its own: `commitAnswer` has already settled and stored the run by
  * the time it is sampled.
  *
  * The reading is deliberately not written back. A lapse follows from
- * `lastGoalDate` on every read, and `commitRound` settles before it stamps, so
- * storage catches up the moment a round is played; persisting a zero on app open
+ * `lastGoalDate` on every read, and `commitAnswer` settles before it stamps, so
+ * storage catches up the moment an answer is given; persisting a zero on app open
  * would buy nothing and would let a device with a wrong clock destroy a real run
  * for good. `lastGoalDate` and `streakBest` stay the record of what happened.
  */

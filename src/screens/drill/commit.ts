@@ -10,6 +10,7 @@ import { log } from '@/services/log';
 import type { AnswerRecord, DayRowLike, RoundSummary, Score, SrsState } from '@/session';
 import {
   applyAnswersToDay,
+  countsAsCorrect,
   effectiveDailyGoal,
   evaluateStreak,
   isGoalMet,
@@ -40,13 +41,18 @@ const NS = 'drill';
  * @param record the answer as `answerQuestion` graded it
  * @param score the round's score *after* that answer (its best combo is a total)
  * @param now the clock reading that decides which local day the answer counts for
+ * @returns whether this is the answer that met today's goal. The summary card has
+ *   no other way to know: it reads the day row after the fact, by which time a
+ *   stamp earned by this round and one carried in from earlier today look alike.
  */
-export function commitAnswer(record: AnswerRecord, score: Score, now: Date = new Date()): void {
+export function commitAnswer(record: AnswerRecord, score: Score, now: Date = new Date()): boolean {
   const date = localDayKey(now);
-  const existing = getDay(date);
-  const base: DayRowLike = existing ?? { date, answered: 0, correct: 0, byGroup: {} };
+  const goal = effectiveDailyGoal(getSettings().dailyGoal);
+  const base: DayRowLike = getDay(date) ?? { date, answered: 0, correct: 0, byGroup: {} };
+  const metBefore = isGoalMet(base, goal);
   const day = applyAnswersToDay(base, toGoalVerdicts([record]));
   setDay(day);
+  const metAfter = isGoalMet(day, goal);
 
   const progress = getProgress();
   const streak = evaluateStreak(
@@ -56,10 +62,8 @@ export function commitAnswer(record: AnswerRecord, score: Score, now: Date = new
       lastGoalDate: progress.lastGoalDate,
     },
     date,
-    isGoalMet(day, effectiveDailyGoal(getSettings().dailyGoal)),
+    metAfter,
   );
-  // `counted` is what the day row counts as correct: an 'almost' is a hit.
-  const counted = record.verdict !== 'wrong';
   setProgress({
     ...progress,
     streakCurrent: streak.current,
@@ -67,8 +71,10 @@ export function commitAnswer(record: AnswerRecord, score: Score, now: Date = new
     lastGoalDate: streak.lastGoalDate,
     bestCombo: Math.max(progress.bestCombo, score.bestCombo),
     totalAnswered: progress.totalAnswered + 1,
-    totalCorrect: progress.totalCorrect + (counted ? 1 : 0),
+    totalCorrect: progress.totalCorrect + (countsAsCorrect(record.verdict) ? 1 : 0),
   });
+
+  return !metBefore && metAfter;
 }
 
 /**

@@ -28,10 +28,9 @@ jobs:
               - 'docs-site/**'
               - 'Dockerfile.docs'
               - 'deploy/nginx-docs.conf'
-              # The docs image stopped carrying security-headers.conf when it got
-              # its own snippet; keeping both means an edit to either one still
-              # rebuilds it, rather than shipping nothing and looking deployed.
               - 'deploy/security-headers.conf'
+              # The snippet Dockerfile.docs actually copies. Without it here, an
+              # edit to the docs CSP rebuilds nothing and still looks deployed.
               - 'deploy/security-headers-docs.conf'
 
   app:

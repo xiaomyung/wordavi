@@ -28,7 +28,11 @@ jobs:
               - 'docs-site/**'
               - 'Dockerfile.docs'
               - 'deploy/nginx-docs.conf'
+              # The docs image stopped carrying security-headers.conf when it got
+              # its own snippet; keeping both means an edit to either one still
+              # rebuilds it, rather than shipping nothing and looking deployed.
               - 'deploy/security-headers.conf'
+              - 'deploy/security-headers-docs.conf'
 
   app:
     runs-on: ubuntu-latest

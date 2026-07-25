@@ -15,6 +15,8 @@ For what wordavi does today from a learner's point of view, see the [[user-guide
   with the message, instead of dropping it silently on the way to the mail app.
 - The component gallery is a development surface again: it is no longer part of
   the published build.
+- The documentation's graph view is legible: the notes are spread out instead of
+  piled in the middle, and hovering one dims the rest.
 
 ## 0.2.0 - 2026-07-25
 
